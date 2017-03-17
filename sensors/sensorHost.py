@@ -213,7 +213,7 @@ class SensorHost(object):
         """
         try:
             self.ipcon.connect(self.host_name, self.port)
-	    self.logger.info('Connected to host "%s".', self.host_name)
+    	      self.logger.info('Connected to host "%s".', self.host_name)
         except socketError as e:
             self.__failed_connection_attemps += 1
             # Suppress the warning after __MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
