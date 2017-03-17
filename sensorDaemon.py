@@ -18,157 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
-#
-# Changelog:
-#
-# 28.11.2016 2.4.2
-# - Added port option to MYSQL connection
-#
-# 21.07.2016 2.4.1
-# - Added port number of connected sensor to log output
-# - Only monitor sensors, which are enabled
-#
-# 09.04.2015 2.4.0
-# - Added the Linux daemon double fork trick to daemonize this program.
-#
-# 06.01.2015 2.3.8
-# - Added PTC bricklet
-# - Added error message in case of unknown sensors
-# - Updated copyright notice
-# - Changed console colour of CRITICAL message to red (from yellow)
-# - Changed warning level of sensor initialisation errors from critical to error
-#
-# 03.09.2014 2.3.7
-# - Fixed some typos in sensorHost.py
-#
-# 03.09.2014 2.3.6
-# - Added colour to the console log
-# - Added more debug logging, when writing to the database
-# - Changed all objects to the new python style objects
-# - Changed some logic concerning early callbacks. We will now throw away ALL sensor values, that come in way too early, that means before their set callback duration (dt < dt_set * 0.9)!
-# - Changed some getters to properties
-# - Removed python environment from configParser.py
-# - Fixed barometer bricklet
-# - Fixed humidity bricklet
-# - Fixed typo
-# - Fixed a bug that caused reconnection attemps to silently fail
-#
-# 10.04.2014 2.3.5
-# - Fixed incorrectly named function in sensorHost.py
-#
-# 19.12.2013 2.3.4
-# - Fixed the barometer sensor plugin
-#
-# 03.11.2013 2.3.3
-# - Fixed a bug which caused sensors to hang indefinitely, when it timed out due to network latency.
-#
-# 21.06.2013 2.3.2
-# - reverted change in 2.0.7. UTC_TIMESTAMP() is no longer used, because of bug http://bugs.mysql.com/bug.php?id=58583
-#
-# 27.09.2013 2.3.1
-# - Fixed typos
-#
-# 22.09.2013 2.3.0
-# - Changed formatting to conform to PEP-8
-# - Renamed all private class variables (This will break compatibility!)
-# - Added installer for Windows
-#
-# 18.09.2013 2.2.0
-# - Script will now terminate if no hosts where found
-# - Now fully Plug 'n' Play compatible 
-# - Unconfigured sensors will now be gracefully handled
-# - Added some more error handling
-#
-# 27.08.2013 2.1.1
-# - Changed temperature bricklet unit from cK to K.
-#
-# 08.07.2013 2.1.0
-# - Licensed under GPL v3
-# - Moved configuration to external conf file
-# - Updated sensors to new API naming scheme
-# - Added ambient light sensor
-# - Added some more output
-# - Improved uncaught exception handling
-#
-# 21.06.2013 2.0.7
-# - changed database timestamp from local time to UTC
-#
-# 13.06.2013 2.0.6
-# - Changed log level for unknown hosts to error
-#
-# 12.06.2013 2.0.5
-# - Fixed some typos
-# - Fixed crash when sensor host could not be found
-# - Added sensor type to enumeration message
-# - Removed master brick from enumeration messages
-#
-# 28.02.2013 2.0.4
-# - Fixed incorrect display of the last update variable, which was given in ms but displayed as seconds
-#
-# 25.02.2013 2.0.3
-# - Added more output on mysql errors
-# - Fixed a bug, that could cause clients to throw a timeout exception
-#
-# 24.02.2013 2.0.2
-# - Fixed enumeartion on reconnect
-# - Added "" to the output of sensor names
-#
-# 21.02.2013 2.0.1
-# - Renamed table "sensor_location" to "sensor_nodes"
-#
-# 08.02.2013 2.0
-# - Moved to callbacks for all supported bricks and bricklets
-#
-# 24.01.2013 1.5
-# - Added support for multiple brickd hosts
-# - Dynamically load the hosts from a MySQL database
-#
-# 24.01.2013 1.4.1
-# - Added more debugging output
-#
-# 23.01.2013 1.4
-# - Moved to Tinkerforge API 2.0
-#
-# 05.12.2012 Version 1.3.7
-# - Fixed an exception in case the sensors do not return a result
-#
-# 03.12.2012 Version 1.3.6
-# - Fixed bug in case the MySQL database does not respond
-#
-# 30.10.2012 Version 1.3.5
-# - Optimized MySQL inserts in main
-#
-# 28.10.2012 Version 1.3.4
-# - Added more logging to the MySQL insert statement in main
-#
-# 22.10.2012 Version 1.3.3
-# - Added sensors count to the info output
-# - Fixed a bug when initialising a new sensor, the logger will now be corretly set
-#
-# 08.10.2012 Version 1.3.2
-# - Convert MySQL warnings to errors to raise and catch them via try/except
-#
-# 01.10.2012 Version 1.3.1
-# - Moved the number to retries to the global variable RETRY_COUNT, even for sensors
-# - Added logger to sensors
-#
-# 01.10.2012 Version 1.3
-# - Added logging to file and console
-#
-# 01.10.2012 Version 1.2:
-# - Added multithreading to ipcon assignment
-#
-# 01.10.2012 Version 1.1:
-# - Added error handler
-# - Added cleanup of MySQL connection after use
-# - Improved error handling
-# - Added more output
-#
-# 26.10.2012 Version 1.0:
-# - Initial Release
-#
 
-__version__ = "2.3.7" + " rev. " + filter(str.isdigit, "$Revision: 327 $")
+from __future__ import print_function
+
+__version__ = "2.5.0"
 
 import MySQLdb
 import os
@@ -228,7 +81,7 @@ class SensorDaemon(Daemon):
             for row in rows:
                 self.logger.debug('Found host "%s:%s"', row[0], row[1])
                 hosts[row[0]] = SensorHost(row[0], row[1], self)
-        except MySQLdb.Error, e:
+        except MySQLdb.Error as e:
             self.logger.critical('Error. Cannot get hosts from MySQL database: %s.', e)
             sys.exit(1)
         finally:
@@ -257,7 +110,7 @@ class SensorDaemon(Daemon):
             else:
                 self.logger.error('Error. Sensor "%s" not found in MySQL database. Please add the uid to the database to enable logging of this sensor.', sensor_uid)
                 period = 0
-        except MySQLdb.Error, e:
+        except MySQLdb.Error as e:
             self.logger.error('Error. Cannot get callback period for sensor "%s" from MySQL database: %s', sensor_uid, e)
         finally:
             if mysqlcon:
@@ -304,7 +157,7 @@ class SensorDaemon(Daemon):
             # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
             mysqlcon.commit()
             self.logger.debug('Successfully written to database: value %s from sensor %s.', value, sensor_uid)
-        except MySQLdb.Error, e:
+        except MySQLdb.Error as e:
             if mysqlcon:
                 # In case of an error roll back any changes. This is only possible on InnoDB. MyISAM will committ any change immediately.
                 mysqlcon.rollback()
@@ -380,9 +233,9 @@ if __name__ == "__main__":
        elif 'restart' == sys.argv[1]:
           daemon.restart()
        else:
-          print "Unknown command"
+          print("Unknown command")
           sys.exit(2)
        sys.exit(0)
     else:
-       print "usage: %s start|stop|restart" % sys.argv[0]
+       print("usage: %s start|stop|restart" % sys.argv[0])
        sys.exit(2)
