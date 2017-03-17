@@ -20,6 +20,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from __future__ import absolute_import, division, print_function
+from builtins import dict
 
 __version__ = "2.5.0"
 
@@ -195,7 +196,7 @@ class SensorDaemon(Daemon):
             sys.exit(1)
 
         # Connect to all hosts. The connection will be kept open.
-        for host in self.hosts.itervalues():
+        for host in self.hosts.values():
             self.logger.warning('Connecting to brick daemon on "%s"...', host.host_name)
             self.logger.info("-----------------")
             host.connect()
@@ -203,7 +204,7 @@ class SensorDaemon(Daemon):
         # Check for all host in regular intervals. If a host was previously unavailable, we will try to reconnect.
         while (True):
             time.sleep(self.config.sensors['ping_intervall'])
-            for host in self.hosts.itervalues():
+            for host in self.hosts.values():
                 host.ping()
 
     def shutdown(self, sig_number, frame):
@@ -213,7 +214,7 @@ class SensorDaemon(Daemon):
         self.logger.warning("##################################################")
         self.logger.warning("Stopping Daemon...")
         self.logger.warning("##################################################")
-        for host in self.hosts.itervalues():
+        for host in self.hosts.values():
             host.disconnect()
         # Shutdown logging system    
         sys.exit(0)
