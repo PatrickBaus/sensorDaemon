@@ -18,10 +18,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import absolute_import, division, print_function
+
 import abc
 import time
-from sensor import Sensor
-from tinkerforge.bricklet_barometer import BrickletBarometer
+from .sensor import Sensor
+from .tinkerforge.bricklet_barometer import BrickletBarometer
 
 class BarometerSensor(Sensor):
     """
@@ -67,7 +69,7 @@ class BarometerSensor(Sensor):
         value: the value as returned by the bricklet. This might not be in SI units.
         """
         # Round to nearest Pa!
-        value = round(value / 10.0)
+        value = round(value / 10)
         super(BarometerSensor, self).callback(value)
 
     def set_callback(self):
