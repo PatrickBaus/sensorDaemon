@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function
 import abc
 import time
 from .sensor import Sensor
-from tinkerforge.bricklet_ambient_light import BrickletAmbientLight
+from .tinkerforge.bricklet_ambient_light import BrickletAmbientLight
 
 class AmbientLightSensor(Sensor):
     """
