@@ -18,10 +18,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import absolute_import, division, print_function
+
 import abc
 import time
-from sensor import Sensor
-from tinkerforge.bricklet_temperature import BrickletTemperature
+from .sensor import Sensor
+from .tinkerforge.bricklet_temperature import BrickletTemperature
 
 class TemperatureSensor(Sensor):
     """
@@ -67,7 +69,7 @@ class TemperatureSensor(Sensor):
         value: the value as returned by the bricklet. This might not be in SI units.
         """
         # Return Kelvin.
-        value = (value + 27315) / 100.0
+        value = (value + 27315) / 100
         super(TemperatureSensor, self).callback(value)
 
     def set_callback(self):

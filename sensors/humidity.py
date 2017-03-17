@@ -18,10 +18,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import absolute_import, division, print_function
+
 import abc
 import time
-from sensor import Sensor
-from tinkerforge.bricklet_humidity import BrickletHumidity
+from .sensor import Sensor
+from .tinkerforge.bricklet_humidity import BrickletHumidity
 
 class HumiditySensor(Sensor):
     """
@@ -68,7 +70,7 @@ class HumiditySensor(Sensor):
         value: the value as returned by the bricklet. This might not be in SI units.
         """
         # Return %RH.
-        value = value / 10.0
+        value = value / 10
         super(HumiditySensor, self).callback(value)
 
     def set_callback(self):

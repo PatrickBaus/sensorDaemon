@@ -18,10 +18,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import absolute_import, division, print_function
+
 import abc
 import time
-from sensor import Sensor
-from tinkerforge.bricklet_ptc import BrickletPTC
+from .sensor import Sensor
+from .tinkerforge.bricklet_ptc import BrickletPTC
 
 class PTCSensor(Sensor):
     """
@@ -67,7 +69,7 @@ class PTCSensor(Sensor):
         value: the value as returned by the bricklet. This might not be in SI units.
         """
         # Return Kelvin.
-        value = (value + 27315) / 100.0
+        value = (value + 27315) / 100
         super(PTCSensor, self).callback(value)
 
     def set_callback(self):

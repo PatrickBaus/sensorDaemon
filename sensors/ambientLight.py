@@ -18,9 +18,11 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import absolute_import, division, print_function
+
 import abc
 import time
-from sensor import Sensor
+from .sensor import Sensor
 from tinkerforge.bricklet_ambient_light import BrickletAmbientLight
 
 class AmbientLightSensor(Sensor):
@@ -67,7 +69,7 @@ class AmbientLightSensor(Sensor):
         value: the value as returned by the bricklet. This might not be in SI units.
         """
         # Return lx.
-        value = value / 10.0
+        value = value / 10
         super(AmbientLightSensor, self).callback(value)
 
     def set_callback(self):

@@ -62,7 +62,7 @@ class Sensor(object):
                 self.logger.warning('Warning. Callback for sensor "%s" is set to %d ms instead of %d ms. Resetting.', self.uid, current_period, self.callback_period)
                 self.set_callback()
             return True
-        except IPConError, e:
+        except IPConError as e:
             if (e.value == IPConError.TIMEOUT):
                 self.logger.warning('Warning. Lost connection to sensor "%s".', self.uid)
             else:
