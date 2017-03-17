@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+## -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 # Copyright (C) 2015  Patrick Baus
@@ -18,15 +18,18 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import absolute_import, division, print_function
+from builtins import dict
+
 from socket import error as socketError
 
-from sensors.tinkerforge.ip_connection import IPConnection
-from sensors.tinkerforge.ip_connection import Error as IPConError
-from sensors.ambientLight import AmbientLightSensor
-from sensors.barometer import BarometerSensor
-from sensors.humidity import HumiditySensor
-from sensors.temperature import TemperatureSensor
-from sensors.ptc import PTCSensor
+from .tinkerforge.ip_connection import IPConnection
+from .tinkerforge.ip_connection import Error as IPConError
+from .ambientLight import AmbientLightSensor
+from .barometer import BarometerSensor
+from .humidity import HumiditySensor
+from .temperature import TemperatureSensor
+from .ptc import PTCSensor
 
 class SensorHost(object):
     """
@@ -134,7 +137,7 @@ class SensorHost(object):
                     # those sensors to a list first, because we can't remove any sensors
                     # from the dict while iterating over it.
                     offline_sensors = []
-                    for sensor in self.sensors.itervalues():
+                    for sensor in self.sensors.values():
                         self.logger.debug('Checking sensor "%s".', sensor.uid)
                         if not sensor.check_callback():
                             offline_sensors.append(sensor)
