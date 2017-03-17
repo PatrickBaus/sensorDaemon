@@ -38,7 +38,7 @@ def module_path():
     if we_are_frozen():
         return os.path.dirname(sys.executable)
 
-    return os.path.dirname(__file__, sys.getfilesystemencoding)
+    return os.path.dirname(__file__)
 
 class ConfigParser(object):
     def uncaught_exception_handler(self,type, value, tb):
@@ -48,28 +48,18 @@ class ConfigParser(object):
         """
         Load config parameters in the logging subsection and do some sanity checking
         """
-        def string_to_level(value):
-            """
-            Maps a string to the corresponding enum.
-            """
-            if value == "info":
-                log_llevel = logging.INFO
-            elif value == "warning":
-                log_level = logging.WARNING
-            elif value == "error":
-                log_level = logging.ERROR
-            elif value == "critical":
-                log_level = logging.CRITICAL
-            elif value == "debug":
-                log_level = logging.DEBUG
-            else:
-                log_level = None
-            return log_level
-            
+        string_to_level = {
+         ' info': logging.INFO,
+          'warning': logging.WARNING,
+          'error': logging.ERROR,
+          'critical': logging.CRITICAL,
+          'debug': logging.DEBUG,
+        }
+
         result = {}
         result['dateformat'] = config['dateformat']
-        result['console_loglevel'] = string_to_level(config['console_loglevel'])
-        result['file_loglevel'] = string_to_level(config['file_loglevel'])
+        result['console_loglevel'] = string_to_level.get(config['console_loglevel'], logging.NOTSET)
+        result['file_loglevel'] = string_to_level.get(config['file_loglevel'], logging.NOTSET)
         # If no absolute path is given, append the path name to the file directory
         if os.path.isabs(config['logfile']):
             result['logfile'] = config['logfile']
