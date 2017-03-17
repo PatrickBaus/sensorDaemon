@@ -68,13 +68,6 @@ class ConfigParser(object):
 
         return result
 
-    def __load_default(self):
-        """
-        Load a default config
-        """
-        self.__options = __DEFAULT
-        
-
     def __load_config(self, config_path):
         """
         Load config file. "configPath" is the full path name to the config file
@@ -123,6 +116,10 @@ class ConfigParser(object):
             config_map['mysql']['port']
         except:
             config_map['mysql']['port'] = 3306
+        try:
+          config_map['mysql']['port'] = int(config_map['mysql']['port'])
+        except:
+            sys.exit('Error: MySQL option "port" is invalid.')
         try:
             config_map['mysql']['username']
         except:

@@ -74,7 +74,7 @@ class SensorDaemon(Daemon):
         mysql_options = self.config.mysql
         self.logger.info("Fetching Brick Daemon hosts from database on '{host}:{port}'...".format(host=mysql_options['host'], port=mysql_options['port']))
         try:
-            mysqlcon = MySQLdb.connect(host=mysql_options['host'], port=int(mysql_options['port']), user=mysql_options['username'], passwd=mysql_options['password'], db=mysql_options['database'])
+            mysqlcon = MySQLdb.connect(host=mysql_options['host'], port=mysql_options['port'], user=mysql_options['username'], passwd=mysql_options['password'], db=mysql_options['database'])
             cur = mysqlcon.cursor()
             cur.execute(MYSQL_STMS['select_hosts'])
             rows = cur.fetchall()
