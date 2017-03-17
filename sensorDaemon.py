@@ -19,7 +19,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 __version__ = "2.5.0"
 
@@ -46,9 +46,9 @@ def module_path():
     even if we are frozen using py2exe"""
 
     if we_are_frozen():
-        return os.path.dirname(unicode(sys.executable, sys.getfilesystemencoding( )))
+        return os.path.dirname(sys.executable)
 
-    return os.path.dirname(unicode(__file__, sys.getfilesystemencoding( )))
+    return os.path.dirname(__file__)
 
 CONFIG_PATH = module_path() + '/sensors.conf'
 

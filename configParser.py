@@ -17,6 +17,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import absolute_import, division, print_function
+
 import logging
 import os
 import sys
@@ -34,9 +36,9 @@ def module_path():
     even if we are frozen using py2exe"""
 
     if we_are_frozen():
-        return os.path.dirname(unicode(sys.executable, sys.getfilesystemencoding( )))
+        return os.path.dirname(sys.executable)
 
-    return os.path.dirname(unicode(__file__, sys.getfilesystemencoding( )))
+    return os.path.dirname(__file__, sys.getfilesystemencoding)
 
 class ConfigParser(object):
     def uncaught_exception_handler(self,type, value, tb):
@@ -75,7 +77,14 @@ class ConfigParser(object):
             result['logfile'] = module_path() + "/"  + config['logfile']
 
         return result
+
+    def __load_default(self):
+        """
+        Load a default config
+        """
+        self.__options = __DEFAULT
         
+
     def __load_config(self, config_path):
         """
         Load config file. "configPath" is the full path name to the config file
@@ -169,4 +178,7 @@ class ConfigParser(object):
         Creates a configParser object.
         configFile: The absolute path to the configuration file to be loaded
         """
-        self.__load_config(config_file)
+        try:
+            self.__load_config(config_file)
+        except FileNotFoundError:
+            sys.exit('Error: Config file does not exist. "Check sensors.conf.default" for an example.')

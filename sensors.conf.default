@@ -1,0 +1,22 @@
+# Config file for the Tinkerforge sensor daemon.
+# Due to the sensitive nature of the file, make sure it is not world
+# readable like chmod 600.
+logging:
+#       Uncomment this line to set console logging to verbose
+#        console_loglevel: 'debug'
+        console_loglevel: 'info'
+        file_loglevel: 'warning'
+#       Date format used to log data to the logfile.
+#       The string is of the form %dateformat  %type  %message
+        dateformat: '%b %d %H:%M:%S'
+        logfile: 'tinkerforge.log'
+
+mysql:
+        host: 'localhost'
+        username: 'sensors'
+        password: 'secretPassword'
+        database: 'sensors'
+
+sensors:
+#       Period of pings to check the availability of the sensors in seconds
+        ping_intervall: 60
