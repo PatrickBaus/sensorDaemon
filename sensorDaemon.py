@@ -223,9 +223,8 @@ if __name__ == "__main__":
     Load the config file, then start the daemon
     """
     parser = argparse.ArgumentParser(description='Sensor daemon for tinkerforge bricklets')
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('action', choices=['start', 'stop', 'restart'])
-    group.add_argument('--nodaemon', action='store_true')
+    parser.add_argument('action', nargs='?', choices=['start', 'stop', 'restart'], help='Run, stop or restart the service')
+    parser.add_argument('--nodaemon', action='store_true', help='If this option is set no action is required. The deamon will not fork to the background.')
     args = parser.parse_args()
 
     config = ConfigParser(CONFIG_PATH)
@@ -239,3 +238,5 @@ if __name__ == "__main__":
         daemon.stop()
     elif args.action == 'restart':
         daemon.restart()
+    else:
+        parser.print_usage()
