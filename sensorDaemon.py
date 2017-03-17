@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function
 
 __version__ = "2.5.0"
 
+import argparse
 import MySQLdb
 import os
 import signal
@@ -221,21 +222,20 @@ if __name__ == "__main__":
     """
     Load the config file, then start the daemon
     """
+    parser = argparse.ArgumentParser(description='Sensor daemon for tinkerforge bricklets')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('action', choices=['start', 'stop', 'restart'])
+    group.add_argument('--nodaemon', action='store_true')
+    args = parser.parse_args()
+
     config = ConfigParser(CONFIG_PATH)
 
     daemon = SensorDaemon(config)
-#    daemon.run()
-    if len(sys.argv) == 2:
-       if 'start' == sys.argv[1]:
-          daemon.start()
-       elif 'stop' == sys.argv[1]:
-          daemon.stop()
-       elif 'restart' == sys.argv[1]:
-          daemon.restart()
-       else:
-          print("Unknown command")
-          sys.exit(2)
-       sys.exit(0)
-    else:
-       print("usage: %s start|stop|restart" % sys.argv[0])
-       sys.exit(2)
+    if (args.nodaemon):
+        daemon.run()
+    elif args.action == 'start':
+        daemon.start()
+    elif args.action == 'stop':
+        daemon.stop()
+    elif args.action == 'restart':
+        daemon.restart()
