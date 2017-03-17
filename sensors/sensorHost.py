@@ -141,7 +141,7 @@ class SensorHost(object):
                     for sensor in offline_sensors:
                         self.remove_sensor(sensor)
 
-                except IPConError, e:
+                except IPConError as e:
                     if (e.value == IPConError.TIMEOUT):
                         self.logger.error('Error. Lost connection to host "%s".', self.host_name)
                     else:
