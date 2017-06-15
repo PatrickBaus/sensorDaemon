@@ -68,7 +68,7 @@ class _WindowsColoredFormatter(logging.Formatter):
     FOREGROUND_GREY      = 0x0007
     FOREGROUND_INTENSITY = 0x0008 # foreground color is intensified.
     FOREGROUND_WHITE     = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED
- 
+
     BACKGROUND_BLACK     = 0x0000
     BACKGROUND_BLUE      = 0x0010
     BACKGROUND_GREEN     = 0x0020
@@ -149,7 +149,7 @@ class DaemonLogger(object):
         Returns the logger object. The first call will create the logger.
         """
         return logging.getLogger('SensorDaemon')
-        
+
     def shutdown(self):
         """
         Shutdown the logging system. This function should be called before closing down the daemon.
