@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
-#  
+#
 # Copyright (C) 2016  Patrick Baus
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 from __future__ import absolute_import, division, print_function
 from builtins import dict
 
-__version__ = "2.6.2"
+__version__ = "2.6.3"
 
 import argparse
 import MySQLdb
@@ -216,7 +216,7 @@ class SensorDaemon(Daemon):
         self.logger.warning("##################################################")
         for host in self.hosts.values():
             host.disconnect()
-        # Shutdown logging system    
+        # Shutdown logging system
         sys.exit(0)
 
 if __name__ == "__main__":

@@ -114,12 +114,12 @@ class DaemonLogger(object):
 
         """
         Log levels:
-        CRITICAL	50
-        ERROR	40
-        WARNING	30
-        INFO	20
-        DEBUG	10
-        NOTSET	0
+        CRITICAL 50
+        ERROR    40
+        WARNING  30
+        INFO     20
+        DEBUG    10
+        NOTSET   0
         """
         log_levels_used = [config['console_loglevel'], config['file_loglevel']]
         # Find the minium log level required. Since NOTSET is 0, we exclude it from the list, but it the list is empty
@@ -127,11 +127,12 @@ class DaemonLogger(object):
         self.get_logger().setLevel(min((level for level in log_levels_used if level is not logging.NOTSET), default=logging.NOTSET))
 
         # Create console logger only if the daemon is run from terminal
-        if sys.stdout.isatty() and config['console_loglevel'] is not logging.NOTSET:
+        if config['console_loglevel'] is not logging.NOTSET:
             console_logger = logging.StreamHandler()
             console_logger.setLevel(config['console_loglevel'])
             console_logger.setFormatter(ColoredFormatter('%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
             self.get_logger().addHandler(console_logger)
+            print('foobar')
 
         # Create file logger for loglevel >= config['file_loglevel']
         if config['file_loglevel'] is not logging.NOTSET:

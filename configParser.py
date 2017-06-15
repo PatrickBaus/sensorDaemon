@@ -49,7 +49,7 @@ class ConfigParser(object):
         Load config parameters in the logging subsection and do some sanity checking
         """
         string_to_level = {
-         ' info': logging.INFO,
+          'info': logging.INFO,
           'warning': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL,
@@ -98,6 +98,10 @@ class ConfigParser(object):
             config_map['logging']['dateformat']
         except:
             sys.exit('Error: Logging option "dateformat" has not been set.')
+        try:
+            config_map['logging']['console_loglevel']
+        except:
+            sys.exit('Error: Logging option "console_loglevel" has not been set.')
         try:
             config_map['logging']['file_loglevel']
         except:
