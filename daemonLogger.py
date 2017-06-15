@@ -111,21 +111,35 @@ class DaemonLogger(object):
         Creates a daemonLogger object.
         config: A dictionary that contains a relevant configuration options for the logger
         """
-        self.get_logger().setLevel(min(config['console_loglevel'], config['file_loglevel'], logging.DEBUG))
+
+        """
+        Log levels:
+        CRITICAL	50
+        ERROR	40
+        WARNING	30
+        INFO	20
+        DEBUG	10
+        NOTSET	0
+        """
+        log_levels_used = [config['console_loglevel'], config['file_loglevel']]
+        # Find the minium log level required. Since NOTSET is 0, we exclude it from the list, but it the list is empty
+        # we know that it is not set, hence the default. The default keyword requires python 3.4
+        self.get_logger().setLevel(min(level for level in log_levels_used if level is not logging.NOTSET, default=logging.NOTSET))
 
         # Create console logger only if the daemon is run from terminal
-        if sys.__stdin__.isatty() and config['console_loglevel'] is not None:
+        if sys.__stdin__.isatty() and config['console_loglevel'] is not logging.NOTSET:
             console_logger = logging.StreamHandler()
             console_logger.setLevel(config['console_loglevel'])
             console_logger.setFormatter(ColoredFormatter('%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
             self.get_logger().addHandler(console_logger)
 
         # Create file logger for loglevel >= config['file_loglevel']
-        file_logger = logging.FileHandler(config['logfile'])
-        file_logger.setLevel(config['file_loglevel'])
-        formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt=config['dateformat'])
-        file_logger.setFormatter(formatter)
-        self.get_logger().addHandler(file_logger)
+        if config['file_loglevel'] is not logging.NOTSET:
+          file_logger = logging.FileHandler(config['logfile'])
+          file_logger.setLevel(config['file_loglevel'])
+          formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt=config['dateformat'])
+          file_logger.setFormatter(formatter)
+          self.get_logger().addHandler(file_logger)
 
         # Set uncaught exception handler to log those exception to file as well
         sys.excepthook = self.uncaught_exception_handler
