@@ -127,7 +127,7 @@ class DaemonLogger(object):
         self.get_logger().setLevel(min((level for level in log_levels_used if level is not logging.NOTSET), default=logging.NOTSET))
 
         # Create console logger only if the daemon is run from terminal
-        if sys.__stdin__.isatty() and config['console_loglevel'] is not logging.NOTSET:
+        if sys.stdout.isatty() and config['console_loglevel'] is not logging.NOTSET:
             console_logger = logging.StreamHandler()
             console_logger.setLevel(config['console_loglevel'])
             console_logger.setFormatter(ColoredFormatter('%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))

@@ -22,7 +22,7 @@
 from __future__ import absolute_import, division, print_function
 from builtins import dict
 
-__version__ = "2.6.0"
+__version__ = "2.6.2"
 
 import argparse
 import MySQLdb
