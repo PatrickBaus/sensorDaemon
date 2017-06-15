@@ -227,7 +227,7 @@ class SensorHost(object):
                     failure_count = ""
                 self.logger.warning('Warning. Failed to connect to host "%s"%s. Error: %s.', self.host_name, failure_count, e)
             if (self.failed_connection_attemps == self.__MAXIMUM_FAILED_CONNECTIONS):
-                self.logger.warning('Warning. Failed to connect to host "%s" (%d time%s). Error: %s. Suppressing warnings from hereon.', self.host_name, self.failed_connection_attemps(), "s"[self.failed_connection_attemps()==1:], e)
+                self.logger.warning('Warning. Failed to connect to host "%s" (%d time%s). Error: %s. Suppressing warnings from hereon.', self.host_name, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
 
         if self.is_connected:
            self.__failed_connection_attemps = 0
