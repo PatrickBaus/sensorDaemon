@@ -94,7 +94,7 @@ class AmbientLightSensorV2(Sensor):
         callbackMethod: The SensorHost callback to deliver to the data to.
         callbackPeriod: The callback period in ms. A value of 0 will turn off the callback.
         """
-        super(AmbientLightSensor, self).__init__(uid, parent, callback_method, callback_period)
+        super(AmbientLightSensorV2, self).__init__(uid, parent, callback_method, callback_period)
 
         self.bricklet = AmbientLightSensorV2(uid, parent.ipcon)
         self.set_callback()
