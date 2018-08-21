@@ -137,20 +137,20 @@ class SensorDaemon(Daemon):
         """
         return self.__config
 
-    def host_callback(self, sensor_type, sensor_uid, value, last_update):
+    def host_callback(self, sensor_type, sensor_uid, value, previous_update):
         """
         Callback function used by the sensors to write data to the database. It will be called by the host.
         sensor_type: String that states the type of sensor
-        sensor_uid_: String that represents the sensors unique id (embedded in the flash rom)
+        sensor_uid: String that represents the sensors unique id (embedded in the flash rom)
         value: Float to be written to the database
-        last_update: Integer representing the number of ms between this callback and the previous.
-        If there was  no last update, set this to None.
+        previous_update: Integer representing the number of ms between this callback and the previous.
+            If there was no previous update, set this to None.
         """
         mysqlcon = None
-        if (last_update is None):
+        if (previous_update is None):
             self.logger.info('%s sensor "%s" returned value %s.', sensor_type.title(), sensor_uid, value)
         else:
-            self.logger.info('%s sensor "%s" returned value %s. Last update was %i s ago.', sensor_type.title(), sensor_uid, value, last_update / 1000)
+            self.logger.info('%s sensor "%s" returned value %s. Previous update was %i s ago.', sensor_type.title(), sensor_uid, value, previous_update / 1000)
         try:
             mysql_options = self.config.mysql
             mysqlcon = MySQLdb.connect(host=mysql_options['host'], port=int(mysql_options['port']), user=mysql_options['username'], passwd=mysql_options['password'], db=mysql_options['database'])
