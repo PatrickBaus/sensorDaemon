@@ -132,7 +132,6 @@ class DaemonLogger(object):
             console_logger.setLevel(config['console_loglevel'])
             console_logger.setFormatter(ColoredFormatter('%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
             self.get_logger().addHandler(console_logger)
-            print('foobar')
 
         # Create file logger for loglevel >= config['file_loglevel']
         if config['file_loglevel'] is not logging.NOTSET:
