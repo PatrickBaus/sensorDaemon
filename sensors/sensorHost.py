@@ -26,7 +26,7 @@ from socket import error as socketError
 from .tinkerforge.ip_connection import IPConnection
 from .tinkerforge.ip_connection import Error as IPConError
 from .ambientLight import AmbientLightSensor
-from .ambientLightV2 import AmbientLightSensorV2
+from .ambientLight_v2 import AmbientLightSensorV2
 from .barometer import BarometerSensor
 from .humidity import HumiditySensor
 from .temperature import TemperatureSensor
