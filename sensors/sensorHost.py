@@ -26,6 +26,7 @@ from socket import error as socketError
 from .tinkerforge.ip_connection import IPConnection
 from .tinkerforge.ip_connection import Error as IPConError
 from .ambientLight import AmbientLightSensor
+from .ambientLightV2 import AmbientLightSensorV2
 from .barometer import BarometerSensor
 from .humidity import HumiditySensor
 from .temperature import TemperatureSensor
@@ -153,11 +154,11 @@ class SensorHost(object):
             self.logger.debug('Host "%s" seems disconnected. Trying to reconnect.', self.host_name)
             self.connect()
 
-    def sensor_callback(self, sensor, value, last_update):
+    def sensor_callback(self, sensor, value, previous_update):
         """
         The callback used by all sensors to send their data to the sensor daemon.
         """
-        self.parent.host_callback(sensor.sensor_type, sensor.uid, value, last_update)
+        self.parent.host_callback(sensor.sensor_type, sensor.uid, value, previous_update)
 
     def connect_callback(self, connected_reason):
         """
@@ -182,6 +183,9 @@ class SensorHost(object):
             # Ambient light bricklet
             if device_identifier == AmbientLightSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(AmbientLightSensor, uid, connected_uid, position, self.host_name, enumeration_type)
+            # Ambient light bricklet v2
+            if device_identifier == AmbientLightSensorV2.DEVICE_IDENTIFIER:
+                self.__connect_sensor(AmbientLightSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
             # Barometer bricklet
             elif device_identifier == BarometerSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(BarometerSensor, uid, connected_uid, position, self.host_name, enumeration_type)
