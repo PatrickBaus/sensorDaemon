@@ -96,5 +96,5 @@ class AmbientLightSensorV2(Sensor):
         """
         super(AmbientLightSensorV2, self).__init__(uid, parent, callback_method, callback_period)
 
-        self.bricklet = AmbientLightSensorV2(uid, parent.ipcon)
+        self.bricklet = BrickletAmbientLightV2(uid, parent.ipcon)
         self.set_callback()
