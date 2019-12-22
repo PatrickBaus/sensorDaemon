@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -207,13 +207,6 @@ class BrickletIndustrialCounter(Device):
         """
         Returns the signal data (duty cycle, period, frequency and value) for the
         given channel.
-
-        The units are:
-
-        * Duty Cycle: 1/100 %
-        * Period: ns
-        * Frequency: mHz (1/1000 Hz)
-        * Value: true = high, false = low
         """
         channel = int(channel)
 
@@ -223,13 +216,6 @@ class BrickletIndustrialCounter(Device):
         """
         Returns the signal data (duty cycle, period, frequency and value) for all four
         channels.
-
-        The units are:
-
-        * Duty Cycle: 1/100 %
-        * Period: ns
-        * Frequency: mHz (1/1000 Hz)
-        * Value: true = high, false = low
         """
         return GetAllSignalData(*self.ipcon.send_request(self, BrickletIndustrialCounter.FUNCTION_GET_ALL_SIGNAL_DATA, (), '', '4H 4Q 4I 4!'))
 
@@ -311,7 +297,7 @@ class BrickletIndustrialCounter(Device):
 
     def set_all_counter_callback_configuration(self, period, value_has_to_change):
         """
-        The period in ms is the period with which the :cb:`All Counter`
+        The period is the period with which the :cb:`All Counter`
         callback is triggered periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -320,8 +306,6 @@ class BrickletIndustrialCounter(Device):
 
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
-
-        The default value is (0, false).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -337,7 +321,7 @@ class BrickletIndustrialCounter(Device):
 
     def set_all_signal_data_callback_configuration(self, period, value_has_to_change):
         """
-        The period in ms is the period with which the :cb:`All Signal Data`
+        The period is the period with which the :cb:`All Signal Data`
         callback is triggered periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -346,8 +330,6 @@ class BrickletIndustrialCounter(Device):
 
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
-
-        The default value is (0, false).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -363,7 +345,7 @@ class BrickletIndustrialCounter(Device):
 
     def set_channel_led_config(self, channel, config):
         """
-        Each channel has a corresponding LED. You can turn the LED Off, On or show a
+        Each channel has a corresponding LED. You can turn the LED off, on or show a
         heartbeat. You can also set the LED to "Channel Status". In this mode the
         LED is on if the channel is high and off otherwise.
 
@@ -376,7 +358,7 @@ class BrickletIndustrialCounter(Device):
 
     def get_channel_led_config(self, channel):
         """
-        Returns the Channel LED configuration as set by :func:`Set Channel LED Config`
+        Returns the channel LED configuration as set by :func:`Set Channel LED Config`
         """
         channel = int(channel)
 
@@ -388,9 +370,9 @@ class BrickletIndustrialCounter(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -405,7 +387,7 @@ class BrickletIndustrialCounter(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.

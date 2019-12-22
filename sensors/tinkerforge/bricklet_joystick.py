@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -96,9 +96,8 @@ class BrickletJoystick(Device):
 
     def get_position(self):
         """
-        Returns the position of the Joystick. The value ranges between -100 and
-        100 for both axis. The middle position of the joystick is x=0, y=0. The
-        returned values are averaged and calibrated (see :func:`Calibrate`).
+        Returns the position of the joystick. The middle position of the joystick is x=0, y=0.
+        The returned values are averaged and calibrated (see :func:`Calibrate`).
 
         If you want to get the position periodically, it is recommended to use the
         :cb:`Position` callback and set the period with
@@ -118,7 +117,6 @@ class BrickletJoystick(Device):
     def get_analog_value(self):
         """
         Returns the values as read by a 12-bit analog-to-digital converter.
-        The values are between 0 and 4095 for both axis.
 
         .. note::
          The values returned by :func:`Get Position` are averaged over several samples
@@ -134,9 +132,9 @@ class BrickletJoystick(Device):
 
     def calibrate(self):
         """
-        Calibrates the middle position of the Joystick. If your Joystick Bricklet
+        Calibrates the middle position of the joystick. If your Joystick Bricklet
         does not return x=0 and y=0 in the middle position, call this function
-        while the Joystick is standing still in the middle position.
+        while the joystick is standing still in the middle position.
 
         The resulting calibration will be saved on the EEPROM of the Joystick
         Bricklet, thus you only have to calibrate it once.
@@ -145,13 +143,11 @@ class BrickletJoystick(Device):
 
     def set_position_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Position` callback is triggered
+        Sets the period with which the :cb:`Position` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Position` callback is only triggered if the position has changed since the
         last triggering.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -165,13 +161,11 @@ class BrickletJoystick(Device):
 
     def set_analog_value_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Analog Value` callback is triggered
+        Sets the period with which the :cb:`Analog Value` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Analog Value` callback is only triggered if the analog values have
         changed since the last triggering.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -198,8 +192,6 @@ class BrickletJoystick(Device):
          "'i'",    "Callback is triggered when the position is *inside* the min and max values"
          "'<'",    "Callback is triggered when the position is smaller than the min values (max is ignored)"
          "'>'",    "Callback is triggered when the position is greater than the min values (max is ignored)"
-
-        The default value is ('x', 0, 0, 0, 0).
         """
         option = create_char(option)
         min_x = int(min_x)
@@ -230,8 +222,6 @@ class BrickletJoystick(Device):
          "'i'",    "Callback is triggered when the analog values are *inside* the min and max values"
          "'<'",    "Callback is triggered when the analog values are smaller than the min values (max is ignored)"
          "'>'",    "Callback is triggered when the analog values are greater than the min values (max is ignored)"
-
-        The default value is ('x', 0, 0, 0, 0).
         """
         option = create_char(option)
         min_x = int(min_x)
@@ -249,7 +239,7 @@ class BrickletJoystick(Device):
 
     def set_debounce_period(self, debounce):
         """
-        Sets the period in ms with which the threshold callbacks
+        Sets the period with which the threshold callbacks
 
         * :cb:`Position Reached`,
         * :cb:`Analog Value Reached`
@@ -260,8 +250,6 @@ class BrickletJoystick(Device):
         * :func:`Set Analog Value Callback Threshold`
 
         keep being reached.
-
-        The default value is 100.
         """
         debounce = int(debounce)
 

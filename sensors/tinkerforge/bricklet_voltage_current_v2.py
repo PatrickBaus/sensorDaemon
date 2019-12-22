@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -77,6 +77,14 @@ class BrickletVoltageCurrentV2(Device):
     AVERAGING_256 = 5
     AVERAGING_512 = 6
     AVERAGING_1024 = 7
+    CONVERSION_TIME_140US = 0
+    CONVERSION_TIME_204US = 1
+    CONVERSION_TIME_332US = 2
+    CONVERSION_TIME_588US = 3
+    CONVERSION_TIME_1_1MS = 4
+    CONVERSION_TIME_2_116MS = 5
+    CONVERSION_TIME_4_156MS = 6
+    CONVERSION_TIME_8_244MS = 7
     BOOTLOADER_MODE_BOOTLOADER = 0
     BOOTLOADER_MODE_FIRMWARE = 1
     BOOTLOADER_MODE_BOOTLOADER_WAIT_FOR_REBOOT = 2
@@ -147,7 +155,7 @@ class BrickletVoltageCurrentV2(Device):
 
     def set_current_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
-        The period in ms is the period with which the :cb:`Current` callback is triggered
+        The period is the period with which the :cb:`Current` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -174,8 +182,6 @@ class BrickletVoltageCurrentV2(Device):
          "'>'",    "Threshold is triggered when the value is greater than the min value (max is ignored)"
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
-
-        The default value is (0, false, 'x', 0, 0).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -205,7 +211,7 @@ class BrickletVoltageCurrentV2(Device):
 
     def set_voltage_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
-        The period in ms is the period with which the :cb:`Voltage` callback is triggered
+        The period is the period with which the :cb:`Voltage` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -232,8 +238,6 @@ class BrickletVoltageCurrentV2(Device):
          "'>'",    "Threshold is triggered when the value is greater than the min value (max is ignored)"
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
-
-        The default value is (0, false, 'x', 0, 0).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -263,7 +267,7 @@ class BrickletVoltageCurrentV2(Device):
 
     def set_power_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
-        The period in ms is the period with which the :cb:`Power` callback is triggered
+        The period is the period with which the :cb:`Power` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -290,8 +294,6 @@ class BrickletVoltageCurrentV2(Device):
          "'>'",    "Threshold is triggered when the value is greater than the min value (max is ignored)"
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
-
-        The default value is (0, false, 'x', 0, 0).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -368,6 +370,9 @@ class BrickletVoltageCurrentV2(Device):
         are measuring 1023mA, you can calibrate the Voltage/Current Bricklet
         by setting the current multiplier to 1000 and the divisor to 1023.
         The same applies for the voltage.
+
+        The calibration will be saved on the EEPROM of the Voltage/Current
+        Bricklet and only needs to be done once.
         """
         voltage_multiplier = int(voltage_multiplier)
         voltage_divisor = int(voltage_divisor)
@@ -388,9 +393,9 @@ class BrickletVoltageCurrentV2(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -405,7 +410,7 @@ class BrickletVoltageCurrentV2(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.

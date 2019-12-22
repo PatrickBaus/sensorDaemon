@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -112,7 +112,7 @@ class BrickletParticulateMatter(Device):
 
     def get_pm_concentration(self):
         """
-        Returns the particulate matter concentration in µg/m³, broken down as:
+        Returns the particulate matter concentration, broken down as:
 
         * PM\ :sub:`1.0`\ ,
         * PM\ :sub:`2.5`\  and
@@ -120,6 +120,10 @@ class BrickletParticulateMatter(Device):
 
         If the sensor is disabled (see :func:`Set Enable`) then the last known good
         values from the sensor are returned.
+
+        If you want to get the values periodically, it is recommended to use the
+        :cb:`PM Concentration` callback. You can set the callback configuration
+        with :func:`Set PM Concentration Callback Configuration`.
         """
         return GetPMConcentration(*self.ipcon.send_request(self, BrickletParticulateMatter.FUNCTION_GET_PM_CONCENTRATION, (), '', 'H H H'))
 
@@ -137,6 +141,10 @@ class BrickletParticulateMatter(Device):
 
         If the sensor is disabled (see :func:`Set Enable`) then the last known good
         value from the sensor is returned.
+
+        If you want to get the values periodically, it is recommended to use the
+        :cb:`PM Count` callback. You can set the callback configuration
+        with :func:`Set PM Count Callback Configuration`.
         """
         return GetPMCount(*self.ipcon.send_request(self, BrickletParticulateMatter.FUNCTION_GET_PM_COUNT, (), '', 'H H H H H H'))
 
@@ -145,8 +153,12 @@ class BrickletParticulateMatter(Device):
         Enables/Disables the fan and the laser diode of the sensors. The sensor is
         enabled by default.
 
-        The sensor takes about 30 after it is enabled to settle and produce stable
+        The sensor takes about 30 seconds after it is enabled to settle and produce stable
         values.
+
+        The laser diode has a lifetime of about 8000 hours. If you want to measure in
+        an interval with a long idle time (e.g. hourly) you should turn the
+        laser diode off between the measurements.
         """
         enable = bool(enable)
 
@@ -171,7 +183,7 @@ class BrickletParticulateMatter(Device):
 
     def set_pm_concentration_callback_configuration(self, period, value_has_to_change):
         """
-        The period in ms is the period with which the :cb:`PM Concentration`
+        The period is the period with which the :cb:`PM Concentration`
         callback is triggered periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -180,8 +192,6 @@ class BrickletParticulateMatter(Device):
 
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
-
-        The default value is (0, false).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -197,7 +207,7 @@ class BrickletParticulateMatter(Device):
 
     def set_pm_count_callback_configuration(self, period, value_has_to_change):
         """
-        The period in ms is the period with which the :cb:`PM Count` callback
+        The period is the period with which the :cb:`PM Count` callback
         is triggered periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -206,8 +216,6 @@ class BrickletParticulateMatter(Device):
 
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
-
-        The default value is (0, false).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -227,9 +235,9 @@ class BrickletParticulateMatter(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -244,7 +252,7 @@ class BrickletParticulateMatter(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -73,11 +73,13 @@ class BrickletIndustrialQuadRelay(Device):
         the other pins.
 
         If no groups are used (see :func:`Set Group`), the pins correspond to the
-        markings on the Quad Relay Bricklet.
+        markings on the Industrial Quad Relay Bricklet.
 
         If groups are used, the pins correspond to the element in the group.
         Element 1 in the group will get pins 0-3, element 2 pins 4-7, element 3
         pins 8-11 and element 4 pins 12-15.
+
+        All running monoflop timers will be aborted if this function is called.
         """
         value_mask = int(value_mask)
 
@@ -97,7 +99,7 @@ class BrickletIndustrialQuadRelay(Device):
         The second parameter is a bitmask with the desired value of the specified
         pins. A 1 in the bitmask means relay closed and a 0 means relay open.
 
-        The third parameter indicates the time (in ms) that the pins should hold
+        The third parameter indicates the time that the pins should hold
         the value.
 
         If this function is called with the parameters (9, 1, 1500) or
@@ -174,11 +176,14 @@ class BrickletIndustrialQuadRelay(Device):
         pin 0, open the relay of pin 1 and leave the others untouched.
 
         If no groups are used (see :func:`Set Group`), the pins correspond to the
-        markings on the Quad Relay Bricklet.
+        markings on the Industrial Quad Relay Bricklet.
 
         If groups are used, the pins correspond to the element in the group.
         Element 1 in the group will get pins 0-3, element 2 pins 4-7, element 3
         pins 8-11 and element 4 pins 12-15.
+
+        Running monoflop timers for the selected relays will be aborted if this function
+        is called.
         """
         selection_mask = int(selection_mask)
         value_mask = int(value_mask)

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -93,6 +93,8 @@ class BrickletIO4(Device):
         For example: The value 3 or 0b0011 will turn the pins 0-1 high and the
         pins 2-3 low.
 
+        All running monoflop timers will be aborted if this function is called.
+
         .. note::
          This function does nothing for pins that are configured as input.
          Pull-up resistors can be switched on with :func:`Set Configuration`.
@@ -127,7 +129,8 @@ class BrickletIO4(Device):
         * (3, 'o', false) or (0b0011, 'o', false) will set pins 0 and 1 as output low.
         * (4, 'o', true) or (0b0100, 'o', true) will set pin 2 of as output high.
 
-        The default configuration is input with pull-up.
+        Running monoflop timers for the specified pins will be aborted if this
+        function is called.
         """
         selection_mask = int(selection_mask)
         direction = create_char(direction)
@@ -152,13 +155,11 @@ class BrickletIO4(Device):
 
     def set_debounce_period(self, debounce):
         """
-        Sets the debounce period of the :cb:`Interrupt` callback in ms.
+        Sets the debounce period of the :cb:`Interrupt` callback.
 
         For example: If you set this value to 100, you will get the interrupt
         maximal every 100ms. This is necessary if something that bounces is
         connected to the IO-4 Bricklet, such as a button.
-
-        The default value is 100.
         """
         debounce = int(debounce)
 
@@ -200,7 +201,7 @@ class BrickletIO4(Device):
         The second parameter is a bitmask with the desired value of the specified
         output pins. A 1 in the bitmask means high and a 0 in the bitmask means low.
 
-        The third parameter indicates the time (in ms) that the pins should hold
+        The third parameter indicates the time that the pins should hold
         the value.
 
         If this function is called with the parameters (9, 1, 1500) or
@@ -239,6 +240,9 @@ class BrickletIO4(Device):
 
         For example: The parameters (9, 4) or (0b0110, 0b0100) will turn
         pin 1 low and pin 2 high, pin 0 and 3 will remain untouched.
+
+        Running monoflop timers for the selected pins will be aborted if this
+        function is called.
 
         .. note::
          This function does nothing for pins that are configured as input.
@@ -281,8 +285,6 @@ class BrickletIO4(Device):
 
         If you don't know what any of this means, just leave it at default. The
         default configuration is very likely OK for you.
-
-        Default values: 0 (edge type) and 100ms (debounce time)
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """

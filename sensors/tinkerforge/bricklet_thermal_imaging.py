@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -157,7 +157,7 @@ class BrickletThermalImaging(Device):
         bottom right.
 
         Each 16-bit value represents one temperature measurement in either
-        Kelvin/10 or Kelvin/100 (depending on the resolution set with:func:`Set Resolution`).
+        Kelvin/10 or Kelvin/100 (depending on the resolution set with :func:`Set Resolution`).
 
         Before you can use this function you have to enable it with
         :func:`Set Image Transfer Config`.
@@ -269,17 +269,17 @@ class BrickletThermalImaging(Device):
         lower the value of N the higher the influence of the current video frame whereas
         the higher the value of N the more influence the previous damped transfer function has.
 
-        Clip Limit Index 0 (AGC HEQ Clip Limit Low): This parameter defines an artificial population that is added to
+        Clip Limit Index 0 (AGC HEQ Clip Limit High): This parameter defines the maximum number of pixels allowed
+        to accumulate in any given histogram bin. Any additional pixels in a given bin are clipped.
+        The effect of this parameter is to limit the influence of highly-populated bins on the
+        resulting HEQ transformation function.
+
+        Clip Limit Index 1 (AGC HEQ Clip Limit Low): This parameter defines an artificial population that is added to
         every non-empty histogram bin. In other words, if the Clip Limit Low is set to L, a bin
         with an actual population of X will have an effective population of L + X. Any empty bin
         that is nearby a populated bin will be given an artificial population of L. The effect of
         higher values is to provide a more linear transfer function; lower values provide a more
         non-linear (equalized) transfer function.
-
-        Clip Limit Index 1 (AGC HEQ Clip Limit High): This parameter defines the maximum number of pixels allowed
-        to accumulate in any given histogram bin. Any additional pixels in a given bin are clipped.
-        The effect of this parameter is to limit the influence of highly-populated bins on the
-        resulting HEQ transformation function.
 
         Empty Counts: This parameter specifies the maximum number of pixels in a bin that will be
         interpreted as an empty bin. Histogram bins with this number of pixels or less will be
@@ -336,9 +336,9 @@ class BrickletThermalImaging(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -353,7 +353,7 @@ class BrickletThermalImaging(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
@@ -524,7 +524,7 @@ class BrickletThermalImaging(Device):
         bottom right.
 
         Each 16-bit value represents one temperature measurement in either
-        Kelvin/10 or Kelvin/100 (depending on the resolution set with:func:`Set Resolution`).
+        Kelvin/10 or Kelvin/100 (depending on the resolution set with :func:`Set Resolution`).
 
         Before you can use this function you have to enable it with
         :func:`Set Image Transfer Config`.

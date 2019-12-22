@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -208,9 +208,8 @@ class BrickletRS232V2(Device):
 
     def set_buffer_config(self, send_buffer_size, receive_buffer_size):
         """
-        Sets the send and receive buffer size in byte. In sum there is
-        10240 byte (10kb) buffer available and the minimum buffer size
-        is 1024 byte (1kb) for both.
+        Sets the send and receive buffer size in byte. In total the buffers have to be
+        10240 byte (10kb) in size, the minimum buffer size is 1024 byte (1kb) for each.
 
         The current buffer content is lost if this function is called.
 
@@ -252,9 +251,9 @@ class BrickletRS232V2(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -269,7 +268,7 @@ class BrickletRS232V2(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.

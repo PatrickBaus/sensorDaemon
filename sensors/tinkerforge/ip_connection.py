@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2012-2015, 2017 Matthias Bolte <matthias@tinkerforge.com>
+# Copyright (C) 2012-2015, 2017, 2019 Matthias Bolte <matthias@tinkerforge.com>
 # Copyright (C) 2011-2012 Olaf Lüke <olaf@tinkerforge.com>
 #
 # Redistribution and use in source and binary forms of this file,
@@ -54,7 +54,11 @@ def base58decode(encoded):
     column_multiplier = 1
 
     for c in encoded[::-1]:
-        column = BASE58.index(c)
+        try:
+            column = BASE58.index(c)
+        except ValueError:
+            raise Error(Error.INVALID_UID, 'UID "{0}" contains invalid character'.format(encoded), suppress_context=True)
+
         value += column * column_multiplier
         column_multiplier *= 58
 
@@ -160,7 +164,7 @@ if sys.hexversion < 0x03000000:
                 if code_point <= 255:
                     chars.append(chr(code_point))
                 else:
-                    raise ValueError('Invalid string value: {1}'.format(repr(value)))
+                    raise ValueError('Invalid string value: {0}'.format(repr(value)))
 
             return ''.join(chars)
         elif isinstance(value, bytearray): # Python2 bytearray satisfies item <= 255 by default
@@ -177,7 +181,7 @@ else:
         if isinstance(value, str):
             for char in value:
                 if ord(char) > 255:
-                    raise ValueError('Invalid string value: {1}'.format(repr(value)))
+                    raise ValueError('Invalid string value: {0}'.format(repr(value)))
 
             return value
         elif isinstance(value, (bytes, bytearray)): # Python3 bytes/bytearray satisfies item <= 255 by default
@@ -305,12 +309,25 @@ class Error(Exception):
     NOT_SUPPORTED = -10
     UNKNOWN_ERROR_CODE = -11
     STREAM_OUT_OF_SYNC = -12
+    INVALID_UID = -13
+    NON_ASCII_CHAR_IN_SECRET = -14
 
-    def __init__(self, value, description):
+    def __init__(self, value, description, suppress_context=False):
         Exception.__init__(self, '{0} ({1})'.format(description, value))
 
         self.value = value
         self.description = description
+
+        if sys.hexversion >= 0x03000000 and suppress_context:
+            # this is a Python 2 syntax compatible form of the "raise ... from None"
+            # syntax in Python 3. especially the timeout error shows in Python 3
+            # the queue.Empty exception as its context. this is confusing and doesn't
+            # help much. the "raise ... from None" syntax in Python 3 stops the
+            # default traceback printer from outputting the context of the exception
+            # while keeping the queue.Empty exception in the __context__ field for
+            # debugging purposes.
+            self.__cause__ = None
+            self.__suppress_context__ = True
 
 class Device(object):
     RESPONSE_EXPECTED_INVALID_FUNCTION_ID = 0
@@ -326,8 +343,14 @@ class Device(object):
 
         uid_ = base58decode(uid)
 
-        if uid_ > 0xFFFFFFFF:
+        if uid_ > (1 << 64) - 1:
+            raise Error(Error.INVALID_UID, 'UID "{0}" is too big'.format(uid))
+
+        if uid_ > (1 << 32) - 1:
             uid_ = uid64_to_uid32(uid_)
+
+        if uid_ == 0:
+            raise Error(Error.INVALID_UID, 'UID "{0}" is empty or maps to zero'.format(uid))
 
         self.uid = uid_
         self.ipcon = ipcon
@@ -513,6 +536,8 @@ class IPConnection(object):
         self.auto_reconnect = True
         self.auto_reconnect_allowed = False
         self.auto_reconnect_pending = False
+        self.auto_reconnect_internal = False
+        self.connect_failure_callback = None
         self.sequence_number_lock = threading.Lock()
         self.next_sequence_number = 0 # protected by sequence_number_lock
         self.authentication_lock = threading.Lock() # protects authentication handshake
@@ -597,10 +622,13 @@ class IPConnection(object):
         is not enabled at all on the Brick Daemon or the WIFI/Ethernet Extension.
 
         For more information about authentication see
-        http://www.tinkerforge.com/en/doc/Tutorials/Tutorial_Authentication/Tutorial.html
+        https://www.tinkerforge.com/en/doc/Tutorials/Tutorial_Authentication/Tutorial.html
         """
 
-        secret_bytes = secret.encode('ascii')
+        try:
+            secret_bytes = secret.encode('ascii')
+        except UnicodeEncodeError:
+            raise Error(Error.NON_ASCII_CHAR_IN_SECRET, 'Authentication secret contains non-ASCII characters')
 
         with self.authentication_lock:
             if self.next_authentication_nonce == 0:
@@ -765,16 +793,31 @@ class IPConnection(object):
                 tmp.settimeout(0.1)
             else:
                 tmp.settimeout(None)
-        except:
+        except Exception as e:
             def cleanup1():
-                # end callback thread
-                if not is_auto_reconnect:
-                    self.callback.queue.put((IPConnection.QUEUE_EXIT, None))
+                if self.auto_reconnect_internal:
+                    if is_auto_reconnect:
+                        return
 
-                    if threading.current_thread() is not self.callback.thread:
-                        self.callback.thread.join()
+                    if self.connect_failure_callback is not None:
+                        self.connect_failure_callback(e)
 
-                    self.callback = None
+                    self.auto_reconnect_allowed = True
+
+                    # FIXME: don't misuse disconnected-callback here to trigger an auto-reconnect
+                    #        because not actual connection has been established yet
+                    self.callback.queue.put((IPConnection.QUEUE_META,
+                                             (IPConnection.CALLBACK_DISCONNECTED,
+                                              IPConnection.DISCONNECT_REASON_ERROR, None)))
+                else:
+                    # end callback thread
+                    if not is_auto_reconnect:
+                        self.callback.queue.put((IPConnection.QUEUE_EXIT, None))
+
+                        if threading.current_thread() is not self.callback.thread:
+                            self.callback.thread.join()
+
+                        self.callback = None
 
             cleanup1()
             raise
@@ -887,6 +930,10 @@ class IPConnection(object):
         # close socket
         self.socket.close()
         self.socket = None
+
+    def set_auto_reconnect_internal(self, auto_reconnect, connect_failure_callback):
+        self.auto_reconnect_internal = auto_reconnect
+        self.connect_failure_callback = connect_failure_callback
 
     def receive_loop(self, socket_id):
         if sys.hexversion < 0x03000000:
@@ -1129,7 +1176,7 @@ class IPConnection(object):
                             continue
             except socket.error:
                 self.handle_disconnect_by_peer(IPConnection.DISCONNECT_REASON_ERROR, None, True)
-                raise Error(Error.NOT_CONNECTED, 'Not connected')
+                raise Error(Error.NOT_CONNECTED, 'Not connected', suppress_context=True)
 
             self.disconnect_probe_flag = False
 
@@ -1170,7 +1217,7 @@ class IPConnection(object):
                             break
                 except queue.Empty:
                     msg = 'Did not receive response for function {0} in time'.format(function_id)
-                    raise Error(Error.TIMEOUT, msg)
+                    raise Error(Error.TIMEOUT, msg, suppress_context=True)
                 finally:
                     device.expected_response_function_id = None
                     device.expected_response_sequence_number = None

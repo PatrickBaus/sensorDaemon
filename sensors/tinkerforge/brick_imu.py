@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -416,10 +416,8 @@ class BrickIMU(Device):
 
     def set_acceleration_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Acceleration` callback is triggered
+        Sets the period with which the :cb:`Acceleration` callback is triggered
         periodically. A value of 0 turns the callback off.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -433,7 +431,7 @@ class BrickIMU(Device):
 
     def set_magnetic_field_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Magnetic Field` callback is
+        Sets the period with which the :cb:`Magnetic Field` callback is
         triggered periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -448,7 +446,7 @@ class BrickIMU(Device):
 
     def set_angular_velocity_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Angular Velocity` callback is
+        Sets the period with which the :cb:`Angular Velocity` callback is
         triggered periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -463,7 +461,7 @@ class BrickIMU(Device):
 
     def set_all_data_period(self, period):
         """
-        Sets the period in ms with which the :cb:`All Data` callback is triggered
+        Sets the period with which the :cb:`All Data` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -478,7 +476,7 @@ class BrickIMU(Device):
 
     def set_orientation_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Orientation` callback is triggered
+        Sets the period with which the :cb:`Orientation` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -493,7 +491,7 @@ class BrickIMU(Device):
 
     def set_quaternion_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Quaternion` callback is triggered
+        Sets the period with which the :cb:`Quaternion` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -549,7 +547,7 @@ class BrickIMU(Device):
         enabled, the Brick will try to adapt the baudrate for the communication
         between Bricks and Bricklets according to the amount of data that is transferred.
 
-        The baudrate will be increased exponetially if lots of data is send/receieved and
+        The baudrate will be increased exponentially if lots of data is send/received and
         decreased linearly if little data is send/received.
 
         This lowers the baudrate in applications where little data is transferred (e.g.
@@ -611,7 +609,7 @@ class BrickIMU(Device):
         If the dynamic baudrate feature is enabled, the baudrate set by this
         function corresponds to the maximum baudrate (see :func:`Set SPITFP Baudrate Config`).
 
-        Regulatory testing is done with the default baudrate. If CE compatability
+        Regulatory testing is done with the default baudrate. If CE compatibility
         or similar is necessary in you applications we recommend to not change
         the baudrate.
 
@@ -642,7 +640,7 @@ class BrickIMU(Device):
 
         * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Brick side. All
@@ -706,7 +704,7 @@ class BrickIMU(Device):
         value returned is not the ambient temperature!
 
         The temperature is only proportional to the real temperature and it has an
-        accuracy of +-15%. Practically it is only useful as an indicator for
+        accuracy of ±15%. Practically it is only useful as an indicator for
         temperature changes.
         """
         return self.ipcon.send_request(self, BrickIMU.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 'h')

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -142,6 +142,8 @@ class BrickletIO4V2(Device):
         For example: (True, True, False, False) will turn the channels 0-1 high and the
         channels 2-3 low.
 
+        All running monoflop timers and PWMs will be aborted if this function is called.
+
         .. note::
          This function does nothing for channels that are configured as input. Pull-up
          resistors can be switched on with :func:`Set Configuration`.
@@ -161,6 +163,9 @@ class BrickletIO4V2(Device):
     def set_selected_value(self, channel, value):
         """
         Sets the output value of a specific channel without affecting the other channels.
+
+        A running monoflop timer or PWM for the specific channel will be aborted if this
+        function is called.
 
         .. note::
          This function does nothing for channels that are configured as input. Pull-up
@@ -189,7 +194,8 @@ class BrickletIO4V2(Device):
         * (2, 'o', true) will set channel 2 as output high.
         * (3, 'o', false) will set channel 3 as output low.
 
-        The default configuration is input with pull-up.
+        A running monoflop timer or PWM for the specific channel will be aborted if this
+        function is called.
         """
         channel = int(channel)
         direction = create_char(direction)
@@ -209,7 +215,7 @@ class BrickletIO4V2(Device):
         """
         This callback can be configured per channel.
 
-        The period in ms is the period with which the :cb:`Input Value`
+        The period is the period with which the :cb:`Input Value`
         callback is triggered periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -218,8 +224,6 @@ class BrickletIO4V2(Device):
 
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
-
-        The default value is (0, false).
         """
         channel = int(channel)
         period = int(period)
@@ -238,7 +242,7 @@ class BrickletIO4V2(Device):
 
     def set_all_input_value_callback_configuration(self, period, value_has_to_change):
         """
-        The period in ms is the period with which the :cb:`All Input Value`
+        The period is the period with which the :cb:`All Input Value`
         callback is triggered periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -247,8 +251,6 @@ class BrickletIO4V2(Device):
 
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
-
-        The default value is (0, false).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -265,11 +267,13 @@ class BrickletIO4V2(Device):
     def set_monoflop(self, channel, value, time):
         """
         The first parameter is the desired state of the channel (*true* means output *high*
-        and *false* means output *low*). The second parameter indicates the time (in ms) that
+        and *false* means output *low*). The second parameter indicates the time that
         the channel should hold the state.
 
         If this function is called with the parameters (true, 1500):
         The channel will turn on and in 1.5s it will turn off again.
+
+        A PWM for the selected channel will be aborted if this function is called.
 
         A monoflop can be used as a failsafe mechanism. For example: Lets assume you
         have a RS485 bus and a IO-4 Bricklet 2.0 is connected to one of the slave
@@ -302,6 +306,9 @@ class BrickletIO4V2(Device):
 
         If you set the reset counter to *true*, the count is set back to 0
         directly after it is read.
+
+        .. note::
+         Calling this function is only allowed for channels configured as input.
         """
         channel = int(channel)
         reset_counter = bool(reset_counter)
@@ -315,18 +322,17 @@ class BrickletIO4V2(Device):
         The edge type parameter configures if rising edges, falling edges or
         both are counted if the channel is configured for input. Possible edge types are:
 
-        * 0 = rising (default)
+        * 0 = rising
         * 1 = falling
         * 2 = both
-
-        The debounce time is given in ms.
 
         Configuring an edge counter resets its value to 0.
 
         If you don't know what any of this means, just leave it at default. The
         default configuration is very likely OK for you.
 
-        Default values: 0 (edge type) and 100ms (debounce time)
+        .. note::
+         Calling this function is only allowed for channels configured as input.
         """
         channel = int(channel)
         edge_type = int(edge_type)
@@ -338,6 +344,9 @@ class BrickletIO4V2(Device):
         """
         Returns the edge type and debounce time for the selected channel as set by
         :func:`Set Edge Count Configuration`.
+
+        .. note::
+         Calling this function is only allowed for channels configured as input.
         """
         channel = int(channel)
 
@@ -345,17 +354,14 @@ class BrickletIO4V2(Device):
 
     def set_pwm_configuration(self, channel, frequency, duty_cycle):
         """
-        Activates a PWM for the given channel with the frequency given in 1/10Hz and the duty
-        cycle given in 1/100%.
+        Activates a PWM for the given channel.
 
         You need to set the channel to output before you call this function, otherwise it will
-        be ignored. To turn the PWM off again, you can set the frequency to 0 or any other
+        report an invalid parameter error. To turn the PWM off again, you can set the frequency to 0 or any other
         function that changes a value of the channel (e.g. :func:`Set Selected Value`).
 
-        The maximum frequency value is 320000000 (32MHz). The maximum duty cycle value is
-        10000 (100%).
-
-        The default values are 0, 0.
+        A running monoflop timer for the given channel will be aborted if this function
+        is called.
         """
         channel = int(channel)
         frequency = int(frequency)
@@ -377,9 +383,9 @@ class BrickletIO4V2(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -394,7 +400,7 @@ class BrickletIO4V2(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -453,7 +453,8 @@ class BrickMaster(Device):
 
     def is_chibi_present(self):
         """
-        Returns *true* if a Chibi Extension is available to be used by the Master Brick.
+        Returns *true* if the Master Brick is at position 0 in the stack and a Chibi
+        Extension is available.
         """
         return self.ipcon.send_request(self, BrickMaster.FUNCTION_IS_CHIBI_PRESENT, (), '', '!')
 
@@ -575,7 +576,7 @@ class BrickMaster(Device):
         different for different frequencies:
 
         .. csv-table::
-         :header: "Frequency",             "Possible Channels"
+         :header: "Frequency", "Possible Channels"
          :widths: 40, 60
 
          "OQPSK 868MHz (Europe)", "0"
@@ -599,7 +600,8 @@ class BrickMaster(Device):
 
     def is_rs485_present(self):
         """
-        Returns *true* if a RS485 Extension is available to be used by the Master Brick.
+        Returns *true* if the Master Brick is at position 0 in the stack and a RS485
+        Extension is available.
         """
         return self.ipcon.send_request(self, BrickMaster.FUNCTION_IS_RS485_PRESENT, (), '', '!')
 
@@ -694,7 +696,8 @@ class BrickMaster(Device):
 
     def is_wifi_present(self):
         """
-        Returns *true* if a WIFI Extension is available to be used by the Master Brick.
+        Returns *true* if the Master Brick is at position 0 in the stack and a WIFI
+        Extension is available.
         """
         return self.ipcon.send_request(self, BrickMaster.FUNCTION_IS_WIFI_PRESENT, (), '', '!')
 
@@ -998,13 +1001,11 @@ class BrickMaster(Device):
 
     def set_stack_current_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Stack Current` callback is triggered
+        Sets the period with which the :cb:`Stack Current` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Stack Current` callback is only triggered if the current has changed
         since the last triggering.
-
-        The default value is 0.
 
         .. versionadded:: 2.0.5$nbsp;(Firmware)
         """
@@ -1022,13 +1023,11 @@ class BrickMaster(Device):
 
     def set_stack_voltage_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Stack Voltage` callback is triggered
+        Sets the period with which the :cb:`Stack Voltage` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Stack Voltage` callback is only triggered if the voltage has changed
         since the last triggering.
-
-        The default value is 0.
 
         .. versionadded:: 2.0.5$nbsp;(Firmware)
         """
@@ -1046,13 +1045,11 @@ class BrickMaster(Device):
 
     def set_usb_voltage_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`USB Voltage` callback is triggered
+        Sets the period with which the :cb:`USB Voltage` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`USB Voltage` callback is only triggered if the voltage has changed
         since the last triggering.
-
-        The default value is 0.
 
         .. versionadded:: 2.0.5$nbsp;(Firmware)
         """
@@ -1172,7 +1169,7 @@ class BrickMaster(Device):
 
     def set_debounce_period(self, debounce):
         """
-        Sets the period in ms with which the threshold callbacks
+        Sets the period with which the threshold callbacks
 
         * :cb:`Stack Current Reached`,
         * :cb:`Stack Voltage Reached`,
@@ -1185,8 +1182,6 @@ class BrickMaster(Device):
         * :func:`Set USB Voltage Callback Threshold`
 
         keep being reached.
-
-        The default value is 100.
 
         .. versionadded:: 2.0.5$nbsp;(Firmware)
         """
@@ -1204,8 +1199,8 @@ class BrickMaster(Device):
 
     def is_ethernet_present(self):
         """
-        Returns *true* if a Ethernet Extension is available to be used by the Master
-        Brick.
+        Returns *true* if the Master Brick is at position 0 in the stack and an Ethernet
+        Extension is available.
 
         .. versionadded:: 2.1.0$nbsp;(Firmware)
         """
@@ -1402,8 +1397,8 @@ class BrickMaster(Device):
 
     def is_wifi2_present(self):
         """
-        Returns *true* if a WIFI Extension 2.0 is available to be used by the Master
-        Brick.
+        Returns *true* if the Master Brick is at position 0 in the stack and a WIFI
+        Extension 2.0 is available.
 
         .. versionadded:: 2.4.0$nbsp;(Firmware)
         """
@@ -1715,7 +1710,7 @@ class BrickMaster(Device):
 
     def set_wifi2_ap_password(self, password):
         """
-        Sets the access point password (up to 63 chars) for the configured encryption
+        Sets the access point password (at least 8 and up to 63 chars) for the configured encryption
         mode, see :func:`Set Wifi2 AP Configuration`.
 
         To apply configuration changes to the WIFI Extension 2.0 the
@@ -1943,7 +1938,7 @@ class BrickMaster(Device):
         enabled, the Brick will try to adapt the baudrate for the communication
         between Bricks and Bricklets according to the amount of data that is transferred.
 
-        The baudrate will be increased exponetially if lots of data is send/receieved and
+        The baudrate will be increased exponentially if lots of data is send/received and
         decreased linearly if little data is send/received.
 
         This lowers the baudrate in applications where little data is transferred (e.g.
@@ -2005,7 +2000,7 @@ class BrickMaster(Device):
         If the dynamic baudrate feature is enabled, the baudrate set by this
         function corresponds to the maximum baudrate (see :func:`Set SPITFP Baudrate Config`).
 
-        Regulatory testing is done with the default baudrate. If CE compatability
+        Regulatory testing is done with the default baudrate. If CE compatibility
         or similar is necessary in you applications we recommend to not change
         the baudrate.
 
@@ -2036,7 +2031,7 @@ class BrickMaster(Device):
 
         * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Brick side. All
@@ -2100,7 +2095,7 @@ class BrickMaster(Device):
         value returned is not the ambient temperature!
 
         The temperature is only proportional to the real temperature and it has an
-        accuracy of +-15%. Practically it is only useful as an indicator for
+        accuracy of ±15%. Practically it is only useful as an indicator for
         temperature changes.
         """
         return self.ipcon.send_request(self, BrickMaster.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 'h')

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -191,8 +191,6 @@ class BrickletGPSV2(Device):
         """
         Returns the current altitude and corresponding geoidal separation.
 
-        Both values are given in cm.
-
         This data is only valid if there is currently a fix as indicated by
         :func:`Get Status`.
         """
@@ -200,8 +198,7 @@ class BrickletGPSV2(Device):
 
     def get_motion(self):
         """
-        Returns the current course and speed. Course is given in hundredths degree
-        and speed is given in hundredths km/h. A course of 0° means the Bricklet is
+        Returns the current course and speed. A course of 0° means the Bricklet is
         traveling north bound and 90° means it is traveling east bound.
 
         Please note that this only returns useful values if an actual movement
@@ -217,7 +214,7 @@ class BrickletGPSV2(Device):
         Returns the current date and time. The date is
         given in the format ``ddmmyy`` and the time is given
         in the format ``hhmmss.sss``. For example, 140713 means
-        14.05.13 as date and 195923568 means 19:59:23.568 as time.
+        14.07.13 as date and 195923568 means 19:59:23.568 as time.
         """
         return GetDateTime(*self.ipcon.send_request(self, BrickletGPSV2.FUNCTION_GET_DATE_TIME, (), '', 'I I'))
 
@@ -261,12 +258,7 @@ class BrickletGPSV2(Device):
 
     def get_satellite_status(self, satellite_system, satellite_number):
         """
-        Returns the current
-
-        * elevation (0° - 90°),
-        * azimuth (0° - 359°) and
-        * SNR (0dB - 99dB)
-
+        Returns the current elevation, azimuth and SNR
         for a given satellite and satellite system.
 
         The satellite number here always goes from 1 to 32. For GLONASS it corresponds to
@@ -302,13 +294,11 @@ class BrickletGPSV2(Device):
 
     def set_coordinates_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Coordinates` callback is triggered
+        Sets the period with which the :cb:`Coordinates` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Coordinates` callback is only triggered if the coordinates changed
         since the last triggering.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -322,13 +312,11 @@ class BrickletGPSV2(Device):
 
     def set_status_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Status` callback is triggered
+        Sets the period with which the :cb:`Status` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Status` callback is only triggered if the status changed since the
         last triggering.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -342,13 +330,11 @@ class BrickletGPSV2(Device):
 
     def set_altitude_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Altitude` callback is triggered
+        Sets the period with which the :cb:`Altitude` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Altitude` callback is only triggered if the altitude changed since the
         last triggering.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -362,13 +348,11 @@ class BrickletGPSV2(Device):
 
     def set_motion_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Motion` callback is triggered
+        Sets the period with which the :cb:`Motion` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Motion` callback is only triggered if the motion changed since the
         last triggering.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -382,13 +366,11 @@ class BrickletGPSV2(Device):
 
     def set_date_time_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Date Time` callback is triggered
+        Sets the period with which the :cb:`Date Time` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`Date Time` callback is only triggered if the date or time changed
         since the last triggering.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -428,9 +410,9 @@ class BrickletGPSV2(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -445,7 +427,7 @@ class BrickletGPSV2(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.

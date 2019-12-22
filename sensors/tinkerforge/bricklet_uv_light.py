@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -72,10 +72,11 @@ class BrickletUVLight(Device):
     def get_uv_light(self):
         """
         Returns the UV light intensity of the sensor, the intensity is given
-        in µW/cm².
+        in 1/10 mW/m². The sensor has already weighted the intensity with the erythemal
+        action spectrum to get the skin-affecting irradiation.
 
-        To get UV Index you have to divide the value by 250. For example, a UV Light
-        intensity of 500µW/cm² is equivalent to an UV Index of 2.
+        To get UV index you just have to divide the value by 250. For example, a UV
+        light intensity of 500 is equivalent to an UV index of 2.
 
         If you want to get the intensity periodically, it is recommended to use the
         :cb:`UV Light` callback and set the period with
@@ -85,13 +86,11 @@ class BrickletUVLight(Device):
 
     def set_uv_light_callback_period(self, period):
         """
-        Sets the period in ms with which the :cb:`UV Light` callback is triggered
+        Sets the period with which the :cb:`UV Light` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         The :cb:`UV Light` callback is only triggered if the intensity has changed since
         the last triggering.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -135,7 +134,7 @@ class BrickletUVLight(Device):
 
     def set_debounce_period(self, debounce):
         """
-        Sets the period in ms with which the threshold callbacks
+        Sets the period with which the threshold callbacks
 
         * :cb:`UV Light Reached`,
 
@@ -144,8 +143,6 @@ class BrickletUVLight(Device):
         * :func:`Set UV Light Callback Threshold`,
 
         keep being reached.
-
-        The default value is 100.
         """
         debounce = int(debounce)
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -112,14 +112,7 @@ class BrickletTemperatureIRV2(Device):
 
     def get_ambient_temperature(self):
         """
-        Returns the ambient temperature of the sensor. The value
-        has a range of -400 to 1250 and is given in °C/10,
-        e.g. a value of 423 means that an ambient temperature of 42.3 °C is
-        measured.
-
-        If you want to get the ambient temperature periodically, it is recommended
-        to use the :cb:`Ambient Temperature` callback and set the period with
-        :func:`Set Ambient Temperature Callback Configuration`.
+        Returns the ambient temperature of the sensor.
 
 
         If you want to get the value periodically, it is recommended to use the
@@ -130,7 +123,7 @@ class BrickletTemperatureIRV2(Device):
 
     def set_ambient_temperature_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
-        The period in ms is the period with which the :cb:`Ambient Temperature` callback is triggered
+        The period is the period with which the :cb:`Ambient Temperature` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -157,8 +150,6 @@ class BrickletTemperatureIRV2(Device):
          "'>'",    "Threshold is triggered when the value is greater than the min value (max is ignored)"
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
-
-        The default value is (0, false, 'x', 0, 0).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -177,18 +168,11 @@ class BrickletTemperatureIRV2(Device):
     def get_object_temperature(self):
         """
         Returns the object temperature of the sensor, i.e. the temperature
-        of the surface of the object the sensor is aimed at. The value
-        has a range of -700 to 3800 and is given in °C/10,
-        e.g. a value of 3001 means that a temperature of 300.1 °C is measured
-        on the surface of the object.
+        of the surface of the object the sensor is aimed at.
 
         The temperature of different materials is dependent on their `emissivity
         <https://en.wikipedia.org/wiki/Emissivity>`__. The emissivity of the material
         can be set with :func:`Set Emissivity`.
-
-        If you want to get the object temperature periodically, it is recommended
-        to use the :cb:`Object Temperature` callback and set the period with
-        :func:`Set Object Temperature Callback Configuration`.
 
 
         If you want to get the value periodically, it is recommended to use the
@@ -199,7 +183,7 @@ class BrickletTemperatureIRV2(Device):
 
     def set_object_temperature_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
-        The period in ms is the period with which the :cb:`Object Temperature` callback is triggered
+        The period is the period with which the :cb:`Object Temperature` callback is triggered
         periodically. A value of 0 turns the callback off.
 
         If the `value has to change`-parameter is set to true, the callback is only
@@ -226,8 +210,6 @@ class BrickletTemperatureIRV2(Device):
          "'>'",    "Threshold is triggered when the value is greater than the min value (max is ignored)"
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
-
-        The default value is (0, false, 'x', 0, 0).
         """
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
@@ -251,7 +233,7 @@ class BrickletTemperatureIRV2(Device):
 
         The emissivity is usually given as a value between 0.0 and 1.0. A list of
         emissivities of different materials can be found
-        `here <http://www.infrared-thermography.com/material.htm>`__.
+        `here <https://www.infrared-thermography.com/material.htm>`__.
 
         The parameter of :func:`Set Emissivity` has to be given with a factor of
         65535 (16-bit). For example: An emissivity of 0.1 can be set with the
@@ -261,8 +243,8 @@ class BrickletTemperatureIRV2(Device):
          If you need a precise measurement for the object temperature, it is
          absolutely crucial that you also provide a precise emissivity.
 
-        The default emissivity is 1.0 (value of 65535) and the minimum emissivity the
-        sensor can handle is 0.1 (value of 6553).
+        The emissivity is stored in non-volatile memory and will still be
+        used after a restart or power cycle of the Bricklet.
         """
         emissivity = int(emissivity)
 
@@ -280,9 +262,9 @@ class BrickletTemperatureIRV2(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -297,7 +279,7 @@ class BrickletTemperatureIRV2(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.

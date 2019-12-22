@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -131,6 +131,9 @@ class BrickletOutdoorWeather(Device):
         that have been seen since the startup of the Bricklet.
 
         Each station gives itself a random identifier on first startup.
+
+        Since firmware version 2.0.2 a station is removed from the list if no data was received for
+        12 hours.
         """
         return GetStationIdentifiersLowLevel(*self.ipcon.send_request(self, BrickletOutdoorWeather.FUNCTION_GET_STATION_IDENTIFIERS_LOW_LEVEL, (), '', 'H H 60B'))
 
@@ -141,6 +144,9 @@ class BrickletOutdoorWeather(Device):
         that have been seen since the startup of the Bricklet.
 
         Each sensor gives itself a random identifier on first startup.
+
+        Since firmware version 2.0.2 a sensor is removed from the list if no data was received for
+        12 hours.
         """
         return GetSensorIdentifiersLowLevel(*self.ipcon.send_request(self, BrickletOutdoorWeather.FUNCTION_GET_SENSOR_IDENTIFIERS_LOW_LEVEL, (), '', 'H H 60B'))
 
@@ -151,14 +157,14 @@ class BrickletOutdoorWeather(Device):
 
         The return values are:
 
-        * Temperature in °C/10,
-        * Humidity in %RH,
-        * Wind Speed in m/10s,
-        * Gust Speed in m/10s,
-        * Rain Fall in mm/10,
-        * Wind Direction (N, NNE, NE, ENE, E, ESE, SE, SSE, S, SSW, SW, WSW, W, WNW, NW, NNW),
-        * Battery Low (true or false) and
-        * Last Change (time in seconds since the reception of this data).
+        * Temperature,
+        * Humidity,
+        * Wind Speed,
+        * Gust Speed,
+        * Rain Fall,
+        * Wind Direction,
+        * Battery Low (true if battery is low) and
+        * Last Change (seconds since the reception of this data).
         """
         identifier = int(identifier)
 
@@ -171,9 +177,9 @@ class BrickletOutdoorWeather(Device):
 
         The return values are:
 
-        * Temperature in °C/10,
-        * Humidity in %RH and
-        * Last Change (time in seconds since the last reception of data).
+        * Temperature,
+        * Humidity and
+        * Last Change (seconds since the last reception of data).
         """
         identifier = int(identifier)
 
@@ -181,7 +187,7 @@ class BrickletOutdoorWeather(Device):
 
     def set_station_callback_configuration(self, enable_callback):
         """
-        Turns callback for station data on or off. Default is off.
+        Turns callback for station data on or off.
         """
         enable_callback = bool(enable_callback)
 
@@ -195,7 +201,7 @@ class BrickletOutdoorWeather(Device):
 
     def set_sensor_callback_configuration(self, enable_callback):
         """
-        Turns callback for sensor data on or off. Default is off.
+        Turns callback for sensor data on or off.
         """
         enable_callback = bool(enable_callback)
 
@@ -213,9 +219,9 @@ class BrickletOutdoorWeather(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -230,7 +236,7 @@ class BrickletOutdoorWeather(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
@@ -354,6 +360,9 @@ class BrickletOutdoorWeather(Device):
         that have been seen since the startup of the Bricklet.
 
         Each station gives itself a random identifier on first startup.
+
+        Since firmware version 2.0.2 a station is removed from the list if no data was received for
+        12 hours.
         """
         with self.stream_lock:
             ret = self.get_station_identifiers_low_level()
@@ -383,6 +392,9 @@ class BrickletOutdoorWeather(Device):
         that have been seen since the startup of the Bricklet.
 
         Each sensor gives itself a random identifier on first startup.
+
+        Since firmware version 2.0.2 a sensor is removed from the list if no data was received for
+        12 hours.
         """
         with self.stream_lock:
             ret = self.get_sensor_identifiers_low_level()

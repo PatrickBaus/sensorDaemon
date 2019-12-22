@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -135,6 +135,7 @@ class BrickIMUV2(Device):
     SENSOR_FUSION_OFF = 0
     SENSOR_FUSION_ON = 1
     SENSOR_FUSION_ON_WITHOUT_MAGNETOMETER = 2
+    SENSOR_FUSION_ON_WITHOUT_FAST_MAGNETOMETER_CALIBRATION = 3
     COMMUNICATION_METHOD_NONE = 0
     COMMUNICATION_METHOD_USB = 1
     COMMUNICATION_METHOD_SPI_STACK = 2
@@ -313,7 +314,7 @@ class BrickIMUV2(Device):
         Returns the current orientation (w, x, y, z) of the IMU Brick as
         `quaternions <https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation>`__.
 
-        You have to divide the returns values by 16383 (14 bit) to get
+        You have to divide the return values by 16383 (14 bit) to get
         the usual range of -1.0 to +1.0 for quaternions.
 
         If you want to get the quaternions periodically, it is recommended
@@ -393,10 +394,8 @@ class BrickIMUV2(Device):
 
     def set_acceleration_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Acceleration` callback is triggered
+        Sets the period with which the :cb:`Acceleration` callback is triggered
         periodically. A value of 0 turns the callback off.
-
-        The default value is 0.
         """
         period = int(period)
 
@@ -410,7 +409,7 @@ class BrickIMUV2(Device):
 
     def set_magnetic_field_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Magnetic Field` callback is triggered
+        Sets the period with which the :cb:`Magnetic Field` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -425,7 +424,7 @@ class BrickIMUV2(Device):
 
     def set_angular_velocity_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Angular Velocity` callback is
+        Sets the period with which the :cb:`Angular Velocity` callback is
         triggered periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -440,7 +439,7 @@ class BrickIMUV2(Device):
 
     def set_temperature_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Temperature` callback is triggered
+        Sets the period with which the :cb:`Temperature` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -455,7 +454,7 @@ class BrickIMUV2(Device):
 
     def set_orientation_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Orientation` callback is triggered
+        Sets the period with which the :cb:`Orientation` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -470,7 +469,7 @@ class BrickIMUV2(Device):
 
     def set_linear_acceleration_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Linear Acceleration` callback is
+        Sets the period with which the :cb:`Linear Acceleration` callback is
         triggered periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -485,7 +484,7 @@ class BrickIMUV2(Device):
 
     def set_gravity_vector_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Gravity Vector` callback is triggered
+        Sets the period with which the :cb:`Gravity Vector` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -500,7 +499,7 @@ class BrickIMUV2(Device):
 
     def set_quaternion_period(self, period):
         """
-        Sets the period in ms with which the :cb:`Quaternion` callback is triggered
+        Sets the period with which the :cb:`Quaternion` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -515,7 +514,7 @@ class BrickIMUV2(Device):
 
     def set_all_data_period(self, period):
         """
-        Sets the period in ms with which the :cb:`All Data` callback is triggered
+        Sets the period with which the :cb:`All Data` callback is triggered
         periodically. A value of 0 turns the callback off.
         """
         period = int(period)
@@ -571,6 +570,12 @@ class BrickIMUV2(Device):
         absolute with respect to the earth). However, the calculation can't be influenced
         by spurious magnetic fields.
 
+        Since firmware version 2.0.13 you can also use a fusion mode without fast
+        magnetometer calibration. This mode is the same as the normal fusion mode,
+        but the fast magnetometer calibration is turned off. So to find the orientation
+        the first time will likely take longer, but small magnetic influences might
+        not affect the automatic calibration as much.
+
         By default sensor fusion is on.
 
         .. versionadded:: 2.0.5$nbsp;(Firmware)
@@ -593,7 +598,7 @@ class BrickIMUV2(Device):
         enabled, the Brick will try to adapt the baudrate for the communication
         between Bricks and Bricklets according to the amount of data that is transferred.
 
-        The baudrate will be increased exponetially if lots of data is send/receieved and
+        The baudrate will be increased exponentially if lots of data is send/received and
         decreased linearly if little data is send/received.
 
         This lowers the baudrate in applications where little data is transferred (e.g.
@@ -655,7 +660,7 @@ class BrickIMUV2(Device):
         If the dynamic baudrate feature is enabled, the baudrate set by this
         function corresponds to the maximum baudrate (see :func:`Set SPITFP Baudrate Config`).
 
-        Regulatory testing is done with the default baudrate. If CE compatability
+        Regulatory testing is done with the default baudrate. If CE compatibility
         or similar is necessary in you applications we recommend to not change
         the baudrate.
 
@@ -686,7 +691,7 @@ class BrickIMUV2(Device):
 
         * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Brick side. All
@@ -744,7 +749,7 @@ class BrickIMUV2(Device):
         value returned is not the ambient temperature!
 
         The temperature is only proportional to the real temperature and it has an
-        accuracy of +-15%. Practically it is only useful as an indicator for
+        accuracy of ±15%. Practically it is only useful as an indicator for
         temperature changes.
         """
         return self.ipcon.send_request(self, BrickIMUV2.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 'h')

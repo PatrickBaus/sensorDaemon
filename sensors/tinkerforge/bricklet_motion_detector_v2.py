@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -22,7 +22,7 @@ GetIdentity = namedtuple('Identity', ['uid', 'connected_uid', 'position', 'hardw
 
 class BrickletMotionDetectorV2(Device):
     """
-    Passive infrared (PIR) motion sensor, 12m range
+    Passive infrared (PIR) motion sensor with 12m range and dimmable backlight
     """
 
     DEVICE_IDENTIFIER = 292
@@ -102,10 +102,8 @@ class BrickletMotionDetectorV2(Device):
 
     def get_motion_detected(self):
         """
-        Returns 1 if a motion was detected. How long this returns 1 after a motion
-        was detected can be adjusted with one of the small potentiometers on the
-        Motion Detector Bricklet, see :ref:`here
-        <motion_detector_bricklet_sensitivity_delay_block_time>`.
+        Returns 1 if a motion was detected. It returns 1 approx. for 1.8 seconds
+        until the sensor checks for a new movement.
 
         There is also a blue LED on the Bricklet that is on as long as the Bricklet is
         in the "motion detected" state.
@@ -114,7 +112,7 @@ class BrickletMotionDetectorV2(Device):
 
     def set_sensitivity(self, sensitivity):
         """
-        Sets the sensitivity of the PIR sensor. The range is 0-100. At full
+        Sets the sensitivity of the PIR sensor. At full
         sensitivity (100), the Bricklet can detect motion in a range of approximately 12m.
 
         The actual range depends on many things in the environment (e.g. reflections) and the
@@ -122,8 +120,6 @@ class BrickletMotionDetectorV2(Device):
         of 10m a cat may only be detected at 2m distance with the same setting.
 
         So you will have to find a good sensitivity for your application by trial and error.
-
-        The default value is 50.
         """
         sensitivity = int(sensitivity)
 
@@ -141,8 +137,6 @@ class BrickletMotionDetectorV2(Device):
         three LEDs. The brightness of each LED can be controlled with a 8-bit value
         (0-255). A value of 0 turns the LED off and a value of 255 turns the LED
         to full brightness.
-
-        The default value is 0, 0, 0.
         """
         top_left = int(top_left)
         top_right = int(top_right)
@@ -162,9 +156,9 @@ class BrickletMotionDetectorV2(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -179,7 +173,7 @@ class BrickletMotionDetectorV2(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.

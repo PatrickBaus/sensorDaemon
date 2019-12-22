@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-06-08.      #
+# This file was automatically generated on 2019-11-25.      #
 #                                                           #
-# Python Bindings Version 2.1.17                            #
+# Python Bindings Version 2.1.24                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -204,7 +204,7 @@ class BrickletDMX(Device):
 
     def set_frame_duration(self, frame_duration):
         """
-        Sets the duration of a frame in ms.
+        Sets the duration of a frame.
 
         Example: If you want to achieve 20 frames per second, you should
         set the frame duration to 50ms (50ms * 20 = 1 second).
@@ -213,8 +213,6 @@ class BrickletDMX(Device):
         this value to 0.
 
         This setting is only used in master mode.
-
-        Default value: 100ms (10 frames per second).
         """
         frame_duration = int(frame_duration)
 
@@ -302,9 +300,9 @@ class BrickletDMX(Device):
 
         The errors are divided into
 
-        * ack checksum errors,
+        * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Bricklet side. All
@@ -319,7 +317,7 @@ class BrickletDMX(Device):
 
         You can change from bootloader mode to firmware mode and vice versa. A change
         from bootloader mode to firmware mode will only take place if the entry function,
-        device identifier und crc are present and correct.
+        device identifier and CRC are present and correct.
 
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
