@@ -29,7 +29,7 @@ class HumiditySensor(Sensor):
     """
     API Wrapper for the Tinkerforge humidity bricklet
     """
-    UNIT = "%"
+    UNIT = "%RH"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
     TYPE = "humidity"
     DEVICE_IDENTIFIER = BrickletHumidity.DEVICE_IDENTIFIER

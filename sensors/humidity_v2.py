@@ -29,7 +29,7 @@ class HumiditySensorV2(Sensor):
     """
     API Wrapper for the Tinkerforge humidity bricklet
     """
-    UNIT = "%"
+    UNIT = "%RH"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
     TYPE = "humidity"
     DEVICE_IDENTIFIER = BrickletHumidityV2.DEVICE_IDENTIFIER
@@ -70,7 +70,7 @@ class HumiditySensorV2(Sensor):
         value: the value as returned by the bricklet. This might not be in SI units.
         """
         # Return %RH.
-        value = value / 10
+        value = value / 100
         super(HumiditySensor, self).callback(value)
 
     def set_callback(self):
@@ -90,5 +90,5 @@ class HumiditySensorV2(Sensor):
         """
         super(HumiditySensorV2, self).__init__(uid, parent, callback_method, callback_period)
 
-        self.__bricklet = BrickletHumidity(uid, parent.ipcon)
+        self.__bricklet = BrickletHumidityV2(uid, parent.ipcon)
         self.set_callback()
