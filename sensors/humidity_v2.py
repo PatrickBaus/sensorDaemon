@@ -88,7 +88,7 @@ class HumiditySensorV2(Sensor):
         callbackMethod: The SensorHost callback to deliver to the data to.
         callbackPeriod: The callback period in ms. A value of 0 will turn off the callback.
         """
-        super(HumiditySensor, self).__init__(uid, parent, callback_method, callback_period)
+        super(HumiditySensorV2, self).__init__(uid, parent, callback_method, callback_period)
 
         self.__bricklet = BrickletHumidity(uid, parent.ipcon)
         self.set_callback()
