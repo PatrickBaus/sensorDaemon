@@ -54,7 +54,7 @@ class HumiditySensorV2(Sensor):
         """
         Returns the callback period in ms.
         """
-        return self.bricklet.get_humidity_callback_configuration()["period"]
+        return self.bricklet.get_humidity_callback_configuration().period
 
     @property
     def bricklet(self):
