@@ -54,7 +54,7 @@ class HumiditySensorV2(Sensor):
         """
         Returns the callback period in ms.
         """
-        return self.bricklet.get_humidity_callback_period()
+        return self.bricklet.get_humidity_callback_configuration()["period"]
 
     @property
     def bricklet(self):
@@ -77,7 +77,7 @@ class HumiditySensorV2(Sensor):
         """
         Sets the callback period and registers the method callback() with the Tinkerforge API.
         """
-        self.bricklet.set_humidity_callback_period(self.callback_period)
+        self.bricklet.set_humidity_callback_configuration(period=self.callback_period)
         self.bricklet.register_callback(self.bricklet.CALLBACK_HUMIDITY, self.callback)
 
     def __init__(self, uid, parent, callback_method, callback_period=0):
