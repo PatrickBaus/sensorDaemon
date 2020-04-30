@@ -18,6 +18,14 @@ mysql:
         password: 'secretPassword'
         database: 'sensors'
 
+postgres:
+        host: 'localhst'
+        port: 5432
+        username: 'sensors'
+        password: 'secretPassword'
+        database: 'sensors'
+
+
 sensors:
 #       Period of pings to check the availability of the sensors in seconds
         ping_intervall: 60

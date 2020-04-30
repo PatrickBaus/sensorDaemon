@@ -26,6 +26,8 @@ __version__ = "2.6.4"
 
 import argparse
 import MySQLdb
+import psycopg2
+from psycopg2 import Error
 import os
 import signal
 import sys
@@ -147,18 +149,19 @@ class SensorDaemon(Daemon):
             If there was no previous update, set this to None.
         """
         mysqlcon = None
+        postgrescon = None
         if (previous_update is None):
             self.logger.info('%s sensor "%s" returned value %s.', sensor_type.title(), sensor_uid, value)
         else:
             self.logger.info('%s sensor "%s" returned value %s. Previous update was %i s ago.', sensor_type.title(), sensor_uid, value, previous_update / 1000)
         try:
-            mysql_options = self.config.mysql
-            mysqlcon = MySQLdb.connect(host=mysql_options['host'], port=int(mysql_options['port']), user=mysql_options['username'], passwd=mysql_options['password'], db=mysql_options['database'])
+            options = self.config.mysql
+            mysqlcon = MySQLdb.connect(host=options['host'], port=int(options['port']), user=options['username'], passwd=options['password'], db=options['database'])
             cur = mysqlcon.cursor()
             cur.execute(MYSQL_STMS['insert_data'], (sensor_uid, value))
             # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
             mysqlcon.commit()
-            self.logger.debug('Successfully written to database: value %s from sensor %s.', value, sensor_uid)
+            self.logger.debug('Successfully written to MySQL database: value %s from sensor %s.', value, sensor_uid)
         except MySQLdb.Error as e:
             if mysqlcon:
                 # In case of an error roll back any changes. This is only possible on InnoDB. MyISAM will committ any change immediately.
@@ -167,6 +170,22 @@ class SensorDaemon(Daemon):
         finally:
             if mysqlcon:
                 mysqlcon.close()
+
+        try:
+            options = self.config.postgres
+            postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], passwd=options['password'], db=options['database'])
+            cur = postgrescon.cursor()
+            cur.execute(MYSQL_STMS['insert_data'], (sensor_uid, value))
+            # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
+            postgrescon.commit()
+            self.logger.debug('Successfully written to Postgres database: value %s from sensor %s.', value, sensor_uid)
+        except psycopg2.DatabaseError as e:
+            if postgrescon:
+                postgrescon.rollback()
+            self.logger.error('Error. Cannot insert value "%s" from sensor "%s" into Postgres database: %s.', value, sensor_uid, e)
+        finally:
+            if postgrescon:
+                postgrescon.close()
 
     def __init__(self, config):
         """
