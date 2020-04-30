@@ -72,7 +72,7 @@ class ConfigParser(object):
         """
         Load config file. "configPath" is the full path name to the config file
         """
-        self.__options = {'logging' : {}, 'mysql' : {}, 'sensors' : {}}
+        self.__options = {'logging' : {}, 'mysql' : {}, 'postgres' : {}, 'sensors' : {}}
         config_file = open(config_path)
         config_map = yaml.safe_load(config_file)
         config_file.close()
@@ -85,6 +85,9 @@ class ConfigParser(object):
 
         # Setup MySQL
         self.__options['mysql'] = config_map['mysql']
+
+        # Setup Postgres
+        self.__options['postgres'] = config_map['postgres']
 
         # Setup sensors
         self.__options['sensors'] = config_map['sensors']
@@ -182,6 +185,13 @@ class ConfigParser(object):
         Returns the part of the configuration containing the MySQL config
         """
         return self.__options['mysql']
+
+    @property
+    def postgres(self):
+        """
+        Returns the part of the configuration containing the Postgres config
+        """
+        return self.__options['postgres']
 
     @property
     def sensors(self):
