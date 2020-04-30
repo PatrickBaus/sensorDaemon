@@ -19,7 +19,7 @@ mysql:
         database: 'sensors'
 
 postgres:
-        host: 'localhst'
+        host: 'localhost'
         port: 5432
         username: 'sensors'
         password: 'secretPassword'

@@ -137,6 +137,32 @@ class ConfigParser(object):
         except:
             sys.exit('Error: MySQL option "database" has not been set.')
 
+        # Postgres
+        try:
+            config_map['postgres']['host']
+        except:
+            sys.exit('Error: Postgres option "host" has not been set.')
+        try:
+            config_map['postgres']['port']
+        except:
+            config_map['postgres']['port'] = 5432
+        try:
+          config_map['postgres']['port'] = int(config_map['postgres']['port'])
+        except:
+            sys.exit('Error: Postgres option "port" is invalid.')
+        try:
+            config_map['postgres']['username']
+        except:
+            sys.exit('Error: Postgres option "username" has not been set.')
+        try:
+            config_map['postgres']['password']
+        except:
+            sys.exit('Error: Postgres option "password" has not been set.')
+        try:
+            config_map['postgres']['database']
+        except:
+            sys.exit('Error: Postgres option "database" has not been set.')
+
         # Sensors
         try:
             config_map['sensors']['ping_intervall']
