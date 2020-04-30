@@ -63,7 +63,7 @@ MYSQL_STMS = {
 }
 
 POSTGRES_STMS = {
-    'insert_data' : "INSERT INTO sensor_data (date ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
+    'insert_data' : "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
 #    'select_period': "SELECT callback_period FROM `sensors` WHERE sensor_uid=%s AND enabled",
 #    'select_hosts' : "SELECT hostname, port FROM `sensor_nodes` WHERE id IN (SELECT DISTINCT node_id FROM `sensors` WHERE enabled)"
 }
