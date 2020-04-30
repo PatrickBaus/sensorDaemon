@@ -180,7 +180,7 @@ class SensorDaemon(Daemon):
 
         try:
             options = self.config.postgres
-            postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], passwd=options['password'], db=options['database'])
+            postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], dbname=options['database'])
             cur = postgrescon.cursor()
             cur.execute(POSTGRES_STMS['insert_data'], (sensor_uid, value))
             # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
