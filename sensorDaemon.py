@@ -62,6 +62,13 @@ MYSQL_STMS = {
     'select_hosts' : "SELECT hostname, port FROM `sensor_nodes` WHERE id IN (SELECT DISTINCT node_id FROM `sensors` WHERE enabled)"
 }
 
+POSTGRES_STMS = {
+    'insert_data' : "INSERT INTO sensor_data (date ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
+#    'select_period': "SELECT callback_period FROM `sensors` WHERE sensor_uid=%s AND enabled",
+#    'select_hosts' : "SELECT hostname, port FROM `sensor_nodes` WHERE id IN (SELECT DISTINCT node_id FROM `sensors` WHERE enabled)"
+}
+
+
 class SensorDaemon(Daemon):
     """
     Main daemon, that runs in the background and monitors all sensors. It will configure them according to options set in the MySQL database and
@@ -175,7 +182,7 @@ class SensorDaemon(Daemon):
             options = self.config.postgres
             postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], passwd=options['password'], db=options['database'])
             cur = postgrescon.cursor()
-            cur.execute(MYSQL_STMS['insert_data'], (sensor_uid, value))
+            cur.execute(POSTGRES_STMS['insert_data'], (sensor_uid, value))
             # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
             postgrescon.commit()
             self.logger.debug('Successfully written to Postgres database: value %s from sensor %s.', value, sensor_uid)
