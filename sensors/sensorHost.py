@@ -31,6 +31,7 @@ from .barometer import BarometerSensor
 from .humidity import HumiditySensor
 from .humidity_v2 import HumiditySensorV2
 from .temperature import TemperatureSensor
+from .temperature_v2 import TemperatureSensorV2
 from .ptc import PTCSensor
 
 class SensorHost(object):
@@ -199,6 +200,9 @@ class SensorHost(object):
             # Temperature bricklet
             elif device_identifier == TemperatureSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(TemperatureSensor, uid, connected_uid, position, self.host_name, enumeration_type)
+            # Temperature v2.0 bricklet
+            elif device_identifier == TemperatureSensorV2.DEVICE_IDENTIFIER:
+                self.__connect_sensor(TemperatureSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
             # PTC bricklet
             elif device_identifier == PTCSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(PTCSensor, uid, connected_uid, position, self.host_name, enumeration_type)
