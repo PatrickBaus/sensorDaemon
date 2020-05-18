@@ -53,7 +53,7 @@ class TemperatureSensorV2(Sensor):
         """
         Returns the callback period in ms.
         """
-        return self.bricklet.get_temperature_callback_configuration()['period']
+        return self.bricklet.get_temperature_callback_configuration()[0]
 
     @property
     def bricklet(self):
