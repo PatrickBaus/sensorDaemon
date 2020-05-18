@@ -76,7 +76,7 @@ class TemperatureSensorV2(Sensor):
         """
         Sets the callback period and registers the method callback() with the Tinkerforge API.
         """
-        self.bricklet.set_temperature_callback_configuration(self.callback_period, value_has_to_change=True)
+        self.bricklet.set_temperature_callback_configuration(self.callback_period, value_has_to_change=True, option='x', min=0, max=0)
         self.bricklet.register_callback(self.bricklet.CALLBACK_TEMPERATURE, self.callback)
 
     def get_identity(self):
