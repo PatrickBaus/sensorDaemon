@@ -70,7 +70,7 @@ class TemperatureSensorV2(Sensor):
         """
         # Return Kelvin.
         value = (value + 27315) / 100
-        super(BrickletTemperatureV2, self).callback(value)
+        super(TemperatureSensor, self).callback(value)
 
     def set_callback(self):
         """
@@ -94,7 +94,7 @@ class TemperatureSensorV2(Sensor):
         callbackMethod: The SensorHost callback to deliver to the data to.
         callbackPeriod: The callback period in ms. A value of 0 will turn off the callback.
         """
-        super(BrickletTemperatureV2, self).__init__(uid, parent, callback_method, callback_period)
+        super(TemperatureSensorV2, self).__init__(uid, parent, callback_method, callback_period)
 
         self.__bricklet = BrickletTemperatureV2(uid, parent.ipcon)
         self.set_callback()
