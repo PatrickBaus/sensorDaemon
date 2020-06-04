@@ -97,6 +97,8 @@ class SensorDaemon(Daemon):
             if postgrescon:
                 postgrescon.close()
 
+        return hosts
+
     def get_callback_period(self, sensor_uid):
         """
         Called by each sensor through its host to query for the callback period. This is the minimum intervall a node is allowed to return data.
