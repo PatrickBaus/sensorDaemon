@@ -27,7 +27,6 @@ __version__ = "2.6.4"
 import argparse
 import MySQLdb
 import psycopg2
-from psycopg2 import Error
 import os
 import signal
 import sys
@@ -64,8 +63,8 @@ MYSQL_STMS = {
 
 POSTGRES_STMS = {
     'insert_data' : "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
-#    'select_period': "SELECT callback_period FROM `sensors` WHERE sensor_uid=%s AND enabled",
-#    'select_hosts' : "SELECT hostname, port FROM `sensor_nodes` WHERE id IN (SELECT DISTINCT node_id FROM `sensors` WHERE enabled)"
+    'select_period': "SELECT callback_period FROM sensors WHERE sensor_uid=%s AND enabled",
+    'select_hosts' : "SELECT hostname, port FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
 }
 
 
@@ -79,53 +78,49 @@ class SensorDaemon(Daemon):
         Reads hosts from the database and returns a list of host nodes.
         """
         hosts = {}
-        mysqlcon = None
-        # Retrieve all data necessary for the MySQL connection
-        mysql_options = self.config.mysql
-        self.logger.info("Fetching Brick Daemon hosts from database on '{host}:{port}'...".format(host=mysql_options['host'], port=mysql_options['port']))
+        postgrescon = None
+        options = self.config.postgres
+        self.logger.info("Fetching Brick Daemon hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
         try:
-            mysqlcon = MySQLdb.connect(host=mysql_options['host'], port=mysql_options['port'], user=mysql_options['username'], passwd=mysql_options['password'], db=mysql_options['database'])
-            cur = mysqlcon.cursor()
-            cur.execute(MYSQL_STMS['select_hosts'])
+            postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], dbname=options['database'])
+            cur = postgrescon.cursor()
+            cur.execute(POSTGRES_STMS['select_hosts'])
             rows = cur.fetchall()
             # Iterate over all hosts found in the database and create host object for them.
             for row in rows:
                 self.logger.debug('Found host "%s:%s"', row[0], row[1])
                 hosts[row[0]] = SensorHost(row[0], row[1], self)
-        except MySQLdb.Error as e:
-            self.logger.critical('Error. Cannot get hosts from MySQL database: %s.', e)
+        except psycopg2.DatabaseError as e:
+            self.logger.critical('Error. Cannot get hosts from database: %s.', e)
             sys.exit(1)
         finally:
-            if mysqlcon:
-                mysqlcon.close()
-            self.logger.info("Found %d host%s.", len(hosts), "s"[len(hosts)==1:])
-        return hosts
+            if postgrescon:
+                postgrescon.close()
 
     def get_callback_period(self, sensor_uid):
         """
         Called by each sensor through its host to query for the callback period. This is the minimum intervall a node is allowed to return data.
         """
-        mysqlcon = None
-        period = 0
-        self.logger.debug('Fetching callback period for sensor "%s"...', (sensor_uid))
+        postgrescon = None
+        options = self.config.postgres
+        self.logger.info("Fetching Brick Daemon hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
         try:
-            # Retrieve all data necessary for the MySQL connection
-            mysql_options = self.config.mysql
-            mysqlcon = MySQLdb.connect(host=mysql_options['host'], port=int(mysql_options['port']), user=mysql_options['username'], passwd=mysql_options['password'], db=mysql_options['database'])
-            cur = mysqlcon.cursor()
-            cur.execute(MYSQL_STMS['select_period'], (sensor_uid, ))
+            postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], dbname=options['database'])
+            cur = postgrescon.cursor()
+            cur.execute(POSTGRES_STMS['select_period'], (sensor_uid, ))
             row = cur.fetchone()
             if row is not None:
                 period = row[0]
                 self.logger.debug('Period for sensor "%s" is %s ms', sensor_uid, period)
             else:
-                self.logger.error('Error. Sensor "%s" not found in MySQL database. Please add the uid to the database to enable logging of this sensor.', sensor_uid)
+                self.logger.error('Error. Sensor "%s" not found in database. Please add the uid to the database to enable logging of this sensor.', sensor_uid)
                 period = 0
-        except MySQLdb.Error as e:
-            self.logger.error('Error. Cannot get callback period for sensor "%s" from MySQL database: %s', sensor_uid, e)
+        except psycopg2.DatabaseError as e:
+            self.logger.critical('Error. Cannot get hosts from database: %s.', e)
+            sys.exit(1)
         finally:
-            if mysqlcon:
-                mysqlcon.close()
+            if postgrescon:
+                postgrescon.close()
 
         if isinstance(period, int):
             return period
@@ -185,11 +180,11 @@ class SensorDaemon(Daemon):
             cur.execute(POSTGRES_STMS['insert_data'], (sensor_uid, value))
             # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
             postgrescon.commit()
-            self.logger.debug('Successfully written to Postgres database: value %s from sensor %s.', value, sensor_uid)
+            self.logger.debug('Successfully written to database: value %s from sensor %s.', value, sensor_uid)
         except psycopg2.DatabaseError as e:
             if postgrescon:
                 postgrescon.rollback()
-            self.logger.error('Error. Cannot insert value "%s" from sensor "%s" into Postgres database: %s.', value, sensor_uid, e)
+            self.logger.error('Error. Cannot insert value "%s" from sensor "%s" into database: %s.', value, sensor_uid, e)
         finally:
             if postgrescon:
                 postgrescon.close()
