@@ -187,10 +187,10 @@ class SensorHost(object):
             if device_identifier == AmbientLightSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(AmbientLightSensor, uid, connected_uid, position, self.host_name, enumeration_type)
             # Ambient light bricklet v2
-            if device_identifier == AmbientLightSensorV2.DEVICE_IDENTIFIER:
+            elif device_identifier == AmbientLightSensorV2.DEVICE_IDENTIFIER:
                 self.__connect_sensor(AmbientLightSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
             # Ambient light bricklet v3
-            if device_identifier == AmbientLightSensorV3.DEVICE_IDENTIFIER:
+            elif device_identifier == AmbientLightSensorV3.DEVICE_IDENTIFIER:
                 self.__connect_sensor(AmbientLightSensorV3, uid, connected_uid, position, self.host_name, enumeration_type)
             # Barometer bricklet
             elif device_identifier == BarometerSensor.DEVICE_IDENTIFIER:
