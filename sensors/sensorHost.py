@@ -27,6 +27,7 @@ from .tinkerforge.ip_connection import IPConnection
 from .tinkerforge.ip_connection import Error as IPConError
 from .ambientLight import AmbientLightSensor
 from .ambientLight_v2 import AmbientLightSensorV2
+from .ambientLight_v3 import AmbientLightSensorV3
 from .barometer import BarometerSensor
 from .humidity import HumiditySensor
 from .humidity_v2 import HumiditySensorV2
@@ -188,6 +189,9 @@ class SensorHost(object):
             # Ambient light bricklet v2
             if device_identifier == AmbientLightSensorV2.DEVICE_IDENTIFIER:
                 self.__connect_sensor(AmbientLightSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
+            # Ambient light bricklet v3
+            if device_identifier == AmbientLightSensorV3.DEVICE_IDENTIFIER:
+                self.__connect_sensor(AmbientLightSensorV3, uid, connected_uid, position, self.host_name, enumeration_type)
             # Barometer bricklet
             elif device_identifier == BarometerSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(BarometerSensor, uid, connected_uid, position, self.host_name, enumeration_type)
