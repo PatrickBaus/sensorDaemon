@@ -27,7 +27,7 @@ from .tinkerforge.bricklet_humidity_v2 import BrickletHumidityV2
 
 class HumiditySensorV2(Sensor):
     """
-    API Wrapper for the Tinkerforge humidity bricklet
+    API Wrapper for the Tinkerforge humidity v2.0 bricklet
     """
     UNIT = "%RH"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."

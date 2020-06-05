@@ -27,7 +27,7 @@ from .tinkerforge.bricklet_ambient_light_v3 import BrickletAmbientLightV3
 
 class AmbientLightSensorV3(Sensor):
     """
-    API Wrapper for the Tinkerforge humidity bricklet
+    API Wrapper for the Tinkerforge ambient light v3.0 bricklet
     """
     UNIT = "lx"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
