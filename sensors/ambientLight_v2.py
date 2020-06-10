@@ -97,4 +97,5 @@ class AmbientLightSensorV2(Sensor):
         super(AmbientLightSensorV2, self).__init__(uid, parent, callback_method, callback_period)
 
         self.__bricklet = BrickletAmbientLightV2(uid, parent.ipcon)
+        self.bricklet.set_configuration(self.bricklet.ILLUMINANCE_RANGE_16000LUX, self.bricklet.BrickletAmbientLightV2.INTEGRATION_TIME_200MS)
         self.set_callback()

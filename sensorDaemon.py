@@ -25,7 +25,6 @@ from builtins import dict
 __version__ = "2.6.4"
 
 import argparse
-import MySQLdb
 import psycopg2
 import os
 import signal
@@ -55,12 +54,6 @@ def module_path():
 
 CONFIG_PATH = module_path() + '/sensors.conf'
 
-MYSQL_STMS = {
-    'insert_data' : "INSERT INTO `sensor_data` (`date` ,`sensor_id` ,`value`) VALUES (NOW(3), (SELECT `id` FROM `sensors` WHERE sensor_uid=%s and enabled), %s)",
-    'select_period': "SELECT callback_period FROM `sensors` WHERE sensor_uid=%s AND enabled",
-    'select_hosts' : "SELECT hostname, port FROM `sensor_nodes` WHERE id IN (SELECT DISTINCT node_id FROM `sensors` WHERE enabled)"
-}
-
 POSTGRES_STMS = {
     'insert_data' : "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
     'select_period': "SELECT callback_period FROM sensors WHERE sensor_uid=%s AND enabled",
@@ -70,7 +63,7 @@ POSTGRES_STMS = {
 
 class SensorDaemon(Daemon):
     """
-    Main daemon, that runs in the background and monitors all sensors. It will configure them according to options set in the MySQL database and
+    Main daemon, that runs in the background and monitors all sensors. It will configure them according to options set in the database and
     then place the returned data in the database as well.
     """
     def __get_hosts(self):
