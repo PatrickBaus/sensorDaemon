@@ -145,8 +145,9 @@ class SensorDaemon(Daemon):
         previous_update: Integer representing the number of ms between this callback and the previous.
             If there was no previous update, set this to None.
         """
+        postgrescon = None
+        options = self.config.postgres
         try:
-            options = self.config.postgres
             postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], dbname=options['database'])
             cur = postgrescon.cursor()
             cur.execute(POSTGRES_STMS['insert_data'], (sensor_uid, value))
