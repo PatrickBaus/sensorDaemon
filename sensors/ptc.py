@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
-# Copyright (C) 2015  Patrick Baus
+# Copyright (C) 2020  Patrick Baus
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,8 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
-
-from __future__ import absolute_import, division, print_function
 
 import abc
 import time
@@ -70,7 +68,7 @@ class PTCSensor(Sensor):
         """
         # Return Kelvin.
         value = (value + 27315) / 100
-        super(PTCSensor, self).callback(value)
+        super().callback(value)
 
     def set_callback(self):
         """
@@ -87,7 +85,7 @@ class PTCSensor(Sensor):
         callbackMethod: The SensorHost callback to deliver to the data to.
         callbackPeriod: The callback period in ms. A value of 0 will turn off the callback.
         """
-        super(PTCSensor, self).__init__(uid, parent, callback_method, callback_period)
+        super().__init__(uid, parent, callback_method, callback_period)
 
         self.__bricklet = BrickletPTC(uid, parent.ipcon)
         self.set_callback()

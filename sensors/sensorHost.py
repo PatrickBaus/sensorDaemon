@@ -1,7 +1,7 @@
 ## -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
-# Copyright (C) 2015  Patrick Baus
+# Copyright (C) 2020  Patrick Baus
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,9 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
-
-from __future__ import absolute_import, division, print_function
-from builtins import dict
 
 from socket import error as socketError
 

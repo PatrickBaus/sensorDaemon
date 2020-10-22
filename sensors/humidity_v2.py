@@ -18,8 +18,6 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from __future__ import absolute_import, division, print_function
-
 import abc
 import time
 from .sensor import Sensor
