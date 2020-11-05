@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
-# Copyright (C) 2016  Patrick Baus
+# Copyright (C) 2020  Patrick Baus
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,10 +19,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from __future__ import absolute_import, division, print_function
-from builtins import dict
-
-__version__ = "2.6.4"
+__version__ = "2.7.0"
 
 import argparse
 import psycopg2

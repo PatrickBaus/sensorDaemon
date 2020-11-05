@@ -260,7 +260,7 @@ class SensorHost(object):
         """
         Disconnect and remove all sensors from this node.
         """
-        for uid in self.sensors.keys():
+        for uid in list(self.sensors):
             self.remove_sensor(self.sensors[uid])
 
     def disconnect(self):
