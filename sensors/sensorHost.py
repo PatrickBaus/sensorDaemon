@@ -212,6 +212,7 @@ class SensorHost(object):
             # PTC v2.0 bricklet
             elif device_identifier == PTCSensorV2.DEVICE_IDENTIFIER:
                 self.__connect_sensor(PTCSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
+                self.sensors[uid].bricklet.set_wire_mode(self.sensors[uid].bricklet.WIRE_MODE_4)
             # Device is not a bricklet
             elif device_identifier < 128:
                 pass
