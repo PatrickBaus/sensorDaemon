@@ -208,6 +208,7 @@ class SensorHost(object):
             # PTC bricklet
             elif device_identifier == PTCSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(PTCSensor, uid, connected_uid, position, self.host_name, enumeration_type)
+                self.sensors[uid].bricklet.set_wire_mode(self.sensors[uid].bricklet.WIRE_MODE_4)
             # PTC v2.0 bricklet
             elif device_identifier == PTCSensorV2.DEVICE_IDENTIFIER:
                 self.__connect_sensor(PTCSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
@@ -261,7 +262,10 @@ class SensorHost(object):
         Disconnect and remove all sensors from this node.
         """
         for uid in list(self.sensors):
-            self.remove_sensor(self.sensors[uid])
+            try:
+                self.remove_sensor(self.sensors[uid])
+            except KeyError:
+                pass
 
     def disconnect(self):
         """
