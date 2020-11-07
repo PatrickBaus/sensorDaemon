@@ -95,7 +95,9 @@ class SensorHost(object):
         except IPConError as e:
             if (e.value == IPConError.TIMEOUT):
                 self.logger.warning('Warning. Cannot disconnect from sensor "%s" on host "%s". The sensor or host does not respond. Will now forcefully remove the sensor.', sensor.uid, self.host_name)
-                del self.sensors[sensor.uid]
+                if sensor.uid in self.sensors:
+                    # If the sensor was disconnected by hand before we could remove it, it might already be gone
+                    del self.sensors[sensor.uid]
 
     @property
     def ipcon(self):
@@ -263,10 +265,7 @@ class SensorHost(object):
         Disconnect and remove all sensors from this node.
         """
         for uid in list(self.sensors):
-            try:
-                self.remove_sensor(self.sensors[uid])
-            except KeyError:
-                pass
+            self.remove_sensor(self.sensors[uid])
 
     def disconnect(self):
         """
