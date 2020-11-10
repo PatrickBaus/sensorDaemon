@@ -29,7 +29,7 @@ class PTCSensorV2(Sensor):
     """
     UNIT = "K"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
-    TYPE = "temperature"
+    TYPE = "PTC temperature"
     DEVICE_IDENTIFIER = BrickletPTCV2.DEVICE_IDENTIFIER
 
     @property
