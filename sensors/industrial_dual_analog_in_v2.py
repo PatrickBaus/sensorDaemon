@@ -65,6 +65,8 @@ class IndustrialDualAnalogInV2(Sensor):
         value: the value as returned by the bricklet. This might not be in SI units.
         """
         if channel == 1:
+            # Return Volt
+            value /= 1000
             super().callback(value)
 
     def set_callback(self):
