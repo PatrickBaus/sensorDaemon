@@ -18,10 +18,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import abc
-import time
 from .sensor import Sensor
-from .tinkerforge.bricklet_humidity import BrickletHumidity
+from .tinkerforge.bricklet_humidity import BrickletHumidity as Bricklet
 
 class HumiditySensor(Sensor):
     """
@@ -30,7 +28,7 @@ class HumiditySensor(Sensor):
     UNIT = "%RH"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
     TYPE = "humidity"
-    DEVICE_IDENTIFIER = BrickletHumidity.DEVICE_IDENTIFIER
+    DEVICE_IDENTIFIER = Bricklet.DEVICE_IDENTIFIER
 
     @property
     def unit(self):
@@ -88,5 +86,5 @@ class HumiditySensor(Sensor):
         """
         super().__init__(uid, parent, callback_method, callback_period)
 
-        self.__bricklet = BrickletHumidity(uid, parent.ipcon)
+        self.__bricklet = Bricklet(uid, parent.ipcon)
         self.set_callback()

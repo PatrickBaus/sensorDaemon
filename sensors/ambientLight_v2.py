@@ -18,10 +18,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import abc
-import time
 from .sensor import Sensor
-from .tinkerforge.bricklet_ambient_light_v2 import BrickletAmbientLightV2
+from .tinkerforge.bricklet_ambient_light_v2 import BrickletAmbientLightV2 as Bricklet
 
 class AmbientLightSensorV2(Sensor):
     """
@@ -30,7 +28,7 @@ class AmbientLightSensorV2(Sensor):
     UNIT = "lx"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
     TYPE = "illuminance"
-    DEVICE_IDENTIFIER = BrickletAmbientLightV2.DEVICE_IDENTIFIER
+    DEVICE_IDENTIFIER = Bricklet.DEVICE_IDENTIFIER
 
     @property
     def unit(self):
@@ -94,6 +92,6 @@ class AmbientLightSensorV2(Sensor):
         """
         super().__init__(uid, parent, callback_method, callback_period)
 
-        self.__bricklet = BrickletAmbientLightV2(uid, parent.ipcon)
+        self.__bricklet = Bricklet(uid, parent.ipcon)
         self.bricklet.set_configuration(self.bricklet.ILLUMINANCE_RANGE_16000LUX, self.bricklet.INTEGRATION_TIME_200MS)
         self.set_callback()

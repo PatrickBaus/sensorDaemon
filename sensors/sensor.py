@@ -22,11 +22,10 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from sensors.tinkerforge.ip_connection import Error as IPConError
 import time
 
-class Sensor(object):
+class Sensor(metaclass=ABCMeta):
     """
     Base class for all Tinkerforge API wrappers
     """
-    __metaclass__ = ABCMeta
 
     @property
     def uid(self):

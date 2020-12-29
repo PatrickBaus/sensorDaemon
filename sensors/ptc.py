@@ -18,10 +18,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import abc
-import time
 from .sensor import Sensor
-from .tinkerforge.bricklet_ptc import BrickletPTC
+from .tinkerforge.bricklet_ptc import BrickletPTC as Bricklet
 
 class PTCSensor(Sensor):
     """
@@ -30,7 +28,7 @@ class PTCSensor(Sensor):
     UNIT = "K"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
     TYPE = "PTC temperature"
-    DEVICE_IDENTIFIER = BrickletPTC.DEVICE_IDENTIFIER
+    DEVICE_IDENTIFIER = Bricklet.DEVICE_IDENTIFIER
 
     @property
     def unit(self):
@@ -87,5 +85,6 @@ class PTCSensor(Sensor):
         """
         super().__init__(uid, parent, callback_method, callback_period)
 
-        self.__bricklet = BrickletPTC(uid, parent.ipcon)
+        self.__bricklet = Bricklet(uid, parent.ipcon)
+        self.bricklet.set_wire_mode(self.bricklet.WIRE_MODE_4)
         self.set_callback()

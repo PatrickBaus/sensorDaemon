@@ -18,10 +18,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import abc
-import time
 from .sensor import Sensor
-from .tinkerforge.bricklet_barometer import BrickletBarometer
+from .tinkerforge.bricklet_barometer import BrickletBarometer as Bricklet
 
 class BarometerSensor(Sensor):
     """
@@ -30,7 +28,7 @@ class BarometerSensor(Sensor):
     UNIT = "Pa"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
     TYPE = "barometer"
-    DEVICE_IDENTIFIER = BrickletBarometer.DEVICE_IDENTIFIER
+    DEVICE_IDENTIFIER = Bricklet.DEVICE_IDENTIFIER
 
     @property
     def unit(self):
@@ -94,5 +92,5 @@ class BarometerSensor(Sensor):
         """
         super().__init__(uid, parent, callback_method, callback_period)
 
-        self.__bricklet = BrickletBarometer(uid, parent.ipcon)
+        self.__bricklet = Bricklet(uid, parent.ipcon)
         self.set_callback()

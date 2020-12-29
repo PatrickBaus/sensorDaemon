@@ -18,10 +18,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import abc
-import time
 from .sensor import Sensor
-from .tinkerforge.bricklet_temperature_v2 import BrickletTemperatureV2
+from .tinkerforge.bricklet_temperature_v2 import BrickletTemperatureV2 as Bricklet
 
 class TemperatureSensorV2(Sensor):
     """
@@ -30,7 +28,7 @@ class TemperatureSensorV2(Sensor):
     UNIT = "K"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
     TYPE = "temperature"
-    DEVICE_IDENTIFIER = BrickletTemperatureV2.DEVICE_IDENTIFIER
+    DEVICE_IDENTIFIER = Bricklet.DEVICE_IDENTIFIER
 
     @property
     def unit(self):
@@ -94,5 +92,5 @@ class TemperatureSensorV2(Sensor):
         """
         super().__init__(uid, parent, callback_method, callback_period)
 
-        self.__bricklet = BrickletTemperatureV2(uid, parent.ipcon)
+        self.__bricklet = Bricklet(uid, parent.ipcon)
         self.set_callback()

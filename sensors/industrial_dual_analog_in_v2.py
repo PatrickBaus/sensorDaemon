@@ -19,15 +19,15 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from .sensor import Sensor
-from .tinkerforge.bricklet_humidity_v2 import BrickletHumidityV2 as Bricklet
+from .tinkerforge.bricklet_industrial_dual_analog_in_v2 import BrickletIndustrialDualAnalogInV2 as Bricklet
 
-class HumiditySensorV2(Sensor):
+class IndustrialDualAnalogInV2(Sensor):
     """
-    API Wrapper for the Tinkerforge humidity v2.0 bricklet
+    API Wrapper for the Tinkerforge Industrial Dual Analog In Bricklet v2.x bricklet
     """
-    UNIT = "%RH"
+    UNIT = "V"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
-    TYPE = "humidity"
+    TYPE = "voltage"
     DEVICE_IDENTIFIER = Bricklet.DEVICE_IDENTIFIER
 
     @property
@@ -37,7 +37,6 @@ class HumiditySensorV2(Sensor):
         """
         return self.UNIT
 
-	
     @property
     def sensor_type(self):
         """
@@ -50,7 +49,7 @@ class HumiditySensorV2(Sensor):
         """
         Returns the callback period in ms.
         """
-        return self.bricklet.get_humidity_callback_configuration().period
+        return self.bricklet.get_temperature_callback_configuration().period
 
     @property
     def bricklet(self):
@@ -65,16 +64,23 @@ class HumiditySensorV2(Sensor):
         It does all the conversion to the apropriate SI unit specified by getUnit().
         value: the value as returned by the bricklet. This might not be in SI units.
         """
-        # Return %RH.
-        value = value / 100
+        # Return K.
+        value = (value + 27315) / 100
         super().callback(value)
 
     def set_callback(self):
         """
         Sets the callback period and registers the method callback() with the Tinkerforge API.
         """
-        self.bricklet.set_humidity_callback_configuration(period=self.callback_period, value_has_to_change=True, option="x", min=0, max=0)
-        self.bricklet.register_callback(self.bricklet.CALLBACK_HUMIDITY, self.callback)
+        self.bricklet.set_voltage_callback_configuration(period=self.callback_period, value_has_to_change=True, option="x", min=0, max=0)
+        self.bricklet.register_callback(self.bricklet.CALLBACK_VOTAGE, self.callback)
+
+    def get_identity(self):
+        """
+        Returns the UID, the UID where the Bricklet is connected to, the position, the hardware and firmware version as well as the device identifier.
+        http://www.tinkerforge.com/en/doc/Software/Bricklets/AmbientLight_Bricklet_Python.html
+        """
+        return self.bricklet.get_identity()
 
     def __init__(self, uid, parent, callback_method, callback_period=0):
         """

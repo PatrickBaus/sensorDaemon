@@ -32,8 +32,9 @@ from .temperature import TemperatureSensor
 from .temperature_v2 import TemperatureSensorV2
 from .ptc import PTCSensor
 from .ptc_v2 import PTCSensorV2
+from .industrial_dual_analog_in_v2 import IndustrialDualAnalogInV2
 
-class SensorHost(object):
+class SensorHost():
     """
     Class that wraps a Tinkerforge brick daemon host. This can be either a PC running brickd, or a master brick with an ethernet/wifi ectension
     """
@@ -210,11 +211,12 @@ class SensorHost(object):
             # PTC bricklet
             elif device_identifier == PTCSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(PTCSensor, uid, connected_uid, position, self.host_name, enumeration_type)
-                self.sensors[uid].bricklet.set_wire_mode(self.sensors[uid].bricklet.WIRE_MODE_4)
             # PTC v2.0 bricklet
             elif device_identifier == PTCSensorV2.DEVICE_IDENTIFIER:
                 self.__connect_sensor(PTCSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
-                self.sensors[uid].bricklet.set_wire_mode(self.sensors[uid].bricklet.WIRE_MODE_4)
+            # Industrial Dual Analog In v2.0 bricklet
+            elif device_identifier == IndustrialDualAnalogInV2.DEVICE_IDENTIFIER:
+                self.__connect_sensor(IndustrialDualAnalogInV2, uid, connected_uid, position, self.host_name, enumeration_type)
             # Device is not a bricklet
             elif device_identifier < 128:
                 pass

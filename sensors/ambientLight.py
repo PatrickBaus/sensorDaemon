@@ -18,10 +18,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import abc
-import time
 from .sensor import Sensor
-from .tinkerforge.bricklet_ambient_light import BrickletAmbientLight
+from .tinkerforge.bricklet_ambient_light import BrickletAmbientLight as Bricklet
 
 class AmbientLightSensor(Sensor):
     """
@@ -30,7 +28,7 @@ class AmbientLightSensor(Sensor):
     UNIT = "lx"
     # The type will be used for describing the sensor, like "Registering %TYPE sensor."
     TYPE = "illuminance"
-    DEVICE_IDENTIFIER = BrickletAmbientLight.DEVICE_IDENTIFIER
+    DEVICE_IDENTIFIER = Bricklet.DEVICE_IDENTIFIER
 
     @property
     def unit(self):
@@ -68,7 +66,7 @@ class AmbientLightSensor(Sensor):
         """
         # Return lx.
         value = value / 10
-        super(AmbientLightSensor, self).callback(value)
+        super().callback(value)
 
     def set_callback(self):
         """
@@ -92,7 +90,7 @@ class AmbientLightSensor(Sensor):
         callbackMethod: The SensorHost callback to deliver to the data to.
         callbackPeriod: The callback period in ms. A value of 0 will turn off the callback.
         """
-        super(AmbientLightSensor, self).__init__(uid, parent, callback_method, callback_period)
+        super().__init__(uid, parent, callback_method, callback_period)
 
-        self.__bricklet = BrickletAmbientLight(uid, parent.ipcon)
+        self.__bricklet = Bricklet(uid, parent.ipcon)
         self.set_callback()
