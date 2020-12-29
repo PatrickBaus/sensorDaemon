@@ -58,15 +58,14 @@ class IndustrialDualAnalogInV2(Sensor):
         """
         return self.__bricklet
 
-    def callback(self, value):
+    def callback(self, channel, value):
         """
         This method will be called by the API, when a new value is available.
         It does all the conversion to the apropriate SI unit specified by getUnit().
         value: the value as returned by the bricklet. This might not be in SI units.
         """
-        # Return K.
-        value = (value + 27315) / 100
-        super().callback(value)
+        if channel == 1:
+            super().callback(value)
 
     def set_callback(self):
         """
