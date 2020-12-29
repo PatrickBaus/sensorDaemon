@@ -72,7 +72,7 @@ class IndustrialDualAnalogInV2(Sensor):
         Sets the callback period and registers the method callback() with the Tinkerforge API.
         """
         self.bricklet.set_voltage_callback_configuration(channel=1, period=self.callback_period, value_has_to_change=True, option="x", min=0, max=0)
-        self.bricklet.register_callback(self.bricklet.CALLBACK_VOTAGE, self.callback)
+        self.bricklet.register_callback(self.bricklet.CALLBACK_VOLTAGE, self.callback)
 
     def get_identity(self):
         """
