@@ -49,7 +49,7 @@ class IndustrialDualAnalogInV2(Sensor):
         """
         Returns the callback period in ms.
         """
-        return self.bricklet.get_voltage_callback_configuration().period
+        return self.bricklet.get_voltage_callback_configuration(channel=1).period
 
     @property
     def bricklet(self):
