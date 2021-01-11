@@ -23,6 +23,7 @@ __version__ = "3.0.0"
 
 import asyncpg
 import os
+import logging
 import signal
 import sys
 import time
