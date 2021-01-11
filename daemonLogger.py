@@ -130,14 +130,14 @@ class DaemonLogger(object):
         if config['console_loglevel'] is not logging.NOTSET:
             console_logger = logging.StreamHandler()
             console_logger.setLevel(config['console_loglevel'])
-            console_logger.setFormatter(ColoredFormatter('%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+            console_logger.setFormatter(ColoredFormatter('%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
             self.get_logger().addHandler(console_logger)
 
         # Create file logger for loglevel >= config['file_loglevel']
         if config['file_loglevel'] is not logging.NOTSET:
           file_logger = logging.FileHandler(config['logfile'])
           file_logger.setLevel(config['file_loglevel'])
-          formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt=config['dateformat'])
+          formatter = logging.Formatter('%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s', datefmt=config['dateformat'])
           file_logger.setFormatter(formatter)
           self.get_logger().addHandler(file_logger)
 

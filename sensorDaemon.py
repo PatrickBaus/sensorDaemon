@@ -169,7 +169,7 @@ class SensorDaemon():
         signal.signal(signal.SIGTERM, self.shutdown)
         signal.signal(signal.SIGINT, self.shutdown)
 
-    asynx def run(self):
+    async def run(self):
         """
         Start the daemon and keep it running through the while (True) loop. Execute shutdown() to kill it.
         """
@@ -219,11 +219,6 @@ def load_config():
 
 # Report all mistakes managing asynchronous resources.
 warnings.simplefilter('always', ResourceWarning)
-logging.basicConfig(
-    format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-    level=logging.DEBUG,    # Enable logs from the ip connection. Set to debug for even more info
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
 
 try:
     config = load_config()
