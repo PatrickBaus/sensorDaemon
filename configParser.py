@@ -90,7 +90,7 @@ def parse_config_from_file(config):
     postgres["host"]     = config_map["postgres"].get("host", "localhost")
     postgres["port"]     = int(config_map["postgres"].get("port", "3306"))
     postgres["username"] = config_map["postgres"].get("user", "sensors")
-    postgres["password"] = config_map["postgres"].get("pasword")
+    postgres["password"] = config_map["postgres"].get("password")
     postgres["database"] = config_map["postgres"].get("database", "sensors")
     if postgres["password"] is None:
         raise RuntimeError("Postgtres password not set")
