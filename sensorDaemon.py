@@ -75,10 +75,8 @@ class SensorDaemon():
             stmt = await conn.prepare(POSTGRES_STMS['select_hosts'])
             async with postgrescon.transaction():
                 async for record in stmt.cursor():
-                # Iterate over all hosts found in the database and create host object for them.
-                for row in rows:
-                    self.logger.debug('Found host "%s:%s"', row[0], row[1])
-                    hosts[row["hostname"]] = SensorHost(row["hostname"], row["port"], self)
+                    self.logger.debug('Found host "%s:%s"', record["hostname"], record["port"])
+                    hosts[record["hostname"]] = SensorHost(record["hostname"], record["port"], self)
         except asyncpg.InterfaceError as e:
             self.logger.critical('Error. Cannot get hosts from database: %s.', e)
             raise
