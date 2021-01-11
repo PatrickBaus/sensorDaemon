@@ -21,6 +21,7 @@
 
 __version__ = "3.0.0"
 
+import asyncio
 import asyncpg
 import os
 import logging
@@ -168,7 +169,7 @@ class SensorDaemon():
         signal.signal(signal.SIGTERM, self.shutdown)
         signal.signal(signal.SIGINT, self.shutdown)
 
-    def run(self):
+    asynx def run(self):
         """
         Start the daemon and keep it running through the while (True) loop. Execute shutdown() to kill it.
         """
@@ -177,7 +178,7 @@ class SensorDaemon():
         self.logger.warning("##################################################")
 
         # Retrieve all hosts from the database
-        self.hosts = self.__get_hosts()
+        self.hosts = await self.__get_hosts()
         # Stop the daemon if no hosts where found
         if (len(self.hosts) == 0):
             self.logger.error("No hosts where found in the database...")
