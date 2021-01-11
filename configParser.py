@@ -38,6 +38,73 @@ def module_path():
 
     return os.path.dirname(__file__)
 
+string_to_level = {
+    'info': logging.INFO,
+    'warning': logging.WARNING,
+    'error': logging.ERROR,
+    'critical': logging.CRITICAL,
+    'debug': logging.DEBUG,
+}
+
+def parse_config_from_env():
+    logging = {}
+    logging["console_loglevel"] = string_to_level.get(os.getenv("CONSOLE_LOGLEVEL"), logging.NOTSET)
+    logging["file_loglevel"]    = string_to_level.get(os.getenv("FILE_LOGLEVEL"), logging.NOTSET)
+    logging["dateformat"]       = os.getenv("DATEFORMAT", "%b %d %H:%M:%S")
+    logging["logfile"]          = os.getenv("LOGFILE", "sensor_daemon.log")
+    if not os.path.isabs(logging["logfile"]):
+        logging['logfile'] = module_path() + "/"  + logging['logfile']
+
+    postgres = {}
+    postgres["host"]     = os.getenv("POSTGRES_HOST", "localhost")
+    postgres["port"]     = int(os.getenv("POSTGRES_PORT", "3306"))
+    postgres["username"] = os.getenv("POSTGRES_USER", "sensors")
+    postgres["password"] = os.getenv("POSTGRES_PASSWORD")
+    postgres["database"] = os.getenv("POSTGRES_DATABASE", "sensors")
+    if postgres["password"] is None:
+        raise RuntimeError("Postgtres password not set")
+
+    sensors = {}
+    sensors["keepalive_interval"] = int(os.getenv("SENSORS_KEEPALIVE_INTERVAL", "60"))
+
+    return {
+      "logging"  : logging,
+      "mysql"    : mysql,
+      "postgres" : postgres,
+      "sensors"  : sensors,
+    }
+
+def parse_config_from_file(config):
+    with open(config) as file:
+        config_map = yaml.safe_load(file)
+
+    logging = {}
+    logging["console_loglevel"] = string_to_level.get(config_map["logging"]["console_loglevel"], logging.NOTSET)
+    logging["file_loglevel"]    = string_to_level.get(config_map["logging"]["file_loglevel"], logging.NOTSET)
+    logging["dateformat"]       = config_map["logging"].get("dateformat", "%b %d %H:%M:%S")
+    logging["logfile"]          = config_map["logging"].get("logfile", "sensor_daemon.log")
+    if not os.path.isabs(logging["logfile"]):
+        logging['logfile'] = module_path() + "/"  + logging['logfile']
+
+    postgres = {}
+    postgres["host"]     = config_map["postgres"].get("host", "localhost")
+    postgres["port"]     = int(config_map["postgres"].get("port", "3306"))
+    postgres["username"] = config_map["postgres"].get("user", "sensors")
+    postgres["password"] = config_map["postgres"].get("pasword")
+    postgres["database"] = config_map["postgres"].get("database", "sensors")
+    if postgres["password"] is None:
+        raise RuntimeError("Postgtres password not set")
+
+    sensors = {}
+    sensors["keepalive_interval"] = int(config_map["sensors"].get("keepalive_intervall", "60"))
+
+    return {
+      "logging"  : logging,
+      "mysql"    : mysql,
+      "postgres" : postgres,
+      "sensors"  : sensors,
+    }
+
 class ConfigParser(object):
     def uncaught_exception_handler(self,type, value, tb):
         self.getLogger().exception('Uncaught exception: %s', value)

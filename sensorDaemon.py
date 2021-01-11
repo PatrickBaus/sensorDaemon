@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
-# Copyright (C) 2020  Patrick Baus
+# Copyright (C) 2021  Patrick Baus
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,17 +19,16 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-__version__ = "2.7.0"
+__version__ = "3.0.0"
 
-import argparse
-import psycopg2
+import asyncpg
 import os
 import signal
 import sys
 import time
 import warnings
 
-from configParser import ConfigParser
+from configParser import ConfigParser, parse_config_from_env, parse_config_from_file
 from daemon import Daemon
 from daemonLogger import DaemonLogger
 from sensors.sensorHost import SensorHost
@@ -58,34 +57,34 @@ POSTGRES_STMS = {
 }
 
 
-class SensorDaemon(Daemon):
+class SensorDaemon():
     """
     Main daemon, that runs in the background and monitors all sensors. It will configure them according to options set in the database and
     then place the returned data in the database as well.
     """
-    def __get_hosts(self):
+    async def __get_hosts(self):
         """
         Reads hosts from the database and returns a list of host nodes.
         """
         hosts = {}
         postgrescon = None
-        options = self.config.postgres
+        options = self.__config["postgres"]
         self.logger.info("Fetching Brick Daemon hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
         try:
-            postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], dbname=options['database'])
-            cur = postgrescon.cursor()
-            cur.execute(POSTGRES_STMS['select_hosts'])
-            rows = cur.fetchall()
-            # Iterate over all hosts found in the database and create host object for them.
-            for row in rows:
-                self.logger.debug('Found host "%s:%s"', row[0], row[1])
-                hosts[row[0]] = SensorHost(row[0], row[1], self)
-        except psycopg2.DatabaseError as e:
+            postgrescon = await asyncpg.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], database=options['database'])
+            stmt = await conn.prepare(POSTGRES_STMS['select_hosts'])
+            async with postgrescon.transaction():
+                async for record in stmt.cursor():
+                # Iterate over all hosts found in the database and create host object for them.
+                for row in rows:
+                    self.logger.debug('Found host "%s:%s"', row[0], row[1])
+                    hosts[row["hostname"]] = SensorHost(row["hostname"], row["port"], self)
+        except asyncpg.InterfaceError as e:
             self.logger.critical('Error. Cannot get hosts from database: %s.', e)
-            sys.exit(1)
+            raise
         finally:
-            if postgrescon:
-                postgrescon.close()
+            if postgrescon is not None:
+                await postgrescon.close()
 
         return hosts
 
@@ -162,11 +161,11 @@ class SensorDaemon(Daemon):
     def __init__(self, config):
         """
         Creates a sensorDaemon object.
-        config: A configParser object containing all the configuration options needed
+        config: A config dict containing the configuration options
         """
         super(SensorDaemon, self).__init__('/tmp/daemon-example.pid')
         self.__config = config
-        self.__logger = DaemonLogger(config.logging).get_logger()
+        self.__logger = DaemonLogger(config["logging"]).get_logger()
         # Hook onto the SIGTERM (standard kill command) and SIGINT (Ctrl + C) signal
         signal.signal(signal.SIGTERM, self.shutdown)
         signal.signal(signal.SIGINT, self.shutdown)
@@ -210,25 +209,29 @@ class SensorDaemon(Daemon):
         # Shutdown logging system
         sys.exit(0)
 
-if __name__ == "__main__":
+def load_config():
     """
-    Load the config file, then start the daemon
+    Tries to load the config either from a file or from environment variables
     """
-    parser = argparse.ArgumentParser(description='Sensor daemon for tinkerforge bricklets')
-    parser.add_argument('action', nargs='?', choices=['start', 'stop', 'restart'], help='Run, stop or restart the service')
-    parser.add_argument('--nodaemon', action='store_true', help='If this option is set no action is required. The deamon will not fork to the background.')
-    args = parser.parse_args()
-
-    config = ConfigParser(CONFIG_PATH)
-
-    daemon = SensorDaemon(config)
-    if (args.nodaemon):
-        daemon.run()
-    elif args.action == 'start':
-        daemon.start()
-    elif args.action == 'stop':
-        daemon.stop()
-    elif args.action == 'restart':
-        daemon.restart()
+    if os.path.isfile(CONFIG_PATH):
+        return parse_config_from_file(CONFIG_PATH)
     else:
-        parser.print_usage()
+        return parse_config_from_env()
+
+# Report all mistakes managing asynchronous resources.
+warnings.simplefilter('always', ResourceWarning)
+logging.basicConfig(
+    format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+    level=logging.DEBUG,    # Enable logs from the ip connection. Set to debug for even more info
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+try:
+    config = load_config()
+    daemon = SensorDaemon(config)
+
+    asyncio.run(daemon.run(), debug=False)
+except KeyboardInterrupt:
+    # The loop will be canceled on a KeyboardInterrupt by the run() method, we just want to suppress the exception
+    pass
+
