@@ -122,7 +122,7 @@ class DaemonLogger(object):
         NOTSET   0
         """
         log_levels_used = [config['console_loglevel'], config['file_loglevel']]
-        # Find the minium log level required. Since NOTSET is 0, we exclude it from the list, but it the list is empty
+        # Find the minium log level required. Since NOTSET is 0, we exclude it from the list, but if the list is empty
         # we know that it is not set, hence the default. The default keyword requires python 3.4
         self.get_logger().setLevel(min((level for level in log_levels_used if level is not logging.NOTSET), default=logging.NOTSET))
 

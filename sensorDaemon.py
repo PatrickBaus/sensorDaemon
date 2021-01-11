@@ -29,7 +29,7 @@ import sys
 import time
 import warnings
 
-from configParser import ConfigParser, parse_config_from_env, parse_config_from_file
+from configParser import parse_config_from_env, parse_config_from_file
 from daemon import Daemon
 from daemonLogger import DaemonLogger
 from sensors.sensorHost import SensorHost
@@ -162,7 +162,6 @@ class SensorDaemon():
         Creates a sensorDaemon object.
         config: A config dict containing the configuration options
         """
-        super(SensorDaemon, self).__init__('/tmp/daemon-example.pid')
         self.__config = config
         self.__logger = DaemonLogger(config["logging"]).get_logger()
         # Hook onto the SIGTERM (standard kill command) and SIGINT (Ctrl + C) signal

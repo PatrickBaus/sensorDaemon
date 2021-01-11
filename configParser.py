@@ -68,8 +68,7 @@ def parse_config_from_env():
     sensors["keepalive_interval"] = int(os.getenv("SENSORS_KEEPALIVE_INTERVAL", "60"))
 
     return {
-      "logging"  : logging,
-      "mysql"    : mysql,
+      "logging"  : log,
       "postgres" : postgres,
       "sensors"  : sensors,
     }
@@ -99,8 +98,7 @@ def parse_config_from_file(config):
     sensors["keepalive_interval"] = int(config_map["sensors"].get("keepalive_intervall", "60"))
 
     return {
-      "logging"  : logging,
-      "mysql"    : mysql,
+      "logging"  : log,
       "postgres" : postgres,
       "sensors"  : sensors,
     }
