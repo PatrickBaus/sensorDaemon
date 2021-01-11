@@ -47,13 +47,13 @@ string_to_level = {
 }
 
 def parse_config_from_env():
-    logging = {}
-    logging["console_loglevel"] = string_to_level.get(os.getenv("CONSOLE_LOGLEVEL"), logging.NOTSET)
-    logging["file_loglevel"]    = string_to_level.get(os.getenv("FILE_LOGLEVEL"), logging.NOTSET)
-    logging["dateformat"]       = os.getenv("DATEFORMAT", "%b %d %H:%M:%S")
-    logging["logfile"]          = os.getenv("LOGFILE", "sensor_daemon.log")
-    if not os.path.isabs(logging["logfile"]):
-        logging['logfile'] = module_path() + "/"  + logging['logfile']
+    log = {}
+    log["console_loglevel"] = string_to_level.get(os.getenv("CONSOLE_LOGLEVEL"), logging.NOTSET)
+    log["file_loglevel"]    = string_to_level.get(os.getenv("FILE_LOGLEVEL"), logging.NOTSET)
+    log["dateformat"]       = os.getenv("DATEFORMAT", "%b %d %H:%M:%S")
+    log["logfile"]          = os.getenv("LOGFILE", "sensor_daemon.log")
+    if not os.path.isabs(log["logfile"]):
+        log['logfile'] = module_path() + "/"  + log['logfile']
 
     postgres = {}
     postgres["host"]     = os.getenv("POSTGRES_HOST", "localhost")
@@ -78,13 +78,13 @@ def parse_config_from_file(config):
     with open(config) as file:
         config_map = yaml.safe_load(file)
 
-    logging = {}
-    logging["console_loglevel"] = string_to_level.get(config_map["logging"]["console_loglevel"], logging.NOTSET)
-    logging["file_loglevel"]    = string_to_level.get(config_map["logging"]["file_loglevel"], logging.NOTSET)
-    logging["dateformat"]       = config_map["logging"].get("dateformat", "%b %d %H:%M:%S")
-    logging["logfile"]          = config_map["logging"].get("logfile", "sensor_daemon.log")
-    if not os.path.isabs(logging["logfile"]):
-        logging['logfile'] = module_path() + "/"  + logging['logfile']
+    log = {}
+    log["console_loglevel"] = string_to_level.get(config_map["logging"]["console_loglevel"], logging.NOTSET)
+    log["file_loglevel"]    = string_to_level.get(config_map["logging"]["file_loglevel"], logging.NOTSET)
+    log["dateformat"]       = config_map["logging"].get("dateformat", "%b %d %H:%M:%S")
+    log["logfile"]          = config_map["logging"].get("logfile", "sensor_daemon.log")
+    if not os.path.isabs(log["logfile"]):
+        log['logfile'] = module_path() + "/"  + log['logfile']
 
     postgres = {}
     postgres["host"]     = config_map["postgres"].get("host", "localhost")
