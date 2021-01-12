@@ -189,14 +189,14 @@ class TinkerforgeSensorHost(SensorHost):
         """
         while "queue not canceled":
             packet = await self.__conn.enumeration_queue.get()
-            if enumeration_type is EnumerationType.CONNECTED or enumeration_type is EnumerationType.AVAILABLE:
+            if packet["enumeration_type"] is EnumerationType.CONNECTED or packet["enumeration_type"] is EnumerationType.AVAILABLE:
                 try:
-                    device = device_factory(packet["device_id"], packet["uid"], self.__conn)
+                    device = device_factory.get(packet["device_id"], packet["uid"], self.__conn)
                 except ValueError:
                     self.logger.warning("Unsupported device (uid '%s', identifier '%s') found on host '%s'", uid, device_identifier, self.hostname)
-            elif enumeration_type is EnumerationType.DICCONNECTED:
+            elif packet["enumeration_type"] is EnumerationType.DICCONNECTED:
                 # Check whether the sensor is actually connected to this host, then remove it.
-                if uid in self.sensors:
+                if packet["uid"] in self.sensors:
                     self.logger.warning("Sensor '%s' disconnected from host '%s'.", uid, self.hostname)
                     del self.sensors[uid]
 
