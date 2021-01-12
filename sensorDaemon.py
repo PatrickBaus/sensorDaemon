@@ -164,7 +164,8 @@ class SensorDaemon():
         config: A config dict containing the configuration options
         """
         self.__config = config
-        self.__logger = DaemonLogger(config["logging"]).get_logger()
+        #self.__logger = DaemonLogger(config["logging"]).get_logger()
+        self.__logger = logging.getLogger(__name__)
         self.__running_tasks = []
 
     async def run(self):
@@ -220,6 +221,11 @@ def load_config():
 
 # Report all mistakes managing asynchronous resources.
 warnings.simplefilter('always', ResourceWarning)
+logging.basicConfig(
+    format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+    level=logging.WARNING,    # Enable logs from the ip connection. Set to debug for even more info
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 try:
     config = load_config()
