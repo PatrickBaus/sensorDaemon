@@ -33,7 +33,7 @@ import warnings
 from configParser import parse_config_from_env, parse_config_from_file
 from daemon import Daemon
 from daemonLogger import DaemonLogger
-from sensors.sensorHost import SensorHost
+from sensors.sensorHost import host_factory
 
 def we_are_frozen():
     """Returns whether we are frozen via py2exe.
@@ -55,7 +55,7 @@ CONFIG_PATH = module_path() + '/sensors.conf'
 POSTGRES_STMS = {
     'insert_data' : "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
     'select_period': "SELECT callback_period FROM sensors WHERE sensor_uid=%s AND enabled",
-    'select_hosts' : "SELECT hostname, port FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
+    'select_hosts' : "SELECT hostname, port, (SELECT drivers.name FROM drivers WHERE drivers.id=driver_id) as driver FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
 }
 
 
@@ -74,11 +74,11 @@ class SensorDaemon():
         self.logger.info("Fetching Brick Daemon hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
         try:
             postgrescon = await asyncpg.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], database=options['database'])
-            stmt = await conn.prepare(POSTGRES_STMS['select_hosts'])
+            stmt = await postgrescon.prepare(POSTGRES_STMS['select_hosts'])
             async with postgrescon.transaction():
                 async for record in stmt.cursor():
                     self.logger.debug('Found host "%s:%s"', record["hostname"], record["port"])
-                    hosts[record["hostname"]] = SensorHost(record["hostname"], record["port"], self)
+                    hosts[record["hostname"]] = host_factory(driver=record["driver"], hostname=record["hostname"], port=record["port"], parent=self)
         except asyncpg.InterfaceError as e:
             self.logger.critical('Error. Cannot get hosts from database: %s.', e)
             raise
@@ -186,7 +186,7 @@ class SensorDaemon():
 
         # Connect to all hosts. The connection will be kept open.
         for host in self.hosts.values():
-            self.logger.warning('Connecting to brick daemon on "%s"...', host.host_name)
+            self.logger.warning('Connecting to brick daemon on "%s"...', host.hostname)
             self.logger.info("-----------------")
             host.connect()
 

@@ -18,25 +18,62 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from abc import ABCMeta
 from socket import error as socketError
 
-from .tinkerforge.ip_connection import IPConnection
+from .tinkerforgeAsync.source.ip_connection import IPConnectionAsync as IPConnection
+from .tinkerforgeAsync.source.device import device_factory
 from .tinkerforge.ip_connection import Error as IPConError
-from .ambientLight import AmbientLightSensor
-from .ambientLight_v2 import AmbientLightSensorV2
-from .ambientLight_v3 import AmbientLightSensorV3
-from .barometer import BarometerSensor
-from .humidity import HumiditySensor
-from .humidity_v2 import HumiditySensorV2
-from .temperature import TemperatureSensor
-from .temperature_v2 import TemperatureSensorV2
-from .ptc import PTCSensor
-from .ptc_v2 import PTCSensorV2
-from .industrial_dual_analog_in_v2 import IndustrialDualAnalogInV2
 
-class SensorHost():
+host_factory = SensorHostFactory()
+
+host_factory.register_host(driver="tinkerforge", host=TinkerforgeSensorHost)
+
+class SensorHostFactory:
+    def __init__(self):
+        self.__available_hosts= {}
+
+    def register_host(self, driver, host):
+        self.__available_hosts[driver] = host
+
+    def get_host(self, driver, hostname, port, parent):
+        host = self.__available_hosts.get(driver)
+        if host is None:
+            raise ValueError(f"No driver available for {driver}")
+        return host(hostname, port, parent)
+
+class SensorHost(metaclass=ABCMeta):
+
+    @property
+    def hostname(self):
+        """
+        Returns the hostname of the Tinkerforge brick daemon, where this host can be found
+        """
+        return self.__hostname
+
+    @property
+    def port(self):
+        """
+        Returns the port at which the Tinkerforge brick daemon is listening
+        """
+        return self.__port
+
+    @abstractmethod
+    async def connect(self):
+        pass
+
+    @abstractmethod
+    async def disconnect(self):
+        pass
+
+    def __init__(self, hostname, port, parent):
+        self.__hostname = hostname
+        self.__port = port
+        self.__parent = parent
+
+class TinkerforgeSensorHost(SensorHost):
     """
-    Class that wraps a Tinkerforge brick daemon host. This can be either a PC running brickd, or a master brick with an ethernet/wifi ectension
+    Class that wraps a Tinkerforge brick daemon host. This can be either a PC running brickd, or a master brick with an ethernet/wifi extension
     """
     __MAXIMUM_FAILED_CONNECTIONS = 3
     @property
@@ -45,20 +82,6 @@ class SensorHost():
         Returns the number of failed connection attemps.
         """
         return self.__failed_connection_attemps
-
-    @property
-    def host_name(self):
-        """
-        Returns the hostname of the Tinkerforge brick daemon, where this host can be found
-        """
-        return self.__host_name
-
-    @property
-    def port(self):
-        """
-        Returns the port at which the Tinkerforge brick daemon is listening
-        """
-        return self.__port
 
     @property
     def sensors(self):
@@ -95,18 +118,10 @@ class SensorHost():
             sensor.disconnect()
         except IPConError as e:
             if (e.value == IPConError.TIMEOUT):
-                self.logger.warning('Warning. Cannot disconnect from sensor "%s" on host "%s". The sensor or host does not respond. Will now forcefully remove the sensor.', sensor.uid, self.host_name)
+                self.logger.warning('Warning. Cannot disconnect from sensor "%s" on host "%s". The sensor or host does not respond. Will now forcefully remove the sensor.', sensor.uid, self.__hostname)
                 if sensor.uid in self.sensors:
                     # If the sensor was disconnected by hand before we could remove it, it might already be gone
                     del self.sensors[sensor.uid]
-
-    @property
-    def ipcon(self):
-        """
-        Returns the Tinkerforge IP Connection object.
-        http://www.tinkerforge.com/en/doc/Software/IPConnection_Python.html
-        """
-        return self.__ipcon
 
     def __enumeration_id_to_string(self, id):
         """
@@ -133,9 +148,9 @@ class SensorHost():
         """
         Check the connection to the brick daemon and subsequently all sensors connected to a host.
         """
-        self.logger.debug('Pinging host "%s"', self.host_name)
+        self.logger.debug('Pinging host "%s"', self.__hostname)
         if self.is_connected:
-            self.logger.debug('Host "%s" seems connected. Checking %i sensors.', self.host_name, len(self.sensors))
+            self.logger.debug('Host "%s" seems connected. Checking %i sensors.', self.__hostname, len(self.sensors))
             if len(self.sensors) > 0:
                 try:
                     # Remove the sensor if it cannot be found. Copy
@@ -151,11 +166,11 @@ class SensorHost():
 
                 except IPConError as e:
                     if (e.value == IPConError.TIMEOUT):
-                        self.logger.error('Error. Lost connection to host "%s".', self.host_name)
+                        self.logger.error('Error. Lost connection to host "%s".', self.__hostname)
                     else:
                         raise
         else:
-            self.logger.debug('Host "%s" seems disconnected. Trying to reconnect.', self.host_name)
+            self.logger.debug('Host "%s" seems disconnected. Trying to reconnect.', self.__hostname)
             self.connect()
 
     def sensor_callback(self, sensor, value, previous_update):
@@ -170,76 +185,41 @@ class SensorHost():
         """
         if self.ipcon.get_connection_state() == IPConnection.CONNECTION_STATE_CONNECTED:
             # Remove all current sensors from this node, then enumerate
-            self.logger.warning('Enumerating devices on host "%s". Reason: %s (%i).', self.host_name, self.__enumeration_id_to_string(connected_reason), connected_reason)
+            self.logger.warning('Enumerating devices on host "%s". Reason: %s (%i).', self.__hostname, self.__enumeration_id_to_string(connected_reason), connected_reason)
             self.disconnect_sensors()
             self.ipcon.enumerate()
         else:
-            self.logger.error('Cannot enumerate host "%s". Host not connected. Reason: %s (%i).', self.host_name, self.__enumeration_id_to_string(connected_reason), connected_reason)
+            self.logger.error('Cannot enumerate host "%s". Host not connected. Reason: %s (%i).', self.__hostname, self.__enumeration_id_to_string(connected_reason), connected_reason)
 
-    def enumerate_callback(self, uid, connected_uid, position, hardware_version, firmware_version, device_identifier, enumeration_type):
+    async def process_enumerations():
         """
-        This method does all the work. Every sensor connector to a brick will return its type, uid (and more) on an enumerate call. We will then
-        create sensor objects according to the type of sensor answering the call.
-        Disconnecting sensors will also be treated here.
-        For details see: http://www.tinkerforge.com/en/doc/Software/IPConnection_Python.html#IPConnection.CALLBACK_ENUMERATE
-        """
-        if enumeration_type == IPConnection.ENUMERATION_TYPE_CONNECTED or enumeration_type == IPConnection.ENUMERATION_TYPE_AVAILABLE:
-            # Ambient light bricklet
-            if device_identifier == AmbientLightSensor.DEVICE_IDENTIFIER:
-                self.__connect_sensor(AmbientLightSensor, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Ambient light bricklet v2
-            elif device_identifier == AmbientLightSensorV2.DEVICE_IDENTIFIER:
-                self.__connect_sensor(AmbientLightSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Ambient light bricklet v3
-            elif device_identifier == AmbientLightSensorV3.DEVICE_IDENTIFIER:
-                self.__connect_sensor(AmbientLightSensorV3, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Barometer bricklet
-            elif device_identifier == BarometerSensor.DEVICE_IDENTIFIER:
-                self.__connect_sensor(BarometerSensor, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Humidity bricklet
-            elif device_identifier == HumiditySensor.DEVICE_IDENTIFIER:
-                self.__connect_sensor(HumiditySensor, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Humidity bricklet v2
-            elif device_identifier == HumiditySensorV2.DEVICE_IDENTIFIER:
-                self.__connect_sensor(HumiditySensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Temperature bricklet
-            elif device_identifier == TemperatureSensor.DEVICE_IDENTIFIER:
-                self.__connect_sensor(TemperatureSensor, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Temperature v2.0 bricklet
-            elif device_identifier == TemperatureSensorV2.DEVICE_IDENTIFIER:
-                self.__connect_sensor(TemperatureSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
-            # PTC bricklet
-            elif device_identifier == PTCSensor.DEVICE_IDENTIFIER:
-                self.__connect_sensor(PTCSensor, uid, connected_uid, position, self.host_name, enumeration_type)
-            # PTC v2.0 bricklet
-            elif device_identifier == PTCSensorV2.DEVICE_IDENTIFIER:
-                self.__connect_sensor(PTCSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Industrial Dual Analog In v2.0 bricklet
-            elif device_identifier == IndustrialDualAnalogInV2.DEVICE_IDENTIFIER:
-                self.__connect_sensor(IndustrialDualAnalogInV2, uid, connected_uid, position, self.host_name, enumeration_type)
-            # Device is not a bricklet
-            elif device_identifier < 128:
-                pass
-            # Throw an error if the device is not supported.
-            else:
-                self.logger.error('Unsupported device (uid "%s", identifier "%s") found on host "%s"', uid, device_identifier, self.host_name)
-
-        elif enumeration_type == IPConnection.ENUMERATION_TYPE_DISCONNECTED:
-            # Check whether the sensor is actually connected to this host and if it is an actual sensor and not a master brick.
-            # If the sensor is connected to this node, delete it.
-            if uid in self.sensors:
-                self.logger.warning('Sensor "%s" disconnected from host "%s".', uid, self.host_name)
-                del self.sensors[uid]
-        else:
-            self.logger.debug('Recieved an unknown enumeration type: %s', enumeration_type)
-
-    def connect(self):
-        """
-        Start up the ip connection to the various brick daemons
+        This infinite loop pulls events from the internal enumeration queue
+        of the ip connection and waits for an enumeration event with a
+        certain device id, then it will run the example code.
         """
         try:
-            self.ipcon.connect(self.host_name, self.port)
-            self.logger.info('Connected to host "%s".', self.host_name)
+            while 'queue not canceled':
+                packet = await ipcon.enumeration_queue.get()
+                if enumeration_type is EnumerationType.CONNECTED or enumeration_type is EnumerationType.AVAILABLE:
+                    try:
+                        device = device_factory(packet['device_id'], packet['uid'], self.__conn)
+                    except ValueError:
+                        self.logger.warning('Unsupported device (uid "%s", identifier "%s") found on host "%s"', uid, device_identifier, self.__hostname)
+                elif enumeration_type is EnumerationType.DICCONNECTED:
+                    # Check whether the sensor is actually connected to this host, then remove it.
+                    if uid in self.sensors:
+                        self.logger.warning('Sensor "%s" disconnected from host "%s".', uid, self.__hostname)
+                        del self.sensors[uid]
+          except asyncio.CancelledError:
+            pass
+
+    async def connect(self):
+        """
+        Start up the ip connection
+        """
+        try:
+            await self.__conn.connect(self.hostname, self.port)
+            self.logger.info('Connected to host "%s".', self.hostname)
         except socketError as e:
             self.__failed_connection_attemps += 1
             # Suppress the warning after __MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
@@ -248,9 +228,9 @@ class SensorHost():
                     failure_count = " (%d times)" % self.failed_connection_attemps
                 else:
                     failure_count = ""
-                self.logger.warning('Warning. Failed to connect to host "%s"%s. Error: %s.', self.host_name, failure_count, e)
+                self.logger.warning('Warning. Failed to connect to host "%s"%s. Error: %s.', self.__hostname, failure_count, e)
             if (self.failed_connection_attemps == self.__MAXIMUM_FAILED_CONNECTIONS):
-                self.logger.warning('Warning. Failed to connect to host "%s" (%d time%s). Error: %s. Suppressing warnings from hereon.', self.host_name, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
+                self.logger.warning('Warning. Failed to connect to host "%s" (%d time%s). Error: %s. Suppressing warnings from hereon.', self.__hostname, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
 
         if self.is_connected:
            self.__failed_connection_attemps = 0
@@ -269,31 +249,27 @@ class SensorHost():
         for uid in list(self.sensors):
             self.remove_sensor(self.sensors[uid])
 
-    def disconnect(self):
+    async def disconnect(self):
         """
         Disconnect all sensors from the host. This will disable the callbacks of the sensors.
         """
         if self.is_connected:
-            self.logger.warning('Disconnecting from brick daemon on "%s"...', self.host_name)
+            self.logger.warning('Disconnecting from brick daemon on "%s"...', self.__hostname)
             self.disconnect_sensors()
             try:
                 self.ipcon.disconnect()
                 pass
             except socketError as e:
-                self.logger.warning('Warning. Failed to disconnect from host "%s". Error: %s.', self.host_name, e)
+                self.logger.warning('Warning. Failed to disconnect from host "%s". Error: %s.', self.__hostname, e)
 
-    def __init__(self, host_name, port, parent):
+    def __init__(self, hostname, port, driver, parent):
         """
         Create new sensorHost Object.
         hostName: IP or hostname of the machine hosting the sensor daemon
         port: port on the host
         parent: sensorDaemon object managing all sensor hosts
         """
-        self.__host_name = host_name
-        self.__port = port
-        self.__parent = parent
+        super(hostname, port, parent)
         self.__sensors = {}
-        self.__ipcon = IPConnection()
-        self.__ipcon.register_callback(IPConnection.CALLBACK_ENUMERATE, self.enumerate_callback)
-        self.__ipcon.register_callback(IPConnection.CALLBACK_CONNECTED, self.connect_callback)
+        self.__conn = IPConnection()
         self.__failed_connection_attemps = 0
