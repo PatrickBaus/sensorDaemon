@@ -166,9 +166,6 @@ class SensorDaemon():
         self.__config = config
         self.__logger = DaemonLogger(config["logging"]).get_logger()
         self.__running_tasks = []
-        # Hook onto the SIGTERM (standard kill command) and SIGINT (Ctrl + C) signal
-        signal.signal(signal.SIGTERM, self.shutdown)
-        signal.signal(signal.SIGINT, self.shutdown)
 
     async def run(self):
         """
@@ -189,6 +186,9 @@ class SensorDaemon():
         try:
             for host in self.hosts.values():
                 self.__running_tasks.append(asyncio.create_task(host.run()))
+
+            while "loop not canceled":
+                await asyncio.sleep(1)
         finally:
             for task in self.__running_tasks:
                 task.cancel()

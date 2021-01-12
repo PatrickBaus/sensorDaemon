@@ -19,6 +19,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from abc import ABCMeta, abstractmethod
+import asyncio
 import logging
 from socket import error as socketError
 
@@ -246,17 +247,18 @@ class TinkerforgeSensorHost(SensorHost):
         Disconnect all sensors from the host. This will disable the callbacks of the sensors.
         """
         if self.is_connected:
-            self.logger.warning('Disconnecting from brick daemon on "%s"...', self.__hostname)
-            self.disconnect_sensors()
-            try:
-                self.ipcon.disconnect()
-                pass
-            except socketError as e:
-                self.logger.warning('Warning. Failed to disconnect from host "%s". Error: %s.', self.__hostname, e)
+            await self.__conn.disconnect()
 
     async def run(self):
-        while not self.is_connected:
-            await self.connect()
+        try:
+            while not self.is_connected:
+                await self.connect()
+
+            while "loop not canceled":
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            await self.disconnect()
+            raise
 
     def __init__(self, hostname, port, parent):
         """
