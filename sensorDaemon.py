@@ -186,15 +186,7 @@ class SensorDaemon():
 
         # Connect to all hosts. The connection will be kept open.
         for host in self.hosts.values():
-            self.logger.warning('Connecting to brick daemon on "%s"...', host.hostname)
-            self.logger.info("-----------------")
-            host.connect()
-
-        # Check for all host in regular intervals. If a host was previously unavailable, we will try to reconnect.
-        while (True):
-            time.sleep(self.config.sensors['ping_intervall'])
-            for host in self.hosts.values():
-                host.ping()
+            await host.connect()
 
     def shutdown(self, sig_number, frame):
         """
