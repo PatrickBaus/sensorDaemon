@@ -165,6 +165,7 @@ class SensorDaemon():
         """
         self.__config = config
         self.__logger = DaemonLogger(config["logging"]).get_logger()
+        self.__running_tasks = []
         # Hook onto the SIGTERM (standard kill command) and SIGINT (Ctrl + C) signal
         signal.signal(signal.SIGTERM, self.shutdown)
         signal.signal(signal.SIGINT, self.shutdown)
@@ -185,8 +186,16 @@ class SensorDaemon():
             sys.exit(1)
 
         # Connect to all hosts. The connection will be kept open.
-        for host in self.hosts.values():
-            await host.connect()
+        try:
+            for host in self.hosts.values():
+                self.__running_tasks.append(asyncio.create_task(host.run()))
+        finally:
+            for task in self.__running_tasks:
+                task.cancel()
+            try:
+                await asyncio.gather(*self.__running_tasks)
+            except asyncio.CancelledError:
+                pass
 
     def shutdown(self, sig_number, frame):
         """

@@ -194,11 +194,11 @@ class TinkerforgeSensorHost(SensorHost):
                     try:
                         device = device_factory(packet["device_id"], packet["uid"], self.__conn)
                     except ValueError:
-                        self.logger.warning("Unsupported device (uid '%s', identifier '%s') found on host '%s'", uid, device_identifier, self.__hostname)
+                        self.logger.warning("Unsupported device (uid '%s', identifier '%s') found on host '%s'", uid, device_identifier, self.hostname)
                 elif enumeration_type is EnumerationType.DICCONNECTED:
                     # Check whether the sensor is actually connected to this host, then remove it.
                     if uid in self.sensors:
-                        self.logger.warning("Sensor '%s' disconnected from host '%s'.", uid, self.__hostname)
+                        self.logger.warning("Sensor '%s' disconnected from host '%s'.", uid, self.hostname)
                         del self.sensors[uid]
         except asyncio.CancelledError:
             pass
@@ -207,7 +207,7 @@ class TinkerforgeSensorHost(SensorHost):
         """
         Start up the ip connection
         """
-        self.__logger.warning("Connecting to brick daemon on '%s'...", host.hostname)
+        self.__logger.warning("Connecting to brick daemon on '%s'...", self.hostname)
         self.__logger.info("-----------------")
         try:
             await self.__conn.connect(self.hostname, self.port)
@@ -220,9 +220,9 @@ class TinkerforgeSensorHost(SensorHost):
                     failure_count = " (%d times)" % self.failed_connection_attemps
                 else:
                     failure_count = ""
-                self._logger__.warning("Failed to connect to host '%s'%s. Error: %s.", self.__hostname, failure_count, e)
+                self.__logger.warning("Failed to connect to host '%s'%s. Error: %s.", self.hostname, failure_count, e)
             if (self.failed_connection_attemps == self.__MAXIMUM_FAILED_CONNECTIONS):
-                self.__logger.warning("Failed to connect to host '%s' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.__hostname, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
+                self.__logger.warning("Failed to connect to host '%s' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.hostname, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
 
         if self.is_connected:
            self.__failed_connection_attemps = 0
@@ -232,7 +232,7 @@ class TinkerforgeSensorHost(SensorHost):
         """
         Checks the state of the ip connection. Will return false if the device is no longer connected.
         """
-        return self.ipcon.get_connection_state() == IPConnection.CONNECTION_STATE_CONNECTED
+        return self.__conn.is_connected
 
     def disconnect_sensors(self):
         """
@@ -253,6 +253,10 @@ class TinkerforgeSensorHost(SensorHost):
                 pass
             except socketError as e:
                 self.logger.warning('Warning. Failed to disconnect from host "%s". Error: %s.', self.__hostname, e)
+
+    async def run(self):
+        while not self.is_connected:
+            await self.connect()
 
     def __init__(self, hostname, port, parent):
         """
