@@ -18,25 +18,21 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from socket import error as socketError
 
 from .tinkerforgeAsync.source.ip_connection import IPConnectionAsync as IPConnection
-from .tinkerforgeAsync.source.device import device_factory
+from .tinkerforgeAsync.source.devices import device_factory
 from .tinkerforge.ip_connection import Error as IPConError
-
-host_factory = SensorHostFactory()
-
-host_factory.register_host(driver="tinkerforge", host=TinkerforgeSensorHost)
 
 class SensorHostFactory:
     def __init__(self):
         self.__available_hosts= {}
 
-    def register_host(self, driver, host):
+    def register(self, driver, host):
         self.__available_hosts[driver] = host
 
-    def get_host(self, driver, hostname, port, parent):
+    def get(self, driver, hostname, port, parent):
         host = self.__available_hosts.get(driver)
         if host is None:
             raise ValueError(f"No driver available for {driver}")
@@ -109,7 +105,7 @@ class TinkerforgeSensorHost(SensorHost):
         Appends a new sensor to the host.
         """
         self.sensors[sensor.uid] = sensor
-        
+
     def remove_sensor(self, sensor):
         """
         Removes a sensor from the host. This will be done gracefully.
@@ -135,7 +131,7 @@ class TinkerforgeSensorHost(SensorHost):
         elif id == IPConnection.ENUMERATION_TYPE_DISCONNECTED:
             result = 'Device discconnected from host'
         return result
-        
+
     def __connect_sensor(self, sensor_class, uid, connected_uid, port, name, enumeration_type):
         self.logger.warning('%s sensor "%s" connected to brick "%s" (Port: "%s") on host "%s". Reason: %s (%i).', sensor_class.TYPE.title(), uid, connected_uid, port, name, self.__enumeration_id_to_string(enumeration_type), enumeration_type)
         # Retrieve the callback period from the database
@@ -210,7 +206,7 @@ class TinkerforgeSensorHost(SensorHost):
                     if uid in self.sensors:
                         self.logger.warning('Sensor "%s" disconnected from host "%s".', uid, self.__hostname)
                         del self.sensors[uid]
-          except asyncio.CancelledError:
+        except asyncio.CancelledError:
             pass
 
     async def connect(self):
@@ -273,3 +269,6 @@ class TinkerforgeSensorHost(SensorHost):
         self.__sensors = {}
         self.__conn = IPConnection()
         self.__failed_connection_attemps = 0
+
+host_factory = SensorHostFactory()
+host_factory.register(driver="tinkerforge", host=TinkerforgeSensorHost)

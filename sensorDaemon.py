@@ -78,7 +78,7 @@ class SensorDaemon():
             async with postgrescon.transaction():
                 async for record in stmt.cursor():
                     self.logger.debug('Found host "%s:%s"', record["hostname"], record["port"])
-                    hosts[record["hostname"]] = host_factory(driver=record["driver"], hostname=record["hostname"], port=record["port"], parent=self)
+                    hosts[record["hostname"]] = host_factory.get(driver=record["driver"], hostname=record["hostname"], port=record["port"], parent=self)
         except asyncpg.InterfaceError as e:
             self.logger.critical('Error. Cannot get hosts from database: %s.', e)
             raise
