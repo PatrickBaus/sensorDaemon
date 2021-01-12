@@ -19,6 +19,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from abc import ABCMeta, abstractmethod
+import logging
 from socket import error as socketError
 
 from .tinkerforgeAsync.source.ip_connection import IPConnectionAsync as IPConnection
@@ -85,13 +86,6 @@ class TinkerforgeSensorHost(SensorHost):
         Returns a dictionary of all sensors registered with this host. getSensors()[%sensor_uid] will return a sensor object.
         """
         return self.__sensors
-
-    @property
-    def logger(self):
-        """
-        Returns the logger to send messages to the console/file
-        """
-        return self.parent.logger
 
     @property
     def parent(self):
@@ -194,17 +188,17 @@ class TinkerforgeSensorHost(SensorHost):
         certain device id, then it will run the example code.
         """
         try:
-            while 'queue not canceled':
+            while "queue not canceled":
                 packet = await ipcon.enumeration_queue.get()
                 if enumeration_type is EnumerationType.CONNECTED or enumeration_type is EnumerationType.AVAILABLE:
                     try:
-                        device = device_factory(packet['device_id'], packet['uid'], self.__conn)
+                        device = device_factory(packet["device_id"], packet["uid"], self.__conn)
                     except ValueError:
-                        self.logger.warning('Unsupported device (uid "%s", identifier "%s") found on host "%s"', uid, device_identifier, self.__hostname)
+                        self.logger.warning("Unsupported device (uid '%s', identifier '%s') found on host '%s'", uid, device_identifier, self.__hostname)
                 elif enumeration_type is EnumerationType.DICCONNECTED:
                     # Check whether the sensor is actually connected to this host, then remove it.
                     if uid in self.sensors:
-                        self.logger.warning('Sensor "%s" disconnected from host "%s".', uid, self.__hostname)
+                        self.logger.warning("Sensor '%s' disconnected from host '%s'.", uid, self.__hostname)
                         del self.sensors[uid]
         except asyncio.CancelledError:
             pass
@@ -213,9 +207,11 @@ class TinkerforgeSensorHost(SensorHost):
         """
         Start up the ip connection
         """
+        self.__logger.warning("Connecting to brick daemon on '%s'...", host.hostname)
+        self.__logger.info("-----------------")
         try:
             await self.__conn.connect(self.hostname, self.port)
-            self.logger.info('Connected to host "%s".', self.hostname)
+            self.__logger.info("Connected to host '%s'.", self.hostname)
         except socketError as e:
             self.__failed_connection_attemps += 1
             # Suppress the warning after __MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
@@ -224,9 +220,9 @@ class TinkerforgeSensorHost(SensorHost):
                     failure_count = " (%d times)" % self.failed_connection_attemps
                 else:
                     failure_count = ""
-                self.logger.warning('Warning. Failed to connect to host "%s"%s. Error: %s.', self.__hostname, failure_count, e)
+                self._logger__.warning("Failed to connect to host '%s'%s. Error: %s.", self.__hostname, failure_count, e)
             if (self.failed_connection_attemps == self.__MAXIMUM_FAILED_CONNECTIONS):
-                self.logger.warning('Warning. Failed to connect to host "%s" (%d time%s). Error: %s. Suppressing warnings from hereon.', self.__hostname, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
+                self.__logger.warning("Failed to connect to host '%s' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.__hostname, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
 
         if self.is_connected:
            self.__failed_connection_attemps = 0
@@ -258,14 +254,15 @@ class TinkerforgeSensorHost(SensorHost):
             except socketError as e:
                 self.logger.warning('Warning. Failed to disconnect from host "%s". Error: %s.', self.__hostname, e)
 
-    def __init__(self, hostname, port, driver, parent):
+    def __init__(self, hostname, port, parent):
         """
         Create new sensorHost Object.
         hostName: IP or hostname of the machine hosting the sensor daemon
         port: port on the host
         parent: sensorDaemon object managing all sensor hosts
         """
-        super(hostname, port, parent)
+        super().__init__(hostname, port, parent)
+        self.__logger = logging.getLogger(__name__)
         self.__sensors = {}
         self.__conn = IPConnection()
         self.__failed_connection_attemps = 0
