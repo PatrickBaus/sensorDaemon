@@ -182,7 +182,7 @@ class TinkerforgeSensorHost(SensorHost):
         else:
             self.logger.error('Cannot enumerate host "%s". Host not connected. Reason: %s (%i).', self.__hostname, self.__enumeration_id_to_string(connected_reason), connected_reason)
 
-    async def process_enumerations():
+    async def process_enumerations(self):
         """
         This infinite loop pulls events from the internal enumeration queue
         of the ip connection and waits for an enumeration event to create the devices
@@ -247,7 +247,7 @@ class TinkerforgeSensorHost(SensorHost):
 
     async def run(self):
         try:
-          self.__running_tasks.append(asyncio.create_task(self.process_enumerations()))
+            self.__running_tasks.append(asyncio.create_task(self.process_enumerations()))
 
             # TODO: Catch connection error
             while not self.is_connected:
