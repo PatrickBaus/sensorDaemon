@@ -71,7 +71,7 @@ class SensorDaemon():
         hosts = {}
         postgrescon = None
         options = self.__config["postgres"]
-        self.logger.info("Fetching Brick Daemon hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
+        self.logger.info("Fetching sensor hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
         try:
             postgrescon = await asyncpg.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], database=options['database'])
             stmt = await postgrescon.prepare(POSTGRES_STMS['select_hosts'])

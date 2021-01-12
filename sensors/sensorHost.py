@@ -23,7 +23,7 @@ import asyncio
 import logging
 from socket import error as socketError
 
-from .tinkerforgeAsync.source.ip_connection import IPConnectionAsync as IPConnection
+from .tinkerforgeAsync.source.ip_connection import EnumerationType, IPConnectionAsync as IPConnection
 from .tinkerforgeAsync.source.devices import device_factory
 from .tinkerforge.ip_connection import Error as IPConError
 
@@ -185,31 +185,27 @@ class TinkerforgeSensorHost(SensorHost):
     async def process_enumerations():
         """
         This infinite loop pulls events from the internal enumeration queue
-        of the ip connection and waits for an enumeration event with a
-        certain device id, then it will run the example code.
+        of the ip connection and waits for an enumeration event to create the devices
         """
-        try:
-            while "queue not canceled":
-                packet = await ipcon.enumeration_queue.get()
-                if enumeration_type is EnumerationType.CONNECTED or enumeration_type is EnumerationType.AVAILABLE:
-                    try:
-                        device = device_factory(packet["device_id"], packet["uid"], self.__conn)
-                    except ValueError:
-                        self.logger.warning("Unsupported device (uid '%s', identifier '%s') found on host '%s'", uid, device_identifier, self.hostname)
-                elif enumeration_type is EnumerationType.DICCONNECTED:
-                    # Check whether the sensor is actually connected to this host, then remove it.
-                    if uid in self.sensors:
-                        self.logger.warning("Sensor '%s' disconnected from host '%s'.", uid, self.hostname)
-                        del self.sensors[uid]
-        except asyncio.CancelledError:
-            pass
+        while "queue not canceled":
+            packet = await self.__conn.enumeration_queue.get()
+            if enumeration_type is EnumerationType.CONNECTED or enumeration_type is EnumerationType.AVAILABLE:
+                try:
+                    device = device_factory(packet["device_id"], packet["uid"], self.__conn)
+                except ValueError:
+                    self.logger.warning("Unsupported device (uid '%s', identifier '%s') found on host '%s'", uid, device_identifier, self.hostname)
+            elif enumeration_type is EnumerationType.DICCONNECTED:
+                # Check whether the sensor is actually connected to this host, then remove it.
+                if uid in self.sensors:
+                    self.logger.warning("Sensor '%s' disconnected from host '%s'.", uid, self.hostname)
+                    del self.sensors[uid]
 
     async def connect(self):
         """
         Start up the ip connection
         """
-        self.__logger.warning("Connecting to brick daemon on '%s'...", self.hostname)
-        self.__logger.info("-----------------")
+        if self.failed_connection_attemps == 0:
+            self.__logger.warning("Connecting to brick daemon on '%s'...", self.hostname)
         try:
             await self.__conn.connect(self.hostname, self.port)
             self.__logger.info("Connected to host '%s'.", self.hostname)
@@ -251,8 +247,13 @@ class TinkerforgeSensorHost(SensorHost):
 
     async def run(self):
         try:
+          self.__running_tasks.append(asyncio.create_task(self.process_enumerations()))
+
+            # TODO: Catch connection error
             while not self.is_connected:
                 await self.connect()
+
+            await self.__conn.enumerate()
 
             while "loop not canceled":
                 await asyncio.sleep(1)
@@ -271,6 +272,7 @@ class TinkerforgeSensorHost(SensorHost):
         self.__logger = logging.getLogger(__name__)
         self.__sensors = {}
         self.__conn = IPConnection()
+        self.__running_tasks = []
         self.__failed_connection_attemps = 0
 
 host_factory = SensorHostFactory()
