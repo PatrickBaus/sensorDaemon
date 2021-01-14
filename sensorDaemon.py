@@ -32,7 +32,6 @@ import warnings
 
 from configParser import parse_config_from_env, parse_config_from_file
 from daemon import Daemon
-from daemonLogger import DaemonLogger
 from sensors.sensorHost import host_factory
 
 def we_are_frozen():
@@ -164,7 +163,6 @@ class SensorDaemon():
         config: A config dict containing the configuration options
         """
         self.__config = config
-        #self.__logger = DaemonLogger(config["logging"]).get_logger()
         self.__logger = logging.getLogger(__name__)
         self.__running_tasks = []
 
