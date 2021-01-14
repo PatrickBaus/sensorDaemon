@@ -27,6 +27,14 @@ from .tinkerforgeAsync.source.ip_connection import EnumerationType, IPConnection
 from .tinkerforgeAsync.source.devices import device_factory
 from .tinkerforge.ip_connection import Error as IPConError
 
+# TODO: Find a way to automatically import those
+from .tinkerforgeAsync.source.bricklet_temperature import BrickletTemperature
+from .tinkerforgeAsync.source.bricklet_temperature_v2 import BrickletTemperatureV2
+from .tinkerforgeAsync.source.bricklet_humidity import BrickletHumidity
+from .tinkerforgeAsync.source.bricklet_humidity_v2 import BrickletHumidityV2
+from .tinkerforgeAsync.source.bricklet_ptc import BrickletPtc
+from .tinkerforgeAsync.source.bricklet_ptc import BrickletPtcV2
+
 class SensorHostFactory:
     def __init__(self):
         self.__available_hosts= {}
