@@ -33,7 +33,7 @@ from .tinkerforgeAsync.source.bricklet_temperature_v2 import BrickletTemperature
 from .tinkerforgeAsync.source.bricklet_humidity import BrickletHumidity
 from .tinkerforgeAsync.source.bricklet_humidity_v2 import BrickletHumidityV2
 from .tinkerforgeAsync.source.bricklet_ptc import BrickletPtc
-from .tinkerforgeAsync.source.bricklet_ptc import BrickletPtcV2
+from .tinkerforgeAsync.source.bricklet_ptc_v2 import BrickletPtcV2
 
 class SensorHostFactory:
     def __init__(self):
