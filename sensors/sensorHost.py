@@ -185,7 +185,7 @@ class TinkerforgeSensorHost(SensorHost):
     async def process_enumerations(self):
         """
         This infinite loop pulls events from the internal enumeration queue
-        of the ip connection and waits for an enumeration event to create the devices
+        of the ip connection and waits for an enumeration event to create the devices.
         """
         while "queue not canceled":
             packet = await self.__conn.enumeration_queue.get()
@@ -193,11 +193,11 @@ class TinkerforgeSensorHost(SensorHost):
                 try:
                     device = device_factory.get(packet["device_id"], packet["uid"], self.__conn)
                 except ValueError:
-                    self.logger.warning("Unsupported device (uid '%s', identifier '%s') found on host '%s'", uid, device_identifier, self.hostname)
+                    self.__logger.warning("Unsupported device id '%s' with uid '%s' found on host '%s'", packet["uid"], packet["device_id"], self.hostname)
             elif packet["enumeration_type"] is EnumerationType.DICCONNECTED:
                 # Check whether the sensor is actually connected to this host, then remove it.
                 if packet["uid"] in self.sensors:
-                    self.logger.warning("Sensor '%s' disconnected from host '%s'.", uid, self.hostname)
+                    self.__logger.warning("Sensor '%s' disconnected from host '%s'.", packet["uid"], self.hostname)
                     del self.sensors[uid]
 
     async def connect(self):
