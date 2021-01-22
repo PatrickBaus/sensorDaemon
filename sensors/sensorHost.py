@@ -127,6 +127,7 @@ class SensorHost():
         callback_period = self.parent.get_callback_period(uid)
         # Create new sensor obect and set up callbacks
         if (callback_period > 0):
+            # TODO: Need to catch tinkerforge.ip_connection.Error or else the thread will die and no more sensors on this host will be served
             self.append_sensor(sensor_class(uid, self, self.sensor_callback, callback_period))
 
     def ping(self):
