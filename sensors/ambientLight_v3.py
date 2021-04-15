@@ -38,7 +38,6 @@ class AmbientLightSensorV3(Sensor):
         """
         return self.UNIT
 
-	
     @property
     def sensor_type(self):
         """

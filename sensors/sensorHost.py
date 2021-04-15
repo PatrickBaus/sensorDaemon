@@ -1,4 +1,4 @@
-## -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 # Copyright (C) 2020  Patrick Baus
@@ -17,8 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
-
-from socket import error as socketError
 
 from .tinkerforge.ip_connection import IPConnection
 from .tinkerforge.ip_connection import Error as IPConError
@@ -245,7 +243,7 @@ class SensorHost():
         try:
             self.ipcon.connect(self.host_name, self.port)
             self.logger.info('Connected to host "%s".', self.host_name)
-        except socketError as e:
+        except OSError as e:
             self.__failed_connection_attemps += 1
             # Suppress the warning after __MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
             if (self.failed_connection_attemps < self.__MAXIMUM_FAILED_CONNECTIONS):
@@ -255,7 +253,7 @@ class SensorHost():
                     failure_count = ""
                 self.logger.warning('Warning. Failed to connect to host "%s"%s. Error: %s.', self.host_name, failure_count, e)
             if (self.failed_connection_attemps == self.__MAXIMUM_FAILED_CONNECTIONS):
-                self.logger.warning('Warning. Failed to connect to host "%s" (%d time%s). Error: %s. Suppressing warnings from hereon.', self.host_name, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
+                self.logger.warning('Warning. Failed to connect to host "%s" (%d time%s). Error: %s. Suppressing warnings from hereon.', self.host_name, self.failed_connection_attemps, "s"[self.failed_connection_attemps == 1:], e)
 
         if self.is_connected:
             self.__failed_connection_attemps = 0
@@ -284,7 +282,7 @@ class SensorHost():
             try:
                 self.ipcon.disconnect()
                 pass
-            except socketError as e:
+            except OSError as e:
                 self.logger.warning('Warning. Failed to disconnect from host "%s". Error: %s.', self.host_name, e)
 
     def __init__(self, host_name, port, parent):

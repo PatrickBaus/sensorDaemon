@@ -53,7 +53,8 @@ class Sensor(metaclass=ABCMeta):
 
     def check_callback(self):
         """
-        Check whether the callback ist still properly registered. A bricklet can only manage one registered callback. So make sure this is ours!
+        Check whether the callback ist still properly registered. A bricklet
+        can only manage one registered callback. So make sure this is ours!
         Returns true if the sensor was found else false.
         """
         try: 
