@@ -22,6 +22,7 @@ import os
 import sys
 import yaml
 
+
 def we_are_frozen():
     """Returns whether we are frozen via py2exe.
     This will affect how we find out where we are located."""
@@ -38,13 +39,15 @@ def module_path():
 
     return os.path.dirname(__file__)
 
+
 class ConfigParser(object):
-    def uncaught_exception_handler(self,type, value, tb):
+    def uncaught_exception_handler(self, type, value, tb):
         self.getLogger().exception('Uncaught exception: %s', value)
 
     def __load_logging(self, config):
         """
-        Load config parameters in the logging subsection and do some sanity checking
+        Load config parameters in the logging subsection and do some sanity
+        checking
         """
         string_to_level = {
           'info': logging.INFO,
@@ -58,11 +61,12 @@ class ConfigParser(object):
         result['dateformat'] = config['dateformat']
         result['console_loglevel'] = string_to_level.get(config['console_loglevel'], logging.NOTSET)
         result['file_loglevel'] = string_to_level.get(config['file_loglevel'], logging.NOTSET)
-        # If no absolute path is given, append the path name to the file directory
+        # If no absolute path is given, append the path name to the
+        # file directory
         if os.path.isabs(config['logfile']):
             result['logfile'] = config['logfile']
         else:
-            result['logfile'] = module_path() + "/"  + config['logfile']
+            result['logfile'] = module_path() + "/" + config['logfile']
 
         return result
 
@@ -70,7 +74,7 @@ class ConfigParser(object):
         """
         Load config file. "configPath" is the full path name to the config file
         """
-        self.__options = {'logging' : {}, 'mysql' : {}, 'postgres' : {}, 'sensors' : {}}
+        self.__options = {'logging': {}, 'mysql': {}, 'postgres': {}, 'sensors': {}}
         config_file = open(config_path)
         config_map = yaml.safe_load(config_file)
         config_file.close()
@@ -97,37 +101,37 @@ class ConfigParser(object):
         # Logging
         try:
             config_map['logging']['dateformat']
-        except:
+        except Exception:
             sys.exit('Error: Logging option "dateformat" has not been set.')
         try:
             config_map['logging']['console_loglevel']
-        except:
+        except Exception:
             sys.exit('Error: Logging option "console_loglevel" has not been set.')
         try:
             config_map['logging']['file_loglevel']
-        except:
+        except Exception:
             sys.exit('Error: Logging option "file_loglevel" has not been set.')
         try:
             config_map['logging']['logfile']
-        except:
+        except Exception:
             sys.exit('Error: Logging option "logfile" has not been set.')
 
         # MySQL
         try:
             config_map['mysql']['host']
-        except:
+        except Exception:
             sys.exit('Error: MySQL option "host" has not been set.')
         try:
             config_map['mysql']['port']
-        except:
+        except Exception:
             config_map['mysql']['port'] = 3306
         try:
-          config_map['mysql']['port'] = int(config_map['mysql']['port'])
-        except:
+            config_map['mysql']['port'] = int(config_map['mysql']['port'])
+        except Exception:
             sys.exit('Error: MySQL option "port" is invalid.')
         try:
             config_map['mysql']['username']
-        except:
+        except Exception:
             sys.exit('Error: MySQL option "username" has not been set.')
         try:
             config_map['mysql']['password']
@@ -135,39 +139,39 @@ class ConfigParser(object):
             sys.exit('Error: MySQL option "password" has not been set.')
         try:
             config_map['mysql']['database']
-        except:
+        except Exception:
             sys.exit('Error: MySQL option "database" has not been set.')
 
         # Postgres
         try:
             config_map['postgres']['host']
-        except:
+        except Exception:
             sys.exit('Error: Postgres option "host" has not been set.')
         try:
             config_map['postgres']['port']
-        except:
+        except Exception:
             config_map['postgres']['port'] = 5432
         try:
-          config_map['postgres']['port'] = int(config_map['postgres']['port'])
-        except:
+            config_map['postgres']['port'] = int(config_map['postgres']['port'])
+        except Exception:
             sys.exit('Error: Postgres option "port" is invalid.')
         try:
             config_map['postgres']['username']
-        except:
+        except Exception:
             sys.exit('Error: Postgres option "username" has not been set.')
         try:
             config_map['postgres']['password']
-        except:
+        except Exception:
             sys.exit('Error: Postgres option "password" has not been set.')
         try:
             config_map['postgres']['database']
-        except:
+        except Exception:
             sys.exit('Error: Postgres option "database" has not been set.')
 
         # Sensors
         try:
             config_map['sensors']['ping_intervall']
-        except:
+        except Exception:
             sys.exit('Error: Sensor option "ping_intervall" has not been set.')
 
     @property

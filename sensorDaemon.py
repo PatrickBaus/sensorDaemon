@@ -34,11 +34,13 @@ from daemon import Daemon
 from daemonLogger import DaemonLogger
 from sensors.sensorHost import SensorHost
 
+
 def we_are_frozen():
     """Returns whether we are frozen via py2exe.
     This will affect how we find out where we are located."""
 
     return hasattr(sys, "frozen")
+
 
 def module_path():
     """ This will get us the program's directory,
@@ -49,18 +51,20 @@ def module_path():
 
     return os.path.dirname(__file__)
 
+
 CONFIG_PATH = module_path() + '/sensors.conf'
 
 POSTGRES_STMS = {
-    'insert_data' : "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
+    'insert_data': "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
     'select_period': "SELECT callback_period FROM sensors WHERE sensor_uid=%s AND enabled",
-    'select_hosts' : "SELECT hostname, port FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
+    'select_hosts': "SELECT hostname, port FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
 }
 
 
 class SensorDaemon(Daemon):
     """
-    Main daemon, that runs in the background and monitors all sensors. It will configure them according to options set in the database and
+    Main daemon, that runs in the background and monitors all sensors. It will
+    configure them according to options set in the database and
     then place the returned data in the database as well.
     """
     def __get_hosts(self):
@@ -76,7 +80,8 @@ class SensorDaemon(Daemon):
             cur = postgrescon.cursor()
             cur.execute(POSTGRES_STMS['select_hosts'])
             rows = cur.fetchall()
-            # Iterate over all hosts found in the database and create host object for them.
+            # Iterate over all hosts found in the database and create host
+            # object for them.
             for row in rows:
                 self.logger.debug('Found host "%s:%s"', row[0], row[1])
                 hosts[row[0]] = SensorHost(row[0], row[1], self)
@@ -91,7 +96,8 @@ class SensorDaemon(Daemon):
 
     def get_callback_period(self, sensor_uid):
         """
-        Called by each sensor through its host to query for the callback period. This is the minimum intervall a node is allowed to return data.
+        Called by each sensor through its host to query for the callback
+        period. This is the minimum intervall a node is allowed to return data.
         """
         postgrescon = None
         options = self.config.postgres
@@ -129,7 +135,8 @@ class SensorDaemon(Daemon):
     @property
     def config(self):
         """
-        Returns the configParser object, which contains all options read from the config file
+        Returns the configParser object, which contains all options read from
+        the config file
         """
         return self.__config
 
@@ -167,13 +174,15 @@ class SensorDaemon(Daemon):
         super(SensorDaemon, self).__init__('/tmp/daemon-example.pid')
         self.__config = config
         self.__logger = DaemonLogger(config.logging).get_logger()
-        # Hook onto the SIGTERM (standard kill command) and SIGINT (Ctrl + C) signal
+        # Hook onto the SIGTERM (standard kill command) and SIGINT (Ctrl + C)
+        # signal
         signal.signal(signal.SIGTERM, self.shutdown)
         signal.signal(signal.SIGINT, self.shutdown)
 
     def run(self):
         """
-        Start the daemon and keep it running through the while (True) loop. Execute shutdown() to kill it.
+        Start the daemon and keep it running through the while (True) loop.
+        Execute shutdown() to kill it.
         """
         self.logger.warning("##################################################")
         self.logger.warning("Starting Daemon...")

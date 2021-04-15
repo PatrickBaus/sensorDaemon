@@ -3,8 +3,12 @@
 Generic linux daemon base class for python 3.x.
 Taken from: http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 """
+import atexit
+import os
+import signal
+import sys
+import time
 
-import sys, os, time, atexit, signal
 
 class Daemon(object):
 	"""A generic daemon class.
@@ -56,7 +60,7 @@ class Daemon(object):
 		atexit.register(self.delpid)
 
 		pid = str(os.getpid())
-		with open(self.pidfile,'w+') as f:
+		with open(self.pidfile, 'w+') as f:
 			f.write(pid + '\n')
 	
 	def delpid(self):
@@ -67,7 +71,7 @@ class Daemon(object):
 
 		# Check for a pidfile to see if the daemon already runs
 		try:
-			with open(self.pidfile,'r') as pf:
+			with open(self.pidfile, 'r') as pf:
 
 				pid = int(pf.read().strip())
 		except IOError:
@@ -88,7 +92,7 @@ class Daemon(object):
 
 		# Get the pid from the pidfile
 		try:
-			with open(self.pidfile,'r') as pf:
+			with open(self.pidfile, 'r') as pf:
 				pid = int(pf.read().strip())
 		except IOError:
 			pid = None
@@ -97,7 +101,7 @@ class Daemon(object):
 			message = "pidfile {0} does not exist. " + \
 					"Daemon not running?\n"
 			sys.stderr.write(message.format(self.pidfile))
-			return # not an error in a restart
+			return   # not an error in a restart
 
 		# Try killing the daemon process	
 		try:
@@ -110,7 +114,7 @@ class Daemon(object):
 				if os.path.exists(self.pidfile):
 					os.remove(self.pidfile)
 			else:
-				print (str(err.args))
+				print(str(err.args))
 				sys.exit(1)
 
 	def restart(self):

@@ -21,6 +21,7 @@
 from .sensor import Sensor
 from .tinkerforge.bricklet_temperature_v2 import BrickletTemperatureV2 as Bricklet
 
+
 class TemperatureSensorV2(Sensor):
     """
     API Wrapper for the Tinkerforge temperature v2.0 bricklet

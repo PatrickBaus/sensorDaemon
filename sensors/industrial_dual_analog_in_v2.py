@@ -21,6 +21,7 @@
 from .sensor import Sensor
 from .tinkerforge.bricklet_industrial_dual_analog_in_v2 import BrickletIndustrialDualAnalogInV2 as Bricklet
 
+
 class IndustrialDualAnalogInV2(Sensor):
     """
     API Wrapper for the Tinkerforge Industrial Dual Analog In Bricklet v2.x bricklet

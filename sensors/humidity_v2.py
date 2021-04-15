@@ -21,6 +21,7 @@
 from .sensor import Sensor
 from .tinkerforge.bricklet_humidity_v2 import BrickletHumidityV2 as Bricklet
 
+
 class HumiditySensorV2(Sensor):
     """
     API Wrapper for the Tinkerforge humidity v2.0 bricklet
@@ -37,7 +38,6 @@ class HumiditySensorV2(Sensor):
         """
         return self.UNIT
 
-	
     @property
     def sensor_type(self):
         """

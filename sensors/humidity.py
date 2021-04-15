@@ -21,6 +21,7 @@
 from .sensor import Sensor
 from .tinkerforge.bricklet_humidity import BrickletHumidity as Bricklet
 
+
 class HumiditySensor(Sensor):
     """
     API Wrapper for the Tinkerforge humidity bricklet
@@ -37,8 +38,7 @@ class HumiditySensor(Sensor):
         """
         return self.UNIT
 
-	
-    @property
+	@property
     def sensor_type(self):
         """
         Return the type of mesurand beeing measured.

@@ -21,6 +21,7 @@
 from .sensor import Sensor
 from .tinkerforge.bricklet_barometer import BrickletBarometer as Bricklet
 
+
 class BarometerSensor(Sensor):
     """
     API Wrapper for the Tinkerforge barometer bricklet

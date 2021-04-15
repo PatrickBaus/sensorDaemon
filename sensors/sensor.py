@@ -22,6 +22,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from sensors.tinkerforge.ip_connection import Error as IPConError
 import time
 
+
 class Sensor(metaclass=ABCMeta):
     """
     Base class for all Tinkerforge API wrappers
@@ -43,7 +44,7 @@ class Sensor(metaclass=ABCMeta):
 
         # If the callback was too soon.
         # This takes care of diverging clocks in each device.
-        if ( last_update is None or last_update >= self.callback_period * 0.9 ):
+        if (last_update is None or last_update >= self.callback_period * 0.9):
             self.last_update = time.time()
             self.__callback_method(self, float(value), last_update)
         else:

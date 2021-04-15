@@ -20,8 +20,10 @@
 
 import datetime as dt
 import logging
+import platform
 import sys
 import traceback
+
 
 class _LinuxColoredFormatter(logging.Formatter):
     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -38,46 +40,47 @@ class _LinuxColoredFormatter(logging.Formatter):
        'ERROR': RED
     }
 
-    converter=dt.datetime.fromtimestamp
+    converter = dt.datetime.fromtimestamp
 
     def formatTime(self, record, datefmt=None):
-       ct = self.converter(record.created)
-       if datefmt:
-           s = ct.strftime(datefmt)
-       else:
-           t = ct.strftime("%Y-%m-%d %H:%M:%S")
-           s = "%s,%03d" % (t, record.msecs)
-       return s
+        ct = self.converter(record.created)
+        if datefmt:
+            s = ct.strftime(datefmt)
+        else:
+            t = ct.strftime("%Y-%m-%d %H:%M:%S")
+            s = "%s,%03d" % (t, record.msecs)
+        return s
 
     def format(self, record):
-       levelname = record.levelname
-       text = super(ColoredFormatter, self).format(record)
-       if levelname in ColoredFormatter.COLORS:
-          text = self.COLOR_SEQ % (30 + self.COLORS[levelname]) + text + self.RESET_SEQ
-       return text
+        levelname = record.levelname
+        text = super(ColoredFormatter, self).format(record)
+        if levelname in ColoredFormatter.COLORS:
+            text = self.COLOR_SEQ % (30 + self.COLORS[levelname]) + text + self.RESET_SEQ
+        return text
+
 
 class _WindowsColoredFormatter(logging.Formatter):
     # wincon.h
-    FOREGROUND_BLACK     = 0x0000
-    FOREGROUND_BLUE      = 0x0001
-    FOREGROUND_GREEN     = 0x0002
-    FOREGROUND_CYAN      = 0x0003
-    FOREGROUND_RED       = 0x0004
-    FOREGROUND_MAGENTA   = 0x0005
-    FOREGROUND_YELLOW    = 0x0006
-    FOREGROUND_GREY      = 0x0007
-    FOREGROUND_INTENSITY = 0x0008 # foreground color is intensified.
-    FOREGROUND_WHITE     = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED
+    FOREGROUND_BLACK = 0x0000
+    FOREGROUND_BLUE = 0x0001
+    FOREGROUND_GREEN = 0x0002
+    FOREGROUND_CYAN = 0x0003
+    FOREGROUND_RED = 0x0004
+    FOREGROUND_MAGENTA = 0x0005
+    FOREGROUND_YELLOW = 0x0006
+    FOREGROUND_GREY = 0x0007
+    FOREGROUND_INTENSITY = 0x0008   # foreground color is intensified.
+    FOREGROUND_WHITE = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED
 
-    BACKGROUND_BLACK     = 0x0000
-    BACKGROUND_BLUE      = 0x0010
-    BACKGROUND_GREEN     = 0x0020
-    BACKGROUND_CYAN      = 0x0030
-    BACKGROUND_RED       = 0x0040
-    BACKGROUND_MAGENTA   = 0x0050
-    BACKGROUND_YELLOW    = 0x0060
-    BACKGROUND_GREY      = 0x0070
-    BACKGROUND_INTENSITY = 0x0080 # background color is intensified.
+    BACKGROUND_BLACK = 0x0000
+    BACKGROUND_BLUE = 0x0010
+    BACKGROUND_GREEN = 0x0020
+    BACKGROUND_CYAN = 0x0030
+    BACKGROUND_RED = 0x0040
+    BACKGROUND_MAGENTA = 0x0050
+    BACKGROUND_YELLOW = 0x0060
+    BACKGROUND_GREY = 0x0070
+    BACKGROUND_INTENSITY = 0x0080   # background color is intensified.
 
     COLORS = {
        'WARNING': FOREGROUND_YELLOW | FOREGROUND_INTENSITY,
@@ -87,19 +90,20 @@ class _WindowsColoredFormatter(logging.Formatter):
        'ERROR': FOREGROUND_RED | FOREGROUND_INTENSITY
     }
 
+
 # select ColorStreamHandler based on platform
-import platform
 if platform.system() == 'Windows':
-   ColoredFormatter = _WindowsColoredFormatter
+    ColoredFormatter = _WindowsColoredFormatter
 else:
-   ColoredFormatter = _LinuxColoredFormatter
+    ColoredFormatter = _LinuxColoredFormatter
+
 
 class DaemonLogger(object):
     """
     This class manages the loggers for the daemon. Since Python does not instantiate loggers directly
     no inheritance will be used. See: http://docs.python.org/2/library/logging.html#logger-objects
     """
-    def uncaught_exception_handler(self,type, value, tb):
+    def uncaught_exception_handler(self, type, value, tb):
         """
         Uncaught excpetion handler
         """
@@ -135,11 +139,11 @@ class DaemonLogger(object):
 
         # Create file logger for loglevel >= config['file_loglevel']
         if config['file_loglevel'] is not logging.NOTSET:
-          file_logger = logging.FileHandler(config['logfile'])
-          file_logger.setLevel(config['file_loglevel'])
-          formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt=config['dateformat'])
-          file_logger.setFormatter(formatter)
-          self.get_logger().addHandler(file_logger)
+            file_logger = logging.FileHandler(config['logfile'])
+            file_logger.setLevel(config['file_loglevel'])
+            formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt=config['dateformat'])
+            file_logger.setFormatter(formatter)
+            self.get_logger().addHandler(file_logger)
 
         # Set uncaught exception handler to log those exception to file as well
         sys.excepthook = self.uncaught_exception_handler

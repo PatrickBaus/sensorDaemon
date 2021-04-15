@@ -21,6 +21,7 @@
 from .sensor import Sensor
 from .tinkerforge.bricklet_ambient_light_v3 import BrickletAmbientLightV3 as Bricklet
 
+
 class AmbientLightSensorV3(Sensor):
     """
     API Wrapper for the Tinkerforge ambient light v3.0 bricklet

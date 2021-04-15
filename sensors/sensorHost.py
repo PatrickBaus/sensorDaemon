@@ -34,11 +34,13 @@ from .ptc import PTCSensor
 from .ptc_v2 import PTCSensorV2
 from .industrial_dual_analog_in_v2 import IndustrialDualAnalogInV2
 
+
 class SensorHost():
     """
     Class that wraps a Tinkerforge brick daemon host. This can be either a PC running brickd, or a master brick with an ethernet/wifi ectension
     """
     __MAXIMUM_FAILED_CONNECTIONS = 3
+
     @property
     def failed_connection_attemps(self):
         """
@@ -97,7 +99,8 @@ class SensorHost():
             if (e.value == IPConError.TIMEOUT):
                 self.logger.warning('Warning. Cannot disconnect from sensor "%s" on host "%s". The sensor or host does not respond. Will now forcefully remove the sensor.', sensor.uid, self.host_name)
                 if sensor.uid in self.sensors:
-                    # If the sensor was disconnected by hand before we could remove it, it might already be gone
+                    # If the sensor was disconnected by hand before we could
+                    # remove it, it might already be gone
                     del self.sensors[sensor.uid]
 
     @property
@@ -127,7 +130,8 @@ class SensorHost():
         callback_period = self.parent.get_callback_period(uid)
         # Create new sensor obect and set up callbacks
         if (callback_period > 0):
-            # TODO: Need to catch tinkerforge.ip_connection.Error or else the thread will die and no more sensors on this host will be served
+            # TODO: Need to catch tinkerforge.ip_connection.Error or else the
+            # thread will die and no more sensors on this host will be served
             self.append_sensor(sensor_class(uid, self, self.sensor_callback, callback_period))
 
     def ping(self):
@@ -254,7 +258,7 @@ class SensorHost():
                 self.logger.warning('Warning. Failed to connect to host "%s" (%d time%s). Error: %s. Suppressing warnings from hereon.', self.host_name, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
 
         if self.is_connected:
-           self.__failed_connection_attemps = 0
+            self.__failed_connection_attemps = 0
 
     @property
     def is_connected(self):
