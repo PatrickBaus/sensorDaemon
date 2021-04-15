@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -45,7 +45,7 @@ class BrickletTilt(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletTilt.DEVICE_IDENTIFIER, BrickletTilt.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -55,8 +55,9 @@ class BrickletTilt(Device):
         self.response_expected[BrickletTilt.FUNCTION_IS_TILT_STATE_CALLBACK_ENABLED] = BrickletTilt.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletTilt.FUNCTION_GET_IDENTITY] = BrickletTilt.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletTilt.CALLBACK_TILT_STATE] = 'B'
+        self.callback_formats[BrickletTilt.CALLBACK_TILT_STATE] = (9, 'B')
 
+        ipcon.add_device(self)
 
     def get_tilt_state(self):
         """
@@ -72,25 +73,33 @@ class BrickletTilt(Device):
            :align: center
            :target: ../../_images/Bricklets/bricklet_tilt_mechanics.jpg
         """
-        return self.ipcon.send_request(self, BrickletTilt.FUNCTION_GET_TILT_STATE, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletTilt.FUNCTION_GET_TILT_STATE, (), '', 9, 'B')
 
     def enable_tilt_state_callback(self):
         """
         Enables the :cb:`Tilt State` callback.
         """
-        self.ipcon.send_request(self, BrickletTilt.FUNCTION_ENABLE_TILT_STATE_CALLBACK, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletTilt.FUNCTION_ENABLE_TILT_STATE_CALLBACK, (), '', 0, '')
 
     def disable_tilt_state_callback(self):
         """
         Disables the :cb:`Tilt State` callback.
         """
-        self.ipcon.send_request(self, BrickletTilt.FUNCTION_DISABLE_TILT_STATE_CALLBACK, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletTilt.FUNCTION_DISABLE_TILT_STATE_CALLBACK, (), '', 0, '')
 
     def is_tilt_state_callback_enabled(self):
         """
         Returns *true* if the :cb:`Tilt State` callback is enabled.
         """
-        return self.ipcon.send_request(self, BrickletTilt.FUNCTION_IS_TILT_STATE_CALLBACK_ENABLED, (), '', '!')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletTilt.FUNCTION_IS_TILT_STATE_CALLBACK_ENABLED, (), '', 9, '!')
 
     def get_identity(self):
         """
@@ -98,12 +107,14 @@ class BrickletTilt(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletTilt.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletTilt.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

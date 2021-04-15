@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -53,7 +53,7 @@ class BrickletIndustrialDigitalIn4(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletIndustrialDigitalIn4.DEVICE_IDENTIFIER, BrickletIndustrialDigitalIn4.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -70,8 +70,9 @@ class BrickletIndustrialDigitalIn4(Device):
         self.response_expected[BrickletIndustrialDigitalIn4.FUNCTION_GET_EDGE_COUNT_CONFIG] = BrickletIndustrialDigitalIn4.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletIndustrialDigitalIn4.FUNCTION_GET_IDENTITY] = BrickletIndustrialDigitalIn4.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletIndustrialDigitalIn4.CALLBACK_INTERRUPT] = 'H H'
+        self.callback_formats[BrickletIndustrialDigitalIn4.CALLBACK_INTERRUPT] = (12, 'H H')
 
+        ipcon.add_device(self)
 
     def get_value(self):
         """
@@ -88,7 +89,9 @@ class BrickletIndustrialDigitalIn4(Device):
         Element 1 in the group will get pins 0-3, element 2 pins 4-7, element 3
         pins 8-11 and element 4 pins 12-15.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_VALUE, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_VALUE, (), '', 10, 'H')
 
     def set_group(self, group):
         """
@@ -111,15 +114,19 @@ class BrickletIndustrialDigitalIn4(Device):
         Changing the group configuration resets all edge counter configurations
         and values.
         """
+        self.check_validity()
+
         group = create_char_list(group)
 
-        self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_SET_GROUP, (group,), '4c', '')
+        self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_SET_GROUP, (group,), '4c', 0, '')
 
     def get_group(self):
         """
         Returns the group as set by :func:`Set Group`
         """
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_GROUP, (), '', '4c')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_GROUP, (), '', 12, '4c')
 
     def get_available_for_group(self):
         """
@@ -127,7 +134,9 @@ class BrickletIndustrialDigitalIn4(Device):
         value 5 or 0b0101 means: Port A and port C are connected to Bricklets that
         can be grouped together.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_AVAILABLE_FOR_GROUP, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_AVAILABLE_FOR_GROUP, (), '', 9, 'B')
 
     def set_debounce_period(self, debounce):
         """
@@ -137,15 +146,19 @@ class BrickletIndustrialDigitalIn4(Device):
         maximal every 100ms. This is necessary if something that bounces is
         connected to the Digital In 4 Bricklet, such as a button.
         """
+        self.check_validity()
+
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', '')
+        self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', 0, '')
 
     def get_debounce_period(self):
         """
         Returns the debounce period as set by :func:`Set Debounce Period`.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 12, 'I')
 
     def set_interrupt(self, interrupt_mask):
         """
@@ -160,15 +173,19 @@ class BrickletIndustrialDigitalIn4(Device):
 
         The interrupt is delivered with the :cb:`Interrupt` callback.
         """
+        self.check_validity()
+
         interrupt_mask = int(interrupt_mask)
 
-        self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_SET_INTERRUPT, (interrupt_mask,), 'H', '')
+        self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_SET_INTERRUPT, (interrupt_mask,), 'H', 0, '')
 
     def get_interrupt(self):
         """
         Returns the interrupt bitmask as set by :func:`Set Interrupt`.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_INTERRUPT, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_INTERRUPT, (), '', 10, 'H')
 
     def get_edge_count(self, pin, reset_counter):
         """
@@ -182,10 +199,12 @@ class BrickletIndustrialDigitalIn4(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
+        self.check_validity()
+
         pin = int(pin)
         reset_counter = bool(reset_counter)
 
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_EDGE_COUNT, (pin, reset_counter), 'B !', 'I')
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_EDGE_COUNT, (pin, reset_counter), 'B !', 12, 'I')
 
     def set_edge_count_config(self, selection_mask, edge_type, debounce):
         """
@@ -208,11 +227,13 @@ class BrickletIndustrialDigitalIn4(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
+        self.check_validity()
+
         selection_mask = int(selection_mask)
         edge_type = int(edge_type)
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_SET_EDGE_COUNT_CONFIG, (selection_mask, edge_type, debounce), 'H B B', '')
+        self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_SET_EDGE_COUNT_CONFIG, (selection_mask, edge_type, debounce), 'H B B', 0, '')
 
     def get_edge_count_config(self, pin):
         """
@@ -221,9 +242,11 @@ class BrickletIndustrialDigitalIn4(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
+        self.check_validity()
+
         pin = int(pin)
 
-        return GetEdgeCountConfig(*self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_EDGE_COUNT_CONFIG, (pin,), 'B', 'B B'))
+        return GetEdgeCountConfig(*self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_EDGE_COUNT_CONFIG, (pin,), 'B', 10, 'B B'))
 
     def get_identity(self):
         """
@@ -231,12 +254,14 @@ class BrickletIndustrialDigitalIn4(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialDigitalIn4.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

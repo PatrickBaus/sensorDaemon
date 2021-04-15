@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -70,7 +70,7 @@ class BrickletGPS(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletGPS.DEVICE_IDENTIFIER, BrickletGPS.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -92,12 +92,13 @@ class BrickletGPS(Device):
         self.response_expected[BrickletGPS.FUNCTION_GET_DATE_TIME_CALLBACK_PERIOD] = BrickletGPS.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletGPS.FUNCTION_GET_IDENTITY] = BrickletGPS.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletGPS.CALLBACK_COORDINATES] = 'I c I c H H H H'
-        self.callback_formats[BrickletGPS.CALLBACK_STATUS] = 'B B B'
-        self.callback_formats[BrickletGPS.CALLBACK_ALTITUDE] = 'i i'
-        self.callback_formats[BrickletGPS.CALLBACK_MOTION] = 'I I'
-        self.callback_formats[BrickletGPS.CALLBACK_DATE_TIME] = 'I I'
+        self.callback_formats[BrickletGPS.CALLBACK_COORDINATES] = (26, 'I c I c H H H H')
+        self.callback_formats[BrickletGPS.CALLBACK_STATUS] = (11, 'B B B')
+        self.callback_formats[BrickletGPS.CALLBACK_ALTITUDE] = (16, 'i i')
+        self.callback_formats[BrickletGPS.CALLBACK_MOTION] = (16, 'I I')
+        self.callback_formats[BrickletGPS.CALLBACK_DATE_TIME] = (16, 'I I')
 
+        ipcon.add_device(self)
 
     def get_coordinates(self):
         """
@@ -120,7 +121,9 @@ class BrickletGPS(Device):
         This data is only valid if there is currently a fix as indicated by
         :func:`Get Status`.
         """
-        return GetCoordinates(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_COORDINATES, (), '', 'I c I c H H H H'))
+        self.check_validity()
+
+        return GetCoordinates(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_COORDINATES, (), '', 26, 'I c I c H H H H'))
 
     def get_status(self):
         """
@@ -140,7 +143,9 @@ class BrickletGPS(Device):
         There is also a :ref:`blue LED <gps_bricklet_fix_led>` on the Bricklet that
         indicates the fix status.
         """
-        return GetStatus(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_STATUS, (), '', 'B B B'))
+        self.check_validity()
+
+        return GetStatus(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_STATUS, (), '', 11, 'B B B'))
 
     def get_altitude(self):
         """
@@ -149,7 +154,9 @@ class BrickletGPS(Device):
         This data is only valid if there is currently a fix as indicated by
         :func:`Get Status`.
         """
-        return GetAltitude(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_ALTITUDE, (), '', 'i i'))
+        self.check_validity()
+
+        return GetAltitude(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_ALTITUDE, (), '', 16, 'i i'))
 
     def get_motion(self):
         """
@@ -162,7 +169,9 @@ class BrickletGPS(Device):
         This data is only valid if there is currently a fix as indicated by
         :func:`Get Status`.
         """
-        return GetMotion(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_MOTION, (), '', 'I I'))
+        self.check_validity()
+
+        return GetMotion(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_MOTION, (), '', 16, 'I I'))
 
     def get_date_time(self):
         """
@@ -171,7 +180,9 @@ class BrickletGPS(Device):
         in the format ``hhmmss.sss``. For example, 140713 means
         14.07.13 as date and 195923568 means 19:59:23.568 as time.
         """
-        return GetDateTime(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_DATE_TIME, (), '', 'I I'))
+        self.check_validity()
+
+        return GetDateTime(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_DATE_TIME, (), '', 16, 'I I'))
 
     def restart(self, restart_type):
         """
@@ -186,9 +197,11 @@ class BrickletGPS(Device):
          "2", "Cold start (don't use time, position, almanacs and ephemeris at restart)"
          "3", "Factory reset (clear all system/user configurations at restart)"
         """
+        self.check_validity()
+
         restart_type = int(restart_type)
 
-        self.ipcon.send_request(self, BrickletGPS.FUNCTION_RESTART, (restart_type,), 'B', '')
+        self.ipcon.send_request(self, BrickletGPS.FUNCTION_RESTART, (restart_type,), 'B', 0, '')
 
     def set_coordinates_callback_period(self, period):
         """
@@ -198,15 +211,19 @@ class BrickletGPS(Device):
         The :cb:`Coordinates` callback is only triggered if the coordinates changed
         since the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_COORDINATES_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_COORDINATES_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_coordinates_callback_period(self):
         """
         Returns the period as set by :func:`Set Coordinates Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_COORDINATES_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_COORDINATES_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_status_callback_period(self, period):
         """
@@ -216,15 +233,19 @@ class BrickletGPS(Device):
         The :cb:`Status` callback is only triggered if the status changed since the
         last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_STATUS_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_STATUS_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_status_callback_period(self):
         """
         Returns the period as set by :func:`Set Status Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_STATUS_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_STATUS_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_altitude_callback_period(self, period):
         """
@@ -234,15 +255,19 @@ class BrickletGPS(Device):
         The :cb:`Altitude` callback is only triggered if the altitude changed since
         the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_ALTITUDE_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_ALTITUDE_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_altitude_callback_period(self):
         """
         Returns the period as set by :func:`Set Altitude Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_ALTITUDE_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_ALTITUDE_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_motion_callback_period(self, period):
         """
@@ -252,15 +277,19 @@ class BrickletGPS(Device):
         The :cb:`Motion` callback is only triggered if the motion changed since the
         last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_MOTION_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_MOTION_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_motion_callback_period(self):
         """
         Returns the period as set by :func:`Set Motion Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_MOTION_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_MOTION_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_date_time_callback_period(self, period):
         """
@@ -270,15 +299,19 @@ class BrickletGPS(Device):
         The :cb:`Date Time` callback is only triggered if the date or time changed
         since the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_DATE_TIME_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletGPS.FUNCTION_SET_DATE_TIME_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_date_time_callback_period(self):
         """
         Returns the period as set by :func:`Set Date Time Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_DATE_TIME_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_DATE_TIME_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -286,12 +319,14 @@ class BrickletGPS(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletGPS.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

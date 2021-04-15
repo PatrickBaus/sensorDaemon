@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -44,7 +44,7 @@ class BrickletMultiTouch(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletMultiTouch.DEVICE_IDENTIFIER, BrickletMultiTouch.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -56,8 +56,9 @@ class BrickletMultiTouch(Device):
         self.response_expected[BrickletMultiTouch.FUNCTION_GET_ELECTRODE_SENSITIVITY] = BrickletMultiTouch.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletMultiTouch.FUNCTION_GET_IDENTITY] = BrickletMultiTouch.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletMultiTouch.CALLBACK_TOUCH_STATE] = 'H'
+        self.callback_formats[BrickletMultiTouch.CALLBACK_TOUCH_STATE] = (10, 'H')
 
+        ipcon.add_device(self)
 
     def get_touch_state(self):
         """
@@ -80,14 +81,18 @@ class BrickletMultiTouch(Device):
         or similar on top of a electrode to build a touch panel with
         a professional look.
         """
-        return self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_GET_TOUCH_STATE, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_GET_TOUCH_STATE, (), '', 10, 'H')
 
     def recalibrate(self):
         """
         Recalibrates the electrodes. Call this function whenever you changed
         or moved you electrodes.
         """
-        self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_RECALIBRATE, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_RECALIBRATE, (), '', 0, '')
 
     def set_electrode_config(self, enabled_electrodes):
         """
@@ -104,17 +109,21 @@ class BrickletMultiTouch(Device):
 
         Disabling electrodes will also reduce power consumption.
 
-        Default: 8191 = 0x1FFF = 0b1111111111111 (all electrodes enabled)
+        Default: 8191 = 0x1FFF = 0b1111111111111 (all electrodes and proximity feature enabled)
         """
+        self.check_validity()
+
         enabled_electrodes = int(enabled_electrodes)
 
-        self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_SET_ELECTRODE_CONFIG, (enabled_electrodes,), 'H', '')
+        self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_SET_ELECTRODE_CONFIG, (enabled_electrodes,), 'H', 0, '')
 
     def get_electrode_config(self):
         """
         Returns the electrode configuration, as set by :func:`Set Electrode Config`.
         """
-        return self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_GET_ELECTRODE_CONFIG, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_GET_ELECTRODE_CONFIG, (), '', 10, 'H')
 
     def set_electrode_sensitivity(self, sensitivity):
         """
@@ -128,15 +137,19 @@ class BrickletMultiTouch(Device):
         After a new sensitivity is set, you likely want to call :func:`Recalibrate`
         to calibrate the electrodes with the newly defined sensitivity.
         """
+        self.check_validity()
+
         sensitivity = int(sensitivity)
 
-        self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_SET_ELECTRODE_SENSITIVITY, (sensitivity,), 'B', '')
+        self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_SET_ELECTRODE_SENSITIVITY, (sensitivity,), 'B', 0, '')
 
     def get_electrode_sensitivity(self):
         """
         Returns the current sensitivity, as set by :func:`Set Electrode Sensitivity`.
         """
-        return self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_GET_ELECTRODE_SENSITIVITY, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_GET_ELECTRODE_SENSITIVITY, (), '', 9, 'B')
 
     def get_identity(self):
         """
@@ -144,12 +157,14 @@ class BrickletMultiTouch(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletMultiTouch.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

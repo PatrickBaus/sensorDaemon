@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -61,7 +61,7 @@ class BrickletIO16(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletIO16.DEVICE_IDENTIFIER, BrickletIO16.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -81,9 +81,10 @@ class BrickletIO16(Device):
         self.response_expected[BrickletIO16.FUNCTION_GET_EDGE_COUNT_CONFIG] = BrickletIO16.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletIO16.FUNCTION_GET_IDENTITY] = BrickletIO16.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletIO16.CALLBACK_INTERRUPT] = 'c B B'
-        self.callback_formats[BrickletIO16.CALLBACK_MONOFLOP_DONE] = 'c B B'
+        self.callback_formats[BrickletIO16.CALLBACK_INTERRUPT] = (11, 'c B B')
+        self.callback_formats[BrickletIO16.CALLBACK_MONOFLOP_DONE] = (11, 'c B B')
 
+        ipcon.add_device(self)
 
     def set_port(self, port, value_mask):
         """
@@ -100,10 +101,12 @@ class BrickletIO16(Device):
          This function does nothing for pins that are configured as input.
          Pull-up resistors can be switched on with :func:`Set Port Configuration`.
         """
+        self.check_validity()
+
         port = create_char(port)
         value_mask = int(value_mask)
 
-        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_PORT, (port, value_mask), 'c B', '')
+        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_PORT, (port, value_mask), 'c B', 0, '')
 
     def get_port(self, port):
         """
@@ -111,9 +114,11 @@ class BrickletIO16(Device):
         specified port. This function works if the pin is configured to input
         as well as if it is configured to output.
         """
+        self.check_validity()
+
         port = create_char(port)
 
-        return self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_PORT, (port,), 'c', 'B')
+        return self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_PORT, (port,), 'c', 9, 'B')
 
     def set_port_configuration(self, port, selection_mask, direction, value):
         """
@@ -136,12 +141,14 @@ class BrickletIO16(Device):
         Running monoflop timers for the selected pins will be aborted if this
         function is called.
         """
+        self.check_validity()
+
         port = create_char(port)
         selection_mask = int(selection_mask)
         direction = create_char(direction)
         value = bool(value)
 
-        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_PORT_CONFIGURATION, (port, selection_mask, direction, value), 'c B c !', '')
+        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_PORT_CONFIGURATION, (port, selection_mask, direction, value), 'c B c !', 0, '')
 
     def get_port_configuration(self, port):
         """
@@ -156,9 +163,11 @@ class BrickletIO16(Device):
         * pins 4 and 5 are configured as output high
         * and pins 6 and 7 are configured as output low.
         """
+        self.check_validity()
+
         port = create_char(port)
 
-        return GetPortConfiguration(*self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_PORT_CONFIGURATION, (port,), 'c', 'B B'))
+        return GetPortConfiguration(*self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_PORT_CONFIGURATION, (port,), 'c', 10, 'B B'))
 
     def set_debounce_period(self, debounce):
         """
@@ -168,15 +177,19 @@ class BrickletIO16(Device):
         maximal every 100ms. This is necessary if something that bounces is
         connected to the IO-16 Bricklet, such as a button.
         """
+        self.check_validity()
+
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', '')
+        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', 0, '')
 
     def get_debounce_period(self):
         """
         Returns the debounce period as set by :func:`Set Debounce Period`.
         """
-        return self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 12, 'I')
 
     def set_port_interrupt(self, port, interrupt_mask):
         """
@@ -189,19 +202,23 @@ class BrickletIO16(Device):
 
         The interrupt is delivered with the :cb:`Interrupt` callback.
         """
+        self.check_validity()
+
         port = create_char(port)
         interrupt_mask = int(interrupt_mask)
 
-        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_PORT_INTERRUPT, (port, interrupt_mask), 'c B', '')
+        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_PORT_INTERRUPT, (port, interrupt_mask), 'c B', 0, '')
 
     def get_port_interrupt(self, port):
         """
         Returns the interrupt bitmask for the specified port as set by
         :func:`Set Port Interrupt`.
         """
+        self.check_validity()
+
         port = create_char(port)
 
-        return self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_PORT_INTERRUPT, (port,), 'c', 'B')
+        return self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_PORT_INTERRUPT, (port,), 'c', 9, 'B')
 
     def set_port_monoflop(self, port, selection_mask, value_mask, time):
         """
@@ -225,12 +242,14 @@ class BrickletIO16(Device):
         of two seconds and pin 0 set to high. Pin 0 will be high all the time. If now
         the RS485 connection is lost, then pin 0 will get low in at most two seconds.
         """
+        self.check_validity()
+
         port = create_char(port)
         selection_mask = int(selection_mask)
         value_mask = int(value_mask)
         time = int(time)
 
-        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_PORT_MONOFLOP, (port, selection_mask, value_mask, time), 'c B B I', '')
+        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_PORT_MONOFLOP, (port, selection_mask, value_mask, time), 'c B B I', 0, '')
 
     def get_port_monoflop(self, port, pin):
         """
@@ -240,10 +259,12 @@ class BrickletIO16(Device):
         If the timer is not running currently, the remaining time will be returned
         as 0.
         """
+        self.check_validity()
+
         port = create_char(port)
         pin = int(pin)
 
-        return GetPortMonoflop(*self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_PORT_MONOFLOP, (port, pin), 'c B', 'B I I'))
+        return GetPortMonoflop(*self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_PORT_MONOFLOP, (port, pin), 'c B', 17, 'B I I'))
 
     def set_selected_values(self, port, selection_mask, value_mask):
         """
@@ -261,11 +282,13 @@ class BrickletIO16(Device):
          This function does nothing for pins that are configured as input.
          Pull-up resistors can be switched on with :func:`Set Port Configuration`.
         """
+        self.check_validity()
+
         port = create_char(port)
         selection_mask = int(selection_mask)
         value_mask = int(value_mask)
 
-        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_SELECTED_VALUES, (port, selection_mask, value_mask), 'c B B', '')
+        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_SELECTED_VALUES, (port, selection_mask, value_mask), 'c B B', 0, '')
 
     def get_edge_count(self, pin, reset_counter):
         """
@@ -277,10 +300,12 @@ class BrickletIO16(Device):
 
         .. versionadded:: 2.0.3$nbsp;(Plugin)
         """
+        self.check_validity()
+
         pin = int(pin)
         reset_counter = bool(reset_counter)
 
-        return self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_EDGE_COUNT, (pin, reset_counter), 'B !', 'I')
+        return self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_EDGE_COUNT, (pin, reset_counter), 'B !', 12, 'I')
 
     def set_edge_count_config(self, pin, edge_type, debounce):
         """
@@ -301,11 +326,13 @@ class BrickletIO16(Device):
 
         .. versionadded:: 2.0.3$nbsp;(Plugin)
         """
+        self.check_validity()
+
         pin = int(pin)
         edge_type = int(edge_type)
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_EDGE_COUNT_CONFIG, (pin, edge_type, debounce), 'B B B', '')
+        self.ipcon.send_request(self, BrickletIO16.FUNCTION_SET_EDGE_COUNT_CONFIG, (pin, edge_type, debounce), 'B B B', 0, '')
 
     def get_edge_count_config(self, pin):
         """
@@ -314,9 +341,11 @@ class BrickletIO16(Device):
 
         .. versionadded:: 2.0.3$nbsp;(Plugin)
         """
+        self.check_validity()
+
         pin = int(pin)
 
-        return GetEdgeCountConfig(*self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_EDGE_COUNT_CONFIG, (pin,), 'B', 'B B'))
+        return GetEdgeCountConfig(*self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_EDGE_COUNT_CONFIG, (pin,), 'B', 10, 'B B'))
 
     def get_identity(self):
         """
@@ -324,12 +353,14 @@ class BrickletIO16(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletIO16.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

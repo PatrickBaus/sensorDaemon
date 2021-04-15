@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -45,7 +45,7 @@ class BrickletAnalogOut(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletAnalogOut.DEVICE_IDENTIFIER, BrickletAnalogOut.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -56,21 +56,26 @@ class BrickletAnalogOut(Device):
         self.response_expected[BrickletAnalogOut.FUNCTION_GET_IDENTITY] = BrickletAnalogOut.RESPONSE_EXPECTED_ALWAYS_TRUE
 
 
+        ipcon.add_device(self)
 
     def set_voltage(self, voltage):
         """
         Sets the voltage. Calling this function will set
         the mode to 0 (see :func:`Set Mode`).
         """
+        self.check_validity()
+
         voltage = int(voltage)
 
-        self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_SET_VOLTAGE, (voltage,), 'H', '')
+        self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_SET_VOLTAGE, (voltage,), 'H', 0, '')
 
     def get_voltage(self):
         """
         Returns the voltage as set by :func:`Set Voltage`.
         """
-        return self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_GET_VOLTAGE, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_GET_VOLTAGE, (), '', 10, 'H')
 
     def set_mode(self, mode):
         """
@@ -84,15 +89,19 @@ class BrickletAnalogOut(Device):
         Setting the mode to 0 will result in an output voltage of 0 V. You can jump
         to a higher output voltage directly by calling :func:`Set Voltage`.
         """
+        self.check_validity()
+
         mode = int(mode)
 
-        self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_SET_MODE, (mode,), 'B', '')
+        self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_SET_MODE, (mode,), 'B', 0, '')
 
     def get_mode(self):
         """
         Returns the mode as set by :func:`Set Mode`.
         """
-        return self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_GET_MODE, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_GET_MODE, (), '', 9, 'B')
 
     def get_identity(self):
         """
@@ -100,11 +109,13 @@ class BrickletAnalogOut(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletAnalogOut.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
 AnalogOut = BrickletAnalogOut # for backward compatibility

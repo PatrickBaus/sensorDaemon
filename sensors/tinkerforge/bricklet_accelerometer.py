@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -79,7 +79,7 @@ class BrickletAccelerometer(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletAccelerometer.DEVICE_IDENTIFIER, BrickletAccelerometer.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -98,20 +98,24 @@ class BrickletAccelerometer(Device):
         self.response_expected[BrickletAccelerometer.FUNCTION_IS_LED_ON] = BrickletAccelerometer.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletAccelerometer.FUNCTION_GET_IDENTITY] = BrickletAccelerometer.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletAccelerometer.CALLBACK_ACCELERATION] = 'h h h'
-        self.callback_formats[BrickletAccelerometer.CALLBACK_ACCELERATION_REACHED] = 'h h h'
+        self.callback_formats[BrickletAccelerometer.CALLBACK_ACCELERATION] = (14, 'h h h')
+        self.callback_formats[BrickletAccelerometer.CALLBACK_ACCELERATION_REACHED] = (14, 'h h h')
 
+        ipcon.add_device(self)
 
     def get_acceleration(self):
         """
         Returns the acceleration in x, y and z direction. The values
-        are given in gₙ/1000 (1gₙ = 9.80665m/s²).
+        are given in gₙ/1000 (1gₙ = 9.80665m/s²). The range is
+        configured with :func:`Set Configuration`.
 
         If you want to get the acceleration periodically, it is recommended
         to use the :cb:`Acceleration` callback and set the period with
         :func:`Set Acceleration Callback Period`.
         """
-        return GetAcceleration(*self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_ACCELERATION, (), '', 'h h h'))
+        self.check_validity()
+
+        return GetAcceleration(*self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_ACCELERATION, (), '', 14, 'h h h'))
 
     def set_acceleration_callback_period(self, period):
         """
@@ -121,15 +125,19 @@ class BrickletAccelerometer(Device):
         The :cb:`Acceleration` callback is only triggered if the acceleration has
         changed since the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_SET_ACCELERATION_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_SET_ACCELERATION_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_acceleration_callback_period(self):
         """
         Returns the period as set by :func:`Set Acceleration Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_ACCELERATION_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_ACCELERATION_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_acceleration_callback_threshold(self, option, min_x, max_x, min_y, max_y, min_z, max_z):
         """
@@ -147,6 +155,8 @@ class BrickletAccelerometer(Device):
          "'<'",    "Callback is triggered when the acceleration is smaller than the min value (max is ignored)"
          "'>'",    "Callback is triggered when the acceleration is greater than the min value (max is ignored)"
         """
+        self.check_validity()
+
         option = create_char(option)
         min_x = int(min_x)
         max_x = int(max_x)
@@ -155,13 +165,15 @@ class BrickletAccelerometer(Device):
         min_z = int(min_z)
         max_z = int(max_z)
 
-        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_SET_ACCELERATION_CALLBACK_THRESHOLD, (option, min_x, max_x, min_y, max_y, min_z, max_z), 'c h h h h h h', '')
+        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_SET_ACCELERATION_CALLBACK_THRESHOLD, (option, min_x, max_x, min_y, max_y, min_z, max_z), 'c h h h h h h', 0, '')
 
     def get_acceleration_callback_threshold(self):
         """
         Returns the threshold as set by :func:`Set Acceleration Callback Threshold`.
         """
-        return GetAccelerationCallbackThreshold(*self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_ACCELERATION_CALLBACK_THRESHOLD, (), '', 'c h h h h h h'))
+        self.check_validity()
+
+        return GetAccelerationCallbackThreshold(*self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_ACCELERATION_CALLBACK_THRESHOLD, (), '', 21, 'c h h h h h h'))
 
     def set_debounce_period(self, debounce):
         """
@@ -175,21 +187,27 @@ class BrickletAccelerometer(Device):
 
         keeps being reached.
         """
+        self.check_validity()
+
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', '')
+        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', 0, '')
 
     def get_debounce_period(self):
         """
         Returns the debounce period as set by :func:`Set Debounce Period`.
         """
-        return self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 12, 'I')
 
     def get_temperature(self):
         """
         Returns the temperature of the accelerometer.
         """
-        return self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_TEMPERATURE, (), '', 'h')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_TEMPERATURE, (), '', 10, 'h')
 
     def set_configuration(self, data_rate, full_scale, filter_bandwidth):
         """
@@ -203,35 +221,45 @@ class BrickletAccelerometer(Device):
         Decreasing data rate or full scale range will also decrease the noise on
         the data.
         """
+        self.check_validity()
+
         data_rate = int(data_rate)
         full_scale = int(full_scale)
         filter_bandwidth = int(filter_bandwidth)
 
-        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_SET_CONFIGURATION, (data_rate, full_scale, filter_bandwidth), 'B B B', '')
+        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_SET_CONFIGURATION, (data_rate, full_scale, filter_bandwidth), 'B B B', 0, '')
 
     def get_configuration(self):
         """
         Returns the configuration as set by :func:`Set Configuration`.
         """
-        return GetConfiguration(*self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_CONFIGURATION, (), '', 'B B B'))
+        self.check_validity()
+
+        return GetConfiguration(*self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_CONFIGURATION, (), '', 11, 'B B B'))
 
     def led_on(self):
         """
         Enables the LED on the Bricklet.
         """
-        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_LED_ON, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_LED_ON, (), '', 0, '')
 
     def led_off(self):
         """
         Disables the LED on the Bricklet.
         """
-        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_LED_OFF, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_LED_OFF, (), '', 0, '')
 
     def is_led_on(self):
         """
         Returns *true* if the LED is enabled, *false* otherwise.
         """
-        return self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_IS_LED_ON, (), '', '!')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_IS_LED_ON, (), '', 9, '!')
 
     def get_identity(self):
         """
@@ -239,12 +267,14 @@ class BrickletAccelerometer(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletAccelerometer.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

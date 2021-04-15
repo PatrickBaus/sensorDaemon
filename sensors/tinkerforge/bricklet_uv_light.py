@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -52,7 +52,7 @@ class BrickletUVLight(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletUVLight.DEVICE_IDENTIFIER, BrickletUVLight.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -65,14 +65,15 @@ class BrickletUVLight(Device):
         self.response_expected[BrickletUVLight.FUNCTION_GET_DEBOUNCE_PERIOD] = BrickletUVLight.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletUVLight.FUNCTION_GET_IDENTITY] = BrickletUVLight.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletUVLight.CALLBACK_UV_LIGHT] = 'I'
-        self.callback_formats[BrickletUVLight.CALLBACK_UV_LIGHT_REACHED] = 'I'
+        self.callback_formats[BrickletUVLight.CALLBACK_UV_LIGHT] = (12, 'I')
+        self.callback_formats[BrickletUVLight.CALLBACK_UV_LIGHT_REACHED] = (12, 'I')
 
+        ipcon.add_device(self)
 
     def get_uv_light(self):
         """
-        Returns the UV light intensity of the sensor, the intensity is given
-        in 1/10 mW/m². The sensor has already weighted the intensity with the erythemal
+        Returns the UV light intensity of the sensor.
+        The sensor has already weighted the intensity with the erythemal
         action spectrum to get the skin-affecting irradiation.
 
         To get UV index you just have to divide the value by 250. For example, a UV
@@ -82,7 +83,9 @@ class BrickletUVLight(Device):
         :cb:`UV Light` callback and set the period with
         :func:`Set UV Light Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_UV_LIGHT, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_UV_LIGHT, (), '', 12, 'I')
 
     def set_uv_light_callback_period(self, period):
         """
@@ -92,15 +95,19 @@ class BrickletUVLight(Device):
         The :cb:`UV Light` callback is only triggered if the intensity has changed since
         the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletUVLight.FUNCTION_SET_UV_LIGHT_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletUVLight.FUNCTION_SET_UV_LIGHT_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_uv_light_callback_period(self):
         """
         Returns the period as set by :func:`Set UV Light Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_UV_LIGHT_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_UV_LIGHT_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_uv_light_callback_threshold(self, option, min, max):
         """
@@ -117,20 +124,22 @@ class BrickletUVLight(Device):
          "'i'",    "Callback is triggered when the intensity is *inside* the min and max values"
          "'<'",    "Callback is triggered when the intensity is smaller than the min value (max is ignored)"
          "'>'",    "Callback is triggered when the intensity is greater than the min value (max is ignored)"
-
-        The default value is ('x', 0, 0).
         """
+        self.check_validity()
+
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletUVLight.FUNCTION_SET_UV_LIGHT_CALLBACK_THRESHOLD, (option, min, max), 'c I I', '')
+        self.ipcon.send_request(self, BrickletUVLight.FUNCTION_SET_UV_LIGHT_CALLBACK_THRESHOLD, (option, min, max), 'c I I', 0, '')
 
     def get_uv_light_callback_threshold(self):
         """
         Returns the threshold as set by :func:`Set UV Light Callback Threshold`.
         """
-        return GetUVLightCallbackThreshold(*self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_UV_LIGHT_CALLBACK_THRESHOLD, (), '', 'c I I'))
+        self.check_validity()
+
+        return GetUVLightCallbackThreshold(*self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_UV_LIGHT_CALLBACK_THRESHOLD, (), '', 17, 'c I I'))
 
     def set_debounce_period(self, debounce):
         """
@@ -144,15 +153,19 @@ class BrickletUVLight(Device):
 
         keep being reached.
         """
+        self.check_validity()
+
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletUVLight.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', '')
+        self.ipcon.send_request(self, BrickletUVLight.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', 0, '')
 
     def get_debounce_period(self):
         """
         Returns the debounce period as set by :func:`Set Debounce Period`.
         """
-        return self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -160,12 +173,14 @@ class BrickletUVLight(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletUVLight.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -83,7 +83,7 @@ class BrickletMotorizedLinearPoti(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletMotorizedLinearPoti.DEVICE_IDENTIFIER, BrickletMotorizedLinearPoti.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -108,9 +108,10 @@ class BrickletMotorizedLinearPoti(Device):
         self.response_expected[BrickletMotorizedLinearPoti.FUNCTION_READ_UID] = BrickletMotorizedLinearPoti.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletMotorizedLinearPoti.FUNCTION_GET_IDENTITY] = BrickletMotorizedLinearPoti.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletMotorizedLinearPoti.CALLBACK_POSITION] = 'H'
-        self.callback_formats[BrickletMotorizedLinearPoti.CALLBACK_POSITION_REACHED] = 'H'
+        self.callback_formats[BrickletMotorizedLinearPoti.CALLBACK_POSITION] = (10, 'H')
+        self.callback_formats[BrickletMotorizedLinearPoti.CALLBACK_POSITION_REACHED] = (10, 'H')
 
+        ipcon.add_device(self)
 
     def get_position(self):
         """
@@ -122,7 +123,9 @@ class BrickletMotorizedLinearPoti(Device):
         :cb:`Position` callback. You can set the callback configuration
         with :func:`Set Position Callback Configuration`.
         """
-        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_POSITION, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_POSITION, (), '', 10, 'H')
 
     def set_position_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
@@ -154,19 +157,23 @@ class BrickletMotorizedLinearPoti(Device):
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_POSITION_CALLBACK_CONFIGURATION, (period, value_has_to_change, option, min, max), 'I ! c H H', '')
+        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_POSITION_CALLBACK_CONFIGURATION, (period, value_has_to_change, option, min, max), 'I ! c H H', 0, '')
 
     def get_position_callback_configuration(self):
         """
         Returns the callback configuration as set by :func:`Set Position Callback Configuration`.
         """
-        return GetPositionCallbackConfiguration(*self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_POSITION_CALLBACK_CONFIGURATION, (), '', 'I ! c H H'))
+        self.check_validity()
+
+        return GetPositionCallbackConfiguration(*self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_POSITION_CALLBACK_CONFIGURATION, (), '', 18, 'I ! c H H'))
 
     def set_motor_position(self, position, drive_mode, hold_position):
         """
@@ -184,11 +191,13 @@ class BrickletMotorizedLinearPoti(Device):
         If the hold position parameter is set to false, the potentiometer can be changed
         again by the user as soon as the set point was reached once.
         """
+        self.check_validity()
+
         position = int(position)
         drive_mode = int(drive_mode)
         hold_position = bool(hold_position)
 
-        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_MOTOR_POSITION, (position, drive_mode, hold_position), 'H B !', '')
+        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_MOTOR_POSITION, (position, drive_mode, hold_position), 'H B !', 0, '')
 
     def get_motor_position(self):
         """
@@ -199,7 +208,9 @@ class BrickletMotorizedLinearPoti(Device):
         The position reached parameter is true if the position has been reached at one point.
         The position may have been changed again in the meantime by the user.
         """
-        return GetMotorPosition(*self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_MOTOR_POSITION, (), '', 'H B ! !'))
+        self.check_validity()
+
+        return GetMotorPosition(*self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_MOTOR_POSITION, (), '', 13, 'H B ! !'))
 
     def calibrate(self):
         """
@@ -211,22 +222,28 @@ class BrickletMotorizedLinearPoti(Device):
         The Motorized Linear Poti Bricklet is already factory-calibrated during
         testing at Tinkerforge.
         """
-        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_CALIBRATE, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_CALIBRATE, (), '', 0, '')
 
     def set_position_reached_callback_configuration(self, enabled):
         """
         Enables/Disables :cb:`Position Reached` callback.
         """
+        self.check_validity()
+
         enabled = bool(enabled)
 
-        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_POSITION_REACHED_CALLBACK_CONFIGURATION, (enabled,), '!', '')
+        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_POSITION_REACHED_CALLBACK_CONFIGURATION, (enabled,), '!', 0, '')
 
     def get_position_reached_callback_configuration(self):
         """
         Returns the :cb:`Position Reached` callback configuration
         as set by :func:`Set Position Reached Callback Configuration`.
         """
-        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_POSITION_REACHED_CALLBACK_CONFIGURATION, (), '', '!')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_POSITION_REACHED_CALLBACK_CONFIGURATION, (), '', 9, '!')
 
     def get_spitfp_error_count(self):
         """
@@ -242,7 +259,9 @@ class BrickletMotorizedLinearPoti(Device):
         The errors counts are for errors that occur on the Bricklet side. All
         Bricks have a similar function that returns the errors on the Brick side.
         """
-        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 'I I I I'))
+        self.check_validity()
+
+        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 24, 'I I I I'))
 
     def set_bootloader_mode(self, mode):
         """
@@ -256,15 +275,19 @@ class BrickletMotorizedLinearPoti(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         mode = int(mode)
 
-        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 'B')
+        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 9, 'B')
 
     def get_bootloader_mode(self):
         """
         Returns the current bootloader mode, see :func:`Set Bootloader Mode`.
         """
-        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_BOOTLOADER_MODE, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_BOOTLOADER_MODE, (), '', 9, 'B')
 
     def set_write_firmware_pointer(self, pointer):
         """
@@ -275,9 +298,11 @@ class BrickletMotorizedLinearPoti(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         pointer = int(pointer)
 
-        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', '')
+        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', 0, '')
 
     def write_firmware(self, data):
         """
@@ -290,9 +315,11 @@ class BrickletMotorizedLinearPoti(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         data = list(map(int, data))
 
-        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 'B')
+        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 9, 'B')
 
     def set_status_led_config(self, config):
         """
@@ -304,26 +331,32 @@ class BrickletMotorizedLinearPoti(Device):
 
         If the Bricklet is in bootloader mode, the LED is will show heartbeat by default.
         """
+        self.check_validity()
+
         config = int(config)
 
-        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', '')
+        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', 0, '')
 
     def get_status_led_config(self):
         """
         Returns the configuration as set by :func:`Set Status LED Config`
         """
-        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 9, 'B')
 
     def get_chip_temperature(self):
         """
-        Returns the temperature in °C as measured inside the microcontroller. The
+        Returns the temperature as measured inside the microcontroller. The
         value returned is not the ambient temperature!
 
         The temperature is only proportional to the real temperature and it has bad
         accuracy. Practically it is only useful as an indicator for
         temperature changes.
         """
-        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 'h')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 10, 'h')
 
     def reset(self):
         """
@@ -334,7 +367,9 @@ class BrickletMotorizedLinearPoti(Device):
         calling functions on the existing ones will result in
         undefined behavior!
         """
-        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_RESET, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_RESET, (), '', 0, '')
 
     def write_uid(self, uid):
         """
@@ -344,16 +379,20 @@ class BrickletMotorizedLinearPoti(Device):
 
         We recommend that you use Brick Viewer to change the UID.
         """
+        self.check_validity()
+
         uid = int(uid)
 
-        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_WRITE_UID, (uid,), 'I', '')
+        self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_WRITE_UID, (uid,), 'I', 0, '')
 
     def read_uid(self):
         """
         Returns the current UID as an integer. Encode as
         Base58 to get the usual string version.
         """
-        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_READ_UID, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_READ_UID, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -361,12 +400,14 @@ class BrickletMotorizedLinearPoti(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletMotorizedLinearPoti.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

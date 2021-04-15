@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -47,7 +47,7 @@ class BrickletIndustrialDigitalOut4(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletIndustrialDigitalOut4.DEVICE_IDENTIFIER, BrickletIndustrialDigitalOut4.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -61,8 +61,9 @@ class BrickletIndustrialDigitalOut4(Device):
         self.response_expected[BrickletIndustrialDigitalOut4.FUNCTION_SET_SELECTED_VALUES] = BrickletIndustrialDigitalOut4.RESPONSE_EXPECTED_FALSE
         self.response_expected[BrickletIndustrialDigitalOut4.FUNCTION_GET_IDENTITY] = BrickletIndustrialDigitalOut4.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletIndustrialDigitalOut4.CALLBACK_MONOFLOP_DONE] = 'H H'
+        self.callback_formats[BrickletIndustrialDigitalOut4.CALLBACK_MONOFLOP_DONE] = (12, 'H H')
 
+        ipcon.add_device(self)
 
     def set_value(self, value_mask):
         """
@@ -81,15 +82,19 @@ class BrickletIndustrialDigitalOut4(Device):
 
         All running monoflop timers will be aborted if this function is called.
         """
+        self.check_validity()
+
         value_mask = int(value_mask)
 
-        self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_SET_VALUE, (value_mask,), 'H', '')
+        self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_SET_VALUE, (value_mask,), 'H', 0, '')
 
     def get_value(self):
         """
         Returns the bitmask as set by :func:`Set Value`.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_VALUE, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_VALUE, (), '', 10, 'H')
 
     def set_monoflop(self, selection_mask, value_mask, time):
         """
@@ -112,11 +117,13 @@ class BrickletIndustrialDigitalOut4(Device):
         of two seconds and pin 0 high. Pin 0 will be high all the time. If now
         the RS485 connection is lost, then pin 0 will turn low in at most two seconds.
         """
+        self.check_validity()
+
         selection_mask = int(selection_mask)
         value_mask = int(value_mask)
         time = int(time)
 
-        self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_SET_MONOFLOP, (selection_mask, value_mask, time), 'H H I', '')
+        self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_SET_MONOFLOP, (selection_mask, value_mask, time), 'H H I', 0, '')
 
     def get_monoflop(self, pin):
         """
@@ -126,9 +133,11 @@ class BrickletIndustrialDigitalOut4(Device):
         If the timer is not running currently, the remaining time will be returned
         as 0.
         """
+        self.check_validity()
+
         pin = int(pin)
 
-        return GetMonoflop(*self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_MONOFLOP, (pin,), 'B', 'H I I'))
+        return GetMonoflop(*self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_MONOFLOP, (pin,), 'B', 18, 'H I I'))
 
     def set_group(self, group):
         """
@@ -148,15 +157,19 @@ class BrickletIndustrialDigitalOut4(Device):
         pins on the Digital Out 4 on port B are assigned to 4-7. It is now possible
         to call :func:`Set Value` and control two Bricklets at the same time.
         """
+        self.check_validity()
+
         group = create_char_list(group)
 
-        self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_SET_GROUP, (group,), '4c', '')
+        self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_SET_GROUP, (group,), '4c', 0, '')
 
     def get_group(self):
         """
         Returns the group as set by :func:`Set Group`
         """
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_GROUP, (), '', '4c')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_GROUP, (), '', 12, '4c')
 
     def get_available_for_group(self):
         """
@@ -164,7 +177,9 @@ class BrickletIndustrialDigitalOut4(Device):
         value 5 or 0b0101 means: Port A and port C are connected to Bricklets that
         can be grouped together.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_AVAILABLE_FOR_GROUP, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_AVAILABLE_FOR_GROUP, (), '', 9, 'B')
 
     def set_selected_values(self, selection_mask, value_mask):
         """
@@ -185,10 +200,12 @@ class BrickletIndustrialDigitalOut4(Device):
         Running monoflop timers for the selected pins will be aborted if this function
         is called.
         """
+        self.check_validity()
+
         selection_mask = int(selection_mask)
         value_mask = int(value_mask)
 
-        self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_SET_SELECTED_VALUES, (selection_mask, value_mask), 'H H', '')
+        self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_SET_SELECTED_VALUES, (selection_mask, value_mask), 'H H', 0, '')
 
     def get_identity(self):
         """
@@ -196,12 +213,14 @@ class BrickletIndustrialDigitalOut4(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialDigitalOut4.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

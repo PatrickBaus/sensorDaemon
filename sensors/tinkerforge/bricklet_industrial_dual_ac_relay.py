@@ -21,23 +21,25 @@ GetMonoflop = namedtuple('Monoflop', ['value', 'time', 'time_remaining'])
 GetSPITFPErrorCount = namedtuple('SPITFPErrorCount', ['error_count_ack_checksum', 'error_count_message_checksum', 'error_count_frame', 'error_count_overflow'])
 GetIdentity = namedtuple('Identity', ['uid', 'connected_uid', 'position', 'hardware_version', 'firmware_version', 'device_identifier'])
 
-class BrickletIndustrialDualRelay(Device):
+class BrickletIndustrialDualACRelay(Device):
     """
-    Two relays to switch AC/DC devices
+    Two relays to switch AC devices
     """
 
-    DEVICE_IDENTIFIER = 284
-    DEVICE_DISPLAY_NAME = 'Industrial Dual Relay Bricklet'
-    DEVICE_URL_PART = 'industrial_dual_relay' # internal
+    DEVICE_IDENTIFIER = 2162
+    DEVICE_DISPLAY_NAME = 'Industrial Dual AC Relay Bricklet'
+    DEVICE_URL_PART = 'industrial_dual_ac_relay' # internal
 
-    CALLBACK_MONOFLOP_DONE = 5
+    CALLBACK_MONOFLOP_DONE = 7
 
 
     FUNCTION_SET_VALUE = 1
     FUNCTION_GET_VALUE = 2
-    FUNCTION_SET_MONOFLOP = 3
-    FUNCTION_GET_MONOFLOP = 4
-    FUNCTION_SET_SELECTED_VALUE = 6
+    FUNCTION_SET_CHANNEL_LED_CONFIG = 3
+    FUNCTION_GET_CHANNEL_LED_CONFIG = 4
+    FUNCTION_SET_MONOFLOP = 5
+    FUNCTION_GET_MONOFLOP = 6
+    FUNCTION_SET_SELECTED_VALUE = 8
     FUNCTION_GET_SPITFP_ERROR_COUNT = 234
     FUNCTION_SET_BOOTLOADER_MODE = 235
     FUNCTION_GET_BOOTLOADER_MODE = 236
@@ -51,6 +53,10 @@ class BrickletIndustrialDualRelay(Device):
     FUNCTION_READ_UID = 249
     FUNCTION_GET_IDENTITY = 255
 
+    CHANNEL_LED_CONFIG_OFF = 0
+    CHANNEL_LED_CONFIG_ON = 1
+    CHANNEL_LED_CONFIG_SHOW_HEARTBEAT = 2
+    CHANNEL_LED_CONFIG_SHOW_CHANNEL_STATUS = 3
     BOOTLOADER_MODE_BOOTLOADER = 0
     BOOTLOADER_MODE_FIRMWARE = 1
     BOOTLOADER_MODE_BOOTLOADER_WAIT_FOR_REBOOT = 2
@@ -72,29 +78,31 @@ class BrickletIndustrialDualRelay(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon, BrickletIndustrialDualRelay.DEVICE_IDENTIFIER, BrickletIndustrialDualRelay.DEVICE_DISPLAY_NAME)
+        Device.__init__(self, uid, ipcon, BrickletIndustrialDualACRelay.DEVICE_IDENTIFIER, BrickletIndustrialDualACRelay.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_SET_VALUE] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_FALSE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_GET_VALUE] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_SET_MONOFLOP] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_FALSE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_GET_MONOFLOP] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_SET_SELECTED_VALUE] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_FALSE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_GET_SPITFP_ERROR_COUNT] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_SET_BOOTLOADER_MODE] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_GET_BOOTLOADER_MODE] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_SET_WRITE_FIRMWARE_POINTER] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_FALSE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_WRITE_FIRMWARE] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_SET_STATUS_LED_CONFIG] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_FALSE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_GET_STATUS_LED_CONFIG] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_GET_CHIP_TEMPERATURE] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_RESET] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_FALSE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_WRITE_UID] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_FALSE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_READ_UID] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialDualRelay.FUNCTION_GET_IDENTITY] = BrickletIndustrialDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_SET_VALUE] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_FALSE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_GET_VALUE] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_SET_CHANNEL_LED_CONFIG] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_FALSE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_GET_CHANNEL_LED_CONFIG] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_SET_MONOFLOP] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_FALSE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_GET_MONOFLOP] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_SET_SELECTED_VALUE] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_FALSE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_GET_SPITFP_ERROR_COUNT] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_SET_BOOTLOADER_MODE] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_GET_BOOTLOADER_MODE] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_SET_WRITE_FIRMWARE_POINTER] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_FALSE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_WRITE_FIRMWARE] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_SET_STATUS_LED_CONFIG] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_FALSE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_GET_STATUS_LED_CONFIG] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_GET_CHIP_TEMPERATURE] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_RESET] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_FALSE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_WRITE_UID] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_FALSE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_READ_UID] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
+        self.response_expected[BrickletIndustrialDualACRelay.FUNCTION_GET_IDENTITY] = BrickletIndustrialDualACRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletIndustrialDualRelay.CALLBACK_MONOFLOP_DONE] = (10, 'B !')
+        self.callback_formats[BrickletIndustrialDualACRelay.CALLBACK_MONOFLOP_DONE] = (10, 'B !')
 
         ipcon.add_device(self)
 
@@ -114,7 +122,7 @@ class BrickletIndustrialDualRelay(Device):
         channel0 = bool(channel0)
         channel1 = bool(channel1)
 
-        self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_SET_VALUE, (channel0, channel1), '! !', 0, '')
+        self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_SET_VALUE, (channel0, channel1), '! !', 0, '')
 
     def get_value(self):
         """
@@ -122,7 +130,30 @@ class BrickletIndustrialDualRelay(Device):
         """
         self.check_validity()
 
-        return GetValue(*self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_GET_VALUE, (), '', 10, '! !'))
+        return GetValue(*self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_GET_VALUE, (), '', 10, '! !'))
+
+    def set_channel_led_config(self, channel, config):
+        """
+        Each channel has a corresponding LED. You can turn the LED off, on or show a
+        heartbeat. You can also set the LED to "Channel Status". In this mode the
+        LED is on if the channel is high and off otherwise.
+        """
+        self.check_validity()
+
+        channel = int(channel)
+        config = int(config)
+
+        self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_SET_CHANNEL_LED_CONFIG, (channel, config), 'B B', 0, '')
+
+    def get_channel_led_config(self, channel):
+        """
+        Returns the channel LED configuration as set by :func:`Set Channel LED Config`
+        """
+        self.check_validity()
+
+        channel = int(channel)
+
+        return self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_GET_CHANNEL_LED_CONFIG, (channel,), 'B', 9, 'B')
 
     def set_monoflop(self, channel, value, time):
         """
@@ -135,7 +166,7 @@ class BrickletIndustrialDualRelay(Device):
         Relay 1 will turn on and in 1.5s it will turn off again.
 
         A monoflop can be used as a failsafe mechanism. For example: Lets assume you
-        have a RS485 bus and a Industrial Dual Relay Bricklet connected to one of the
+        have a RS485 bus and a Industrial Dual AC Relay Bricklet connected to one of the
         slave stacks. You can now call this function every second, with a time parameter
         of two seconds. The relay will be on all the time. If now the RS485
         connection is lost, the relay will turn off in at most two seconds.
@@ -146,7 +177,7 @@ class BrickletIndustrialDualRelay(Device):
         value = bool(value)
         time = int(time)
 
-        self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_SET_MONOFLOP, (channel, value, time), 'B ! I', 0, '')
+        self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_SET_MONOFLOP, (channel, value, time), 'B ! I', 0, '')
 
     def get_monoflop(self, channel):
         """
@@ -160,7 +191,7 @@ class BrickletIndustrialDualRelay(Device):
 
         channel = int(channel)
 
-        return GetMonoflop(*self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_GET_MONOFLOP, (channel,), 'B', 17, '! I I'))
+        return GetMonoflop(*self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_GET_MONOFLOP, (channel,), 'B', 17, '! I I'))
 
     def set_selected_value(self, channel, value):
         """
@@ -177,7 +208,7 @@ class BrickletIndustrialDualRelay(Device):
         channel = int(channel)
         value = bool(value)
 
-        self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_SET_SELECTED_VALUE, (channel, value), 'B !', 0, '')
+        self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_SET_SELECTED_VALUE, (channel, value), 'B !', 0, '')
 
     def get_spitfp_error_count(self):
         """
@@ -195,7 +226,7 @@ class BrickletIndustrialDualRelay(Device):
         """
         self.check_validity()
 
-        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 24, 'I I I I'))
+        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 24, 'I I I I'))
 
     def set_bootloader_mode(self, mode):
         """
@@ -213,7 +244,7 @@ class BrickletIndustrialDualRelay(Device):
 
         mode = int(mode)
 
-        return self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 9, 'B')
+        return self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 9, 'B')
 
     def get_bootloader_mode(self):
         """
@@ -221,7 +252,7 @@ class BrickletIndustrialDualRelay(Device):
         """
         self.check_validity()
 
-        return self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_GET_BOOTLOADER_MODE, (), '', 9, 'B')
+        return self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_GET_BOOTLOADER_MODE, (), '', 9, 'B')
 
     def set_write_firmware_pointer(self, pointer):
         """
@@ -236,7 +267,7 @@ class BrickletIndustrialDualRelay(Device):
 
         pointer = int(pointer)
 
-        self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', 0, '')
+        self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', 0, '')
 
     def write_firmware(self, data):
         """
@@ -253,7 +284,7 @@ class BrickletIndustrialDualRelay(Device):
 
         data = list(map(int, data))
 
-        return self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 9, 'B')
+        return self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 9, 'B')
 
     def set_status_led_config(self, config):
         """
@@ -269,7 +300,7 @@ class BrickletIndustrialDualRelay(Device):
 
         config = int(config)
 
-        self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', 0, '')
+        self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', 0, '')
 
     def get_status_led_config(self):
         """
@@ -277,7 +308,7 @@ class BrickletIndustrialDualRelay(Device):
         """
         self.check_validity()
 
-        return self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 9, 'B')
+        return self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 9, 'B')
 
     def get_chip_temperature(self):
         """
@@ -290,7 +321,7 @@ class BrickletIndustrialDualRelay(Device):
         """
         self.check_validity()
 
-        return self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 10, 'h')
+        return self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 10, 'h')
 
     def reset(self):
         """
@@ -303,7 +334,7 @@ class BrickletIndustrialDualRelay(Device):
         """
         self.check_validity()
 
-        self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_RESET, (), '', 0, '')
+        self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_RESET, (), '', 0, '')
 
     def write_uid(self, uid):
         """
@@ -317,7 +348,7 @@ class BrickletIndustrialDualRelay(Device):
 
         uid = int(uid)
 
-        self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_WRITE_UID, (uid,), 'I', 0, '')
+        self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_WRITE_UID, (uid,), 'I', 0, '')
 
     def read_uid(self):
         """
@@ -326,7 +357,7 @@ class BrickletIndustrialDualRelay(Device):
         """
         self.check_validity()
 
-        return self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_READ_UID, (), '', 12, 'I')
+        return self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_READ_UID, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -341,7 +372,7 @@ class BrickletIndustrialDualRelay(Device):
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialDualRelay.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialDualACRelay.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """
@@ -352,4 +383,4 @@ class BrickletIndustrialDualRelay(Device):
         else:
             self.registered_callbacks[callback_id] = function
 
-IndustrialDualRelay = BrickletIndustrialDualRelay # for backward compatibility
+IndustrialDualACRelay = BrickletIndustrialDualACRelay # for backward compatibility

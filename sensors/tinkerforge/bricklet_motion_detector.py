@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -47,7 +47,7 @@ class BrickletMotionDetector(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletMotionDetector.DEVICE_IDENTIFIER, BrickletMotionDetector.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -56,9 +56,10 @@ class BrickletMotionDetector(Device):
         self.response_expected[BrickletMotionDetector.FUNCTION_GET_STATUS_LED_CONFIG] = BrickletMotionDetector.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletMotionDetector.FUNCTION_GET_IDENTITY] = BrickletMotionDetector.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletMotionDetector.CALLBACK_MOTION_DETECTED] = ''
-        self.callback_formats[BrickletMotionDetector.CALLBACK_DETECTION_CYCLE_ENDED] = ''
+        self.callback_formats[BrickletMotionDetector.CALLBACK_MOTION_DETECTED] = (8, '')
+        self.callback_formats[BrickletMotionDetector.CALLBACK_DETECTION_CYCLE_ENDED] = (8, '')
 
+        ipcon.add_device(self)
 
     def get_motion_detected(self):
         """
@@ -70,7 +71,9 @@ class BrickletMotionDetector(Device):
         There is also a blue LED on the Bricklet that is on as long as the Bricklet is
         in the "motion detected" state.
         """
-        return self.ipcon.send_request(self, BrickletMotionDetector.FUNCTION_GET_MOTION_DETECTED, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMotionDetector.FUNCTION_GET_MOTION_DETECTED, (), '', 9, 'B')
 
     def set_status_led_config(self, config):
         """
@@ -83,9 +86,11 @@ class BrickletMotionDetector(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
+        self.check_validity()
+
         config = int(config)
 
-        self.ipcon.send_request(self, BrickletMotionDetector.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', '')
+        self.ipcon.send_request(self, BrickletMotionDetector.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', 0, '')
 
     def get_status_led_config(self):
         """
@@ -93,7 +98,9 @@ class BrickletMotionDetector(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
-        return self.ipcon.send_request(self, BrickletMotionDetector.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletMotionDetector.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 9, 'B')
 
     def get_identity(self):
         """
@@ -101,12 +108,14 @@ class BrickletMotionDetector(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletMotionDetector.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletMotionDetector.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

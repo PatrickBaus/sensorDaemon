@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-01-15.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.28                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -52,7 +52,7 @@ class BrickletCO2(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletCO2.DEVICE_IDENTIFIER, BrickletCO2.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -65,9 +65,10 @@ class BrickletCO2(Device):
         self.response_expected[BrickletCO2.FUNCTION_GET_DEBOUNCE_PERIOD] = BrickletCO2.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletCO2.FUNCTION_GET_IDENTITY] = BrickletCO2.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletCO2.CALLBACK_CO2_CONCENTRATION] = 'H'
-        self.callback_formats[BrickletCO2.CALLBACK_CO2_CONCENTRATION_REACHED] = 'H'
+        self.callback_formats[BrickletCO2.CALLBACK_CO2_CONCENTRATION] = (10, 'H')
+        self.callback_formats[BrickletCO2.CALLBACK_CO2_CONCENTRATION_REACHED] = (10, 'H')
 
+        ipcon.add_device(self)
 
     def get_co2_concentration(self):
         """
@@ -77,7 +78,9 @@ class BrickletCO2(Device):
         the :cb:`CO2 Concentration` callback and set the period with
         :func:`Set CO2 Concentration Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_CO2_CONCENTRATION, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_CO2_CONCENTRATION, (), '', 10, 'H')
 
     def set_co2_concentration_callback_period(self, period):
         """
@@ -87,15 +90,19 @@ class BrickletCO2(Device):
         The :cb:`CO2 Concentration` callback is only triggered if the CO2 concentration
         has changed since the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletCO2.FUNCTION_SET_CO2_CONCENTRATION_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletCO2.FUNCTION_SET_CO2_CONCENTRATION_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_co2_concentration_callback_period(self):
         """
         Returns the period as set by :func:`Set CO2 Concentration Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_CO2_CONCENTRATION_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_CO2_CONCENTRATION_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_co2_concentration_callback_threshold(self, option, min, max):
         """
@@ -113,17 +120,21 @@ class BrickletCO2(Device):
          "'<'",    "Callback is triggered when the CO2 concentration is smaller than the min value (max is ignored)"
          "'>'",    "Callback is triggered when the CO2 concentration is greater than the min value (max is ignored)"
         """
+        self.check_validity()
+
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletCO2.FUNCTION_SET_CO2_CONCENTRATION_CALLBACK_THRESHOLD, (option, min, max), 'c H H', '')
+        self.ipcon.send_request(self, BrickletCO2.FUNCTION_SET_CO2_CONCENTRATION_CALLBACK_THRESHOLD, (option, min, max), 'c H H', 0, '')
 
     def get_co2_concentration_callback_threshold(self):
         """
         Returns the threshold as set by :func:`Set CO2 Concentration Callback Threshold`.
         """
-        return GetCO2ConcentrationCallbackThreshold(*self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_CO2_CONCENTRATION_CALLBACK_THRESHOLD, (), '', 'c H H'))
+        self.check_validity()
+
+        return GetCO2ConcentrationCallbackThreshold(*self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_CO2_CONCENTRATION_CALLBACK_THRESHOLD, (), '', 13, 'c H H'))
 
     def set_debounce_period(self, debounce):
         """
@@ -137,15 +148,19 @@ class BrickletCO2(Device):
 
         keep being reached.
         """
+        self.check_validity()
+
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletCO2.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', '')
+        self.ipcon.send_request(self, BrickletCO2.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', 0, '')
 
     def get_debounce_period(self):
         """
         Returns the debounce period as set by :func:`Set Debounce Period`.
         """
-        return self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -153,12 +168,14 @@ class BrickletCO2(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletCO2.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """
