@@ -27,6 +27,7 @@ from .barometer import BarometerSensor
 from .barometer_v2 import BarometerSensorV2
 from .humidity import HumiditySensor
 from .humidity_v2 import HumiditySensorV2
+from .io4_v2 import BrickletIO4
 from .temperature import TemperatureSensor
 from .temperature_v2 import TemperatureSensorV2
 from .ptc import PTCSensor
@@ -87,7 +88,7 @@ class SensorHost():
         Appends a new sensor to the host.
         """
         self.sensors[sensor.uid] = sensor
-        
+
     def remove_sensor(self, sensor):
         """
         Removes a sensor from the host. This will be done gracefully.
@@ -122,7 +123,7 @@ class SensorHost():
         elif id == IPConnection.ENUMERATION_TYPE_DISCONNECTED:
             result = 'Device discconnected from host'
         return result
-        
+
     def __connect_sensor(self, sensor_class, uid, connected_uid, port, name, enumeration_type):
         self.logger.warning('%s sensor "%s" connected to brick "%s" (Port: "%s") on host "%s". Reason: %s (%i).', sensor_class.TYPE.title(), uid, connected_uid, port, name, self.__enumeration_id_to_string(enumeration_type), enumeration_type)
         # Retrieve the callback period from the database
@@ -209,6 +210,9 @@ class SensorHost():
             # Humidity bricklet v2
             elif device_identifier == HumiditySensorV2.DEVICE_IDENTIFIER:
                 self.__connect_sensor(HumiditySensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
+            # IO-4 bricklet v2
+            elif device_identifier == BrickletIO4.DEVICE_IDENTIFIER:
+                self.__connect_sensor(BrickletIO4, uid, connected_uid, position, self.host_name, enumeration_type)
             # Temperature bricklet
             elif device_identifier == TemperatureSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(TemperatureSensor, uid, connected_uid, position, self.host_name, enumeration_type)
