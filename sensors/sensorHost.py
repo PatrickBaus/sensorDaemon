@@ -24,6 +24,7 @@ from .ambientLight import AmbientLightSensor
 from .ambientLight_v2 import AmbientLightSensorV2
 from .ambientLight_v3 import AmbientLightSensorV3
 from .barometer import BarometerSensor
+from .barometer_v2 import BarometerSensorV2
 from .humidity import HumiditySensor
 from .humidity_v2 import HumiditySensorV2
 from .temperature import TemperatureSensor
@@ -199,6 +200,9 @@ class SensorHost():
             # Barometer bricklet
             elif device_identifier == BarometerSensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(BarometerSensor, uid, connected_uid, position, self.host_name, enumeration_type)
+            # Barometer bricklet v2
+            elif device_identifier == BarometerSensorV2.DEVICE_IDENTIFIER:
+                self.__connect_sensor(BarometerSensorV2, uid, connected_uid, position, self.host_name, enumeration_type)
             # Humidity bricklet
             elif device_identifier == HumiditySensor.DEVICE_IDENTIFIER:
                 self.__connect_sensor(HumiditySensor, uid, connected_uid, position, self.host_name, enumeration_type)
