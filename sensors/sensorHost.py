@@ -23,30 +23,24 @@ import asyncio
 import logging
 from socket import error as socketError
 
+from .sensor import TinkerforgeSensor
 from .tinkerforgeAsync.source.ip_connection import EnumerationType, IPConnectionAsync as IPConnection
-from .tinkerforgeAsync.source.devices import device_factory
 from .tinkerforge.ip_connection import Error as IPConError
 
-# TODO: Find a way to automatically import those
-from .tinkerforgeAsync.source.bricklet_temperature import BrickletTemperature
-from .tinkerforgeAsync.source.bricklet_temperature_v2 import BrickletTemperatureV2
-from .tinkerforgeAsync.source.bricklet_humidity import BrickletHumidity
-from .tinkerforgeAsync.source.bricklet_humidity_v2 import BrickletHumidityV2
-from .tinkerforgeAsync.source.bricklet_ptc import BrickletPtc
-from .tinkerforgeAsync.source.bricklet_ptc_v2 import BrickletPtcV2
 
 class SensorHostFactory:
     def __init__(self):
-        self.__available_hosts= {}
+        self.__available_hosts = {}
 
     def register(self, driver, host):
         self.__available_hosts[driver] = host
 
-    def get(self, driver, hostname, port, parent):
+    def get(self, driver, hostname, port, config, parent):
         host = self.__available_hosts.get(driver)
         if host is None:
             raise ValueError(f"No driver available for {driver}")
-        return host(hostname, port, parent)
+        return host(hostname, port, config, parent)
+
 
 class SensorHost(metaclass=ABCMeta):
 
@@ -64,6 +58,13 @@ class SensorHost(metaclass=ABCMeta):
         """
         return self.__port
 
+    @property
+    def parent(self):
+        """
+        Returns the sensor daemon object.
+        """
+        return self.__parent
+
     @abstractmethod
     async def connect(self):
         pass
@@ -72,16 +73,19 @@ class SensorHost(metaclass=ABCMeta):
     async def disconnect(self):
         pass
 
-    def __init__(self, hostname, port, parent):
+    def __init__(self, hostname, port, config, parent):
         self.__hostname = hostname
         self.__port = port
+        self.__config = config
         self.__parent = parent
+
 
 class TinkerforgeSensorHost(SensorHost):
     """
     Class that wraps a Tinkerforge brick daemon host. This can be either a PC running brickd, or a master brick with an ethernet/wifi extension
     """
     __MAXIMUM_FAILED_CONNECTIONS = 3
+
     @property
     def failed_connection_attemps(self):
         """
@@ -95,13 +99,6 @@ class TinkerforgeSensorHost(SensorHost):
         Returns a dictionary of all sensors registered with this host. getSensors()[%sensor_uid] will return a sensor object.
         """
         return self.__sensors
-
-    @property
-    def parent(self):
-        """
-        Returns the sensor daemon object.
-        """
-        return self.__parent
 
     def append_sensor(self, sensor):
         """
@@ -190,6 +187,9 @@ class TinkerforgeSensorHost(SensorHost):
         else:
             self.logger.error('Cannot enumerate host "%s". Host not connected. Reason: %s (%i).', self.__hostname, self.__enumeration_id_to_string(connected_reason), connected_reason)
 
+    async def get_sensor_config(self, uid):
+        return await self.parent.get_sensor_config(uid)
+
     async def process_enumerations(self):
         """
         This infinite loop pulls events from the internal enumeration queue
@@ -197,16 +197,23 @@ class TinkerforgeSensorHost(SensorHost):
         """
         while "queue not canceled":
             packet = await self.__conn.enumeration_queue.get()
-            if packet["enumeration_type"] is EnumerationType.CONNECTED or packet["enumeration_type"] is EnumerationType.AVAILABLE:
+            if packet["enumeration_type"] in (EnumerationType.CONNECTED, EnumerationType.AVAILABLE):
                 try:
-                    device = device_factory.get(packet["device_id"], packet["uid"], self.__conn)
+                    device = TinkerforgeSensor(packet["device_id"], packet["uid"], self.__conn, self)
                 except ValueError:
                     self.__logger.warning("Unsupported device id '%s' with uid '%s' found on host '%s'", packet["uid"], packet["device_id"], self.hostname)
+
+                if device.uid in self.__sensor_tasks:
+                    self.__sensor_tasks[device.uid].cancel()
+                    await self.__sensor_tasks[device.uid]
+                self.__sensor_tasks[device.uid] = asyncio.create_task(device.run(), name=device.uid)
             elif packet["enumeration_type"] is EnumerationType.DICCONNECTED:
                 # Check whether the sensor is actually connected to this host, then remove it.
-                if packet["uid"] in self.sensors:
+                if packet["uid"] in __sensor_tasks:
                     self.__logger.warning("Sensor '%s' disconnected from host '%s'.", packet["uid"], self.hostname)
-                    del self.sensors[uid]
+                    self.__sensor_tasks[packet["uid"]].cancel()
+                    await self.__sensor_tasks[packet["uid"]]
+                    del self.__sensor_tasks[packet["uid"]]
 
     async def connect(self):
         """
@@ -227,10 +234,10 @@ class TinkerforgeSensorHost(SensorHost):
                     failure_count = ""
                 self.__logger.warning("Failed to connect to host '%s'%s. Error: %s.", self.hostname, failure_count, e)
             if (self.failed_connection_attemps == self.__MAXIMUM_FAILED_CONNECTIONS):
-                self.__logger.warning("Failed to connect to host '%s' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.hostname, self.failed_connection_attemps, "s"[self.failed_connection_attemps==1:], e)
+                self.__logger.warning("Failed to connect to host '%s' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.hostname, self.failed_connection_attemps, "s"[self.failed_connection_attemps == 1:], e)
 
         if self.is_connected:
-           self.__failed_connection_attemps = 0
+            self.__failed_connection_attemps = 0
 
     @property
     def is_connected(self):
@@ -269,19 +276,22 @@ class TinkerforgeSensorHost(SensorHost):
             await self.disconnect()
             raise
 
-    def __init__(self, hostname, port, parent):
+    def __init__(self, hostname, port, config, parent):
         """
         Create new sensorHost Object.
         hostName: IP or hostname of the machine hosting the sensor daemon
         port: port on the host
         parent: sensorDaemon object managing all sensor hosts
         """
-        super().__init__(hostname, port, parent)
+        super().__init__(hostname, port, config, parent)
         self.__logger = logging.getLogger(__name__)
         self.__sensors = {}
         self.__conn = IPConnection()
         self.__running_tasks = []
         self.__failed_connection_attemps = 0
+        self.__running_tasks = []
+        self.__sensor_tasks = {}
+
 
 host_factory = SensorHostFactory()
 host_factory.register(driver="tinkerforge", host=TinkerforgeSensorHost)

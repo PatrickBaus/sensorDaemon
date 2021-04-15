@@ -60,8 +60,9 @@ POSTGRES_STMS = {
 
 class SensorDaemon():
     """
-    Main daemon, that runs in the background and monitors all sensors. It will configure them according to options set in the database and
-    then place the returned data in the database as well.
+    Main daemon, that runs in the background and monitors all sensors. It will
+    configure them according to options set in the database and then place the
+    returned data in the database as well.
     """
     async def __get_hosts(self):
         """
@@ -127,13 +128,15 @@ class SensorDaemon():
     @property
     def config(self):
         """
-        Returns the configParser object, which contains all options read from the config file
+        Returns the configParser object, which contains all options read from
+        the config file
         """
         return self.__config
 
     def host_callback(self, sensor_type, sensor_uid, value, previous_update):
         """
-        Callback function used by the sensors to write data to the database. It will be called by the host.
+        Callback function used by the sensors to write data to the database.
+        It will be called by the host.
         sensor_type: String that states the type of sensor
         sensor_uid: String that represents the sensors unique id (embedded in the flash rom)
         value: Float to be written to the database
@@ -168,7 +171,8 @@ class SensorDaemon():
 
     async def run(self):
         """
-        Start the daemon and keep it running through the while (True) loop. Execute shutdown() to kill it.
+        Start the daemon and keep it running through the while (True)
+        loop. Execute shutdown() to kill it.
         """
         self.logger.warning("##################################################")
         self.logger.warning("Starting Daemon...")
@@ -231,6 +235,7 @@ try:
 
     asyncio.run(daemon.run(), debug=False)
 except KeyboardInterrupt:
-    # The loop will be canceled on a KeyboardInterrupt by the run() method, we just want to suppress the exception
+    # The loop will be canceled on a KeyboardInterrupt by the run() method, we
+    # just want to suppress the exception
     pass
 

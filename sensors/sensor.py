@@ -18,9 +18,64 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import asyncio
+import logging
 from abc import ABCMeta, abstractmethod, abstractproperty
 from sensors.tinkerforge.ip_connection import Error as IPConError
 import time
+
+from .tinkerforgeAsync.source.device_factory import device_factory
+
+
+class TinkerforgeSensor():
+    """
+    Base class for all Tinkerforge Sensors
+    """
+    @property
+    def uid(self):
+        return self.__sensor.uid
+
+    async def disconnect(self):
+        """
+        Cleanup method
+        """
+        pass
+
+    async def __init_sensor(self):
+        config = self.__config.get("on_connect")
+        if config is not None:
+            for cmd in config:
+                try:
+                    function = getattr(self.__sensor, cmd["function"])
+                except AttributeError:
+                    self.__logger.error("Invalid config parameter '%s' for sensor %s on host '%s'", cmd["function"], self.__sensor.uid, self.__parent.hostname)
+                    continue
+
+                try:
+                    result = function(*cmd.get("args", []), **cmd.get("kwargs", {}))
+                    if asyncio.iscoroutine(result):
+                        await result
+                except Exception:
+                    self.__logger.exception("Error running config for sensor %s on host '%s'", self.__sensor.uid, self.__parent.hostname)
+                    continue
+
+    async def run(self):
+        try:
+            self.__config = await self.__parent.get_sensor_config(self.__sensor.uid)
+            await self.__init_sensor()
+
+            while "loop not canceled":
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            await self.disconnect()
+            raise
+
+    def __init__(self, device_id, uid, ipcon, parent):
+        self.__sensor = device_factory.get(device_id, uid, ipcon)
+        self.__config = None
+        self.__parent = parent
+        self.__logger = logging.getLogger(__name__)
+
 
 class Sensor(metaclass=ABCMeta):
     """
@@ -43,7 +98,7 @@ class Sensor(metaclass=ABCMeta):
 
         # If the callback was too soon.
         # This takes care of diverging clocks in each device.
-        if ( last_update is None or last_update >= self.callback_period * 0.9 ):
+        if (last_update is None or last_update >= self.callback_period * 0.9):
             self.last_update = time.time()
             self.__callback_method(self, float(value), last_update)
         else:

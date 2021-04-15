@@ -21,6 +21,7 @@
 from .sensor import Sensor
 from .tinkerforge.bricklet_ptc_v2 import BrickletPTCV2 as Bricklet
 
+
 class PTCSensorV2(Sensor):
     """
     API Wrapper for the Tinkerforge PTC light v2.0 bricklet
