@@ -65,8 +65,7 @@ class BarometerSensor(Sensor):
         It does all the conversion to the apropriate SI unit specified by getUnit().
         value: the value as returned by the bricklet. This might not be in SI units.
         """
-        # Round to nearest Pa!
-        value = round(value / 10)
+        value = value / 10
         super().callback(value)
 
     def set_callback(self):
@@ -94,4 +93,5 @@ class BarometerSensor(Sensor):
         super().__init__(uid, parent, callback_method, callback_period)
 
         self.__bricklet = Bricklet(uid, parent.ipcon)
+        self.bricklet.set_averaging(moving_average_pressure=25, average_pressure=10, average_temperature=10)
         self.set_callback()
