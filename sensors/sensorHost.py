@@ -167,7 +167,7 @@ class SensorHost():
         """
         The callback used by all sensors to send their data to the sensor daemon.
         """
-        self.parent.host_callback(sensor.sensor_type, sensor.uid, sensor_sid, value, previous_update)
+        self.parent.host_callback(sensor.sensor_type, sensor.uid, secondary_id, value, previous_update)
 
     def connect_callback(self, connected_reason):
         """
