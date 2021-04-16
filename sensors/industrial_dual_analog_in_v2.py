@@ -65,10 +65,9 @@ class IndustrialDualAnalogInV2(Sensor):
         It does all the conversion to the apropriate SI unit specified by getUnit().
         value: the value as returned by the bricklet. This might not be in SI units.
         """
-        if channel == 1:
-            # Return Volt
-            value /= 1000
-            super().callback(value)
+        # Return Volt
+        value /= 1000
+        super().callback(value, channel)
 
     def set_callback(self):
         """
