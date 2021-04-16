@@ -163,11 +163,11 @@ class SensorHost():
             self.logger.debug('Host "%s" seems disconnected. Trying to reconnect.', self.host_name)
             self.connect()
 
-    def sensor_callback(self, sensor, value, previous_update):
+    def sensor_callback(self, sensor, secondary_id, value, previous_update):
         """
         The callback used by all sensors to send their data to the sensor daemon.
         """
-        self.parent.host_callback(sensor.sensor_type, sensor.uid, value, previous_update)
+        self.parent.host_callback(sensor.sensor_type, sensor.uid, sensor_sid, value, previous_update)
 
     def connect_callback(self, connected_reason):
         """

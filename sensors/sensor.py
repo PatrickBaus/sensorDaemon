@@ -35,18 +35,18 @@ class Sensor(metaclass=ABCMeta):
         """
         return self.__uid
 
-    def callback(self, value):
+    def callback(self, value, secondary_id=0):
         """
         Checks all values before sending them to the sensor host. If a value was returned too early, that means before the callback period is over,
         the value will be discarded. This is most probably due to another process like the BrickViewer registering its own callback with the bricklet.
         """
-        last_update = self.last_update
+        # Calculate the number of ms between now and the last update
+        last_update = int((time.time() - self.__last_update.get(secondary_id, 0)) * 1000)
 
-        # If the callback was too soon.
-        # This takes care of diverging clocks in each device.
-        if (last_update is None or last_update >= self.callback_period * 0.9):
-            self.last_update = time.time()
-            self.__callback_method(self, float(value), last_update)
+        # The *0.9 takes care of diverging clocks in each device.
+        if last_update >= self.callback_period * 0.9:
+            self.__last_update[secondary_id] = time.time()
+            self.__callback_method(self, secondary_id, float(value), last_update)
         else:
             self.check_callback()
             self.logger.warning('Warning. Discarding value "%s" from sensor "%s", because the last update was too recent. Was %i s ago, but supposed to be every %i s.', value, self.uid, last_update / 1000, self.callback_period / 1000)
@@ -121,25 +121,6 @@ class Sensor(metaclass=ABCMeta):
         return self.parent.logger
 
     @property
-    def last_update(self):
-        """
-        Returns the timedelta between now and the last update registered in ms.
-        Return None if there was no update so far.
-        """
-        if (self.__last_update is not None):
-            return int((time.time() - self.__last_update) * 1000)
-        else:
-            return None
-
-    @last_update.setter
-    def last_update(self, value):
-        """
-        Sets the time in seconds since the epoch as a floating point number.
-        Set to None to if there was no update so far.
-        """
-        self.__last_update = value
-
-    @property
     def callback_period(self):
         """
         Returns the callback period in ms.
@@ -170,4 +151,4 @@ class Sensor(metaclass=ABCMeta):
         self.__parent = parent
         self.__callback_method = callback_method
         self.__callback_period = callback_period
-        self.__last_update = None
+        self.__last_update = {}

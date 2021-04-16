@@ -55,7 +55,7 @@ def module_path():
 CONFIG_PATH = module_path() + '/sensors.conf'
 
 POSTGRES_STMS = {
-    'insert_data': "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
+    'insert_data': "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and sensor_sid=%s and enabled), %s)",
     'select_period': "SELECT callback_period FROM sensors WHERE sensor_uid=%s AND enabled",
     'select_hosts': "SELECT hostname, port FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
 }
@@ -140,7 +140,7 @@ class SensorDaemon(Daemon):
         """
         return self.__config
 
-    def host_callback(self, sensor_type, sensor_uid, value, previous_update):
+    def host_callback(self, sensor_type, sensor_uid, sensor_sid, value, previous_update):
         """
         Callback function used by the sensors to write data to the database. It will be called by the host.
         sensor_type: String that states the type of sensor
@@ -154,14 +154,14 @@ class SensorDaemon(Daemon):
         try:
             postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], dbname=options['database'])
             cur = postgrescon.cursor()
-            cur.execute(POSTGRES_STMS['insert_data'], (sensor_uid, value))
+            cur.execute(POSTGRES_STMS['insert_data'], (sensor_uid, sensor_sid, value))
             # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
             postgrescon.commit()
-            self.logger.debug('Successfully written to database: value %s from sensor %s.', value, sensor_uid)
+            self.logger.debug('Successfully written to database: value %s from sensor %s (%s).', value, sensor_uid, sensor_sid)
         except psycopg2.DatabaseError as e:
             if postgrescon:
                 postgrescon.rollback()
-            self.logger.error('Error. Cannot insert value "%s" from sensor "%s" into database: %s.', value, sensor_uid, e)
+            self.logger.error('Error. Cannot insert value "%s" from sensor "%s" (%s) into database: %s.', value, sensor_uid, sensor_sid, e)
         finally:
             if postgrescon:
                 postgrescon.close()
