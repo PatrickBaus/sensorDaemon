@@ -19,7 +19,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from .sensor import Sensor
-from .tinkerforge.bricklet_io4 import BrickletIO4 as Bricklet
+from .tinkerforge.bricklet_io4_v2 import BrickletIO4V2 as Bricklet
 
 
 class BrickletIO4(Sensor):
