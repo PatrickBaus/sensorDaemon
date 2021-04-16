@@ -59,6 +59,15 @@ class BrickletIO4(Sensor):
         """
         return self.__bricklet
 
+    def callback(self, changed, value):
+        """
+        This method will be called by the API, when a new value is available.
+        It does all the conversion to the apropriate SI unit specified by getUnit().
+        value: the value as returned by the bricklet. This might not be in SI units.
+        """
+        # Strip the changes and only take the current value
+        super().callback(value)
+
     def set_callback(self):
         """
         Sets the callback period and registers the method callback() with the Tinkerforge API.
