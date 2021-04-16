@@ -65,9 +65,8 @@ class BrickletIO4(Sensor):
         It does all the conversion to the apropriate SI unit specified by getUnit().
         value: the value as returned by the bricklet. This might not be in SI units.
         """
-        # Strip the changes and only take the current value
-        # Also convert the tuple into an integer: (1,0,0,0) -> 1000
-        super().callback(int(''.join(map(str, value))))
+        # Strip the changes and only take the current value of the 4th sensor
+        super().callback(value[3])
 
     def set_callback(self):
         """
