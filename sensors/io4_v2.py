@@ -46,7 +46,7 @@ class BrickletIO4(Sensor):
         return self.TYPE
 
     @property
-    def sensor_callback_period(self, channel):
+    def sensor_callback_period(self):
         """
         Returns the callback period in ms.
         """
