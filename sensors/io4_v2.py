@@ -50,7 +50,7 @@ class BrickletIO4(Sensor):
         """
         Returns the callback period in ms.
         """
-        return self.bricklet.get_input_value_callback_configuration(channel)
+        return self.bricklet.get_input_value_callback_configuration(self.__channel)
 
     @property
     def bricklet(self):
@@ -75,7 +75,7 @@ class BrickletIO4(Sensor):
             self.bricklet.set_input_value_callback_configuration(channel=channel, period=self.callback_period, value_has_to_change=False)
         self.bricklet.register_callback(self.bricklet.CALLBACK_INPUT_VALUE, self.callback)
 
-    def __init__(self, uid, parent, callback_method, callback_period=0):
+    def __init__(self, uid, parent, callback_method, callback_period=0, sid=0):
         """
         Create new sensor Object.
         uid: UID of the sensor
@@ -86,6 +86,7 @@ class BrickletIO4(Sensor):
         super().__init__(uid, parent, callback_method, callback_period)
 
         self.__bricklet = Bricklet(uid, parent.ipcon)
+        self.__channel = sid
         for channel in range(4):
             self.bricklet.set_configuration(channel, self.bricklet.DIRECTION_IN, True)
         self.set_callback()
