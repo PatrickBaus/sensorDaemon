@@ -46,11 +46,11 @@ class BrickletIO4(Sensor):
         return self.TYPE
 
     @property
-    def sensor_callback_period(self):
+    def sensor_callback_period(self, channel):
         """
         Returns the callback period in ms.
         """
-        return self.bricklet.get_all_input_value_callback_configuration()[0]
+        return self.bricklet.get_input_value_callback_configuration(channel)
 
     @property
     def bricklet(self):
@@ -72,7 +72,7 @@ class BrickletIO4(Sensor):
         Sets the callback period and registers the method callback() with the Tinkerforge API.
         """
         for channel in range(4):
-            self.bricklet.set_input_value_callback_configuration(channel=channel, period=self.callback_period, value_has_to_change=True)
+            self.bricklet.set_input_value_callback_configuration(channel=channel, period=self.callback_period, value_has_to_change=False)
         self.bricklet.register_callback(self.bricklet.CALLBACK_INPUT_VALUE, self.callback)
 
     def __init__(self, uid, parent, callback_method, callback_period=0):
