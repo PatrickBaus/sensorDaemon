@@ -50,7 +50,7 @@ class BrickletIO4(Sensor):
         """
         Returns the callback period in ms.
         """
-        return self.bricklet.get_input_value_callback_configuration(self.__channel)
+        return self.bricklet.get_input_value_callback_configuration(self.__channel)[0]
 
     @property
     def bricklet(self):
