@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -175,6 +175,11 @@ except ValueError:
     from bricklet_current25 import BrickletCurrent25
 
 try:
+    from .bricklet_dc_v2 import BrickletDCV2
+except ValueError:
+    from bricklet_dc_v2 import BrickletDCV2
+
+try:
     from .bricklet_distance_ir import BrickletDistanceIR
 except ValueError:
     from bricklet_distance_ir import BrickletDistanceIR
@@ -260,6 +265,11 @@ except ValueError:
     from bricklet_humidity_v2 import BrickletHumidityV2
 
 try:
+    from .bricklet_imu_v3 import BrickletIMUV3
+except ValueError:
+    from bricklet_imu_v3 import BrickletIMUV3
+
+try:
     from .bricklet_industrial_analog_out import BrickletIndustrialAnalogOut
 except ValueError:
     from bricklet_industrial_analog_out import BrickletIndustrialAnalogOut
@@ -305,6 +315,11 @@ except ValueError:
     from bricklet_industrial_dual_0_20ma_v2 import BrickletIndustrialDual020mAV2
 
 try:
+    from .bricklet_industrial_dual_ac_relay import BrickletIndustrialDualACRelay
+except ValueError:
+    from bricklet_industrial_dual_ac_relay import BrickletIndustrialDualACRelay
+
+try:
     from .bricklet_industrial_dual_analog_in import BrickletIndustrialDualAnalogIn
 except ValueError:
     from bricklet_industrial_dual_analog_in import BrickletIndustrialDualAnalogIn
@@ -318,6 +333,11 @@ try:
     from .bricklet_industrial_dual_relay import BrickletIndustrialDualRelay
 except ValueError:
     from bricklet_industrial_dual_relay import BrickletIndustrialDualRelay
+
+try:
+    from .bricklet_industrial_ptc import BrickletIndustrialPTC
+except ValueError:
+    from bricklet_industrial_ptc import BrickletIndustrialPTC
 
 try:
     from .bricklet_industrial_quad_relay import BrickletIndustrialQuadRelay
@@ -495,6 +515,11 @@ except ValueError:
     from bricklet_particulate_matter import BrickletParticulateMatter
 
 try:
+    from .bricklet_performance_dc import BrickletPerformanceDC
+except ValueError:
+    from bricklet_performance_dc import BrickletPerformanceDC
+
+try:
     from .bricklet_piezo_buzzer import BrickletPiezoBuzzer
 except ValueError:
     from bricklet_piezo_buzzer import BrickletPiezoBuzzer
@@ -603,6 +628,16 @@ try:
     from .bricklet_segment_display_4x7_v2 import BrickletSegmentDisplay4x7V2
 except ValueError:
     from bricklet_segment_display_4x7_v2 import BrickletSegmentDisplay4x7V2
+
+try:
+    from .bricklet_servo_v2 import BrickletServoV2
+except ValueError:
+    from bricklet_servo_v2 import BrickletServoV2
+
+try:
+    from .bricklet_silent_stepper_v2 import BrickletSilentStepperV2
+except ValueError:
+    from bricklet_silent_stepper_v2 import BrickletSilentStepperV2
 
 try:
     from .bricklet_solid_state_relay import BrickletSolidStateRelay
@@ -729,6 +764,7 @@ DEVICE_CLASSES = {
     BrickletCompass.DEVICE_IDENTIFIER: BrickletCompass,
     BrickletCurrent12.DEVICE_IDENTIFIER: BrickletCurrent12,
     BrickletCurrent25.DEVICE_IDENTIFIER: BrickletCurrent25,
+    BrickletDCV2.DEVICE_IDENTIFIER: BrickletDCV2,
     BrickletDistanceIR.DEVICE_IDENTIFIER: BrickletDistanceIR,
     BrickletDistanceIRV2.DEVICE_IDENTIFIER: BrickletDistanceIRV2,
     BrickletDistanceUS.DEVICE_IDENTIFIER: BrickletDistanceUS,
@@ -746,6 +782,7 @@ DEVICE_CLASSES = {
     BrickletHallEffectV2.DEVICE_IDENTIFIER: BrickletHallEffectV2,
     BrickletHumidity.DEVICE_IDENTIFIER: BrickletHumidity,
     BrickletHumidityV2.DEVICE_IDENTIFIER: BrickletHumidityV2,
+    BrickletIMUV3.DEVICE_IDENTIFIER: BrickletIMUV3,
     BrickletIndustrialAnalogOut.DEVICE_IDENTIFIER: BrickletIndustrialAnalogOut,
     BrickletIndustrialAnalogOutV2.DEVICE_IDENTIFIER: BrickletIndustrialAnalogOutV2,
     BrickletIndustrialCounter.DEVICE_IDENTIFIER: BrickletIndustrialCounter,
@@ -755,9 +792,11 @@ DEVICE_CLASSES = {
     BrickletIndustrialDigitalOut4V2.DEVICE_IDENTIFIER: BrickletIndustrialDigitalOut4V2,
     BrickletIndustrialDual020mA.DEVICE_IDENTIFIER: BrickletIndustrialDual020mA,
     BrickletIndustrialDual020mAV2.DEVICE_IDENTIFIER: BrickletIndustrialDual020mAV2,
+    BrickletIndustrialDualACRelay.DEVICE_IDENTIFIER: BrickletIndustrialDualACRelay,
     BrickletIndustrialDualAnalogIn.DEVICE_IDENTIFIER: BrickletIndustrialDualAnalogIn,
     BrickletIndustrialDualAnalogInV2.DEVICE_IDENTIFIER: BrickletIndustrialDualAnalogInV2,
     BrickletIndustrialDualRelay.DEVICE_IDENTIFIER: BrickletIndustrialDualRelay,
+    BrickletIndustrialPTC.DEVICE_IDENTIFIER: BrickletIndustrialPTC,
     BrickletIndustrialQuadRelay.DEVICE_IDENTIFIER: BrickletIndustrialQuadRelay,
     BrickletIndustrialQuadRelayV2.DEVICE_IDENTIFIER: BrickletIndustrialQuadRelayV2,
     BrickletIO16.DEVICE_IDENTIFIER: BrickletIO16,
@@ -793,6 +832,7 @@ DEVICE_CLASSES = {
     BrickletOneWire.DEVICE_IDENTIFIER: BrickletOneWire,
     BrickletOutdoorWeather.DEVICE_IDENTIFIER: BrickletOutdoorWeather,
     BrickletParticulateMatter.DEVICE_IDENTIFIER: BrickletParticulateMatter,
+    BrickletPerformanceDC.DEVICE_IDENTIFIER: BrickletPerformanceDC,
     BrickletPiezoBuzzer.DEVICE_IDENTIFIER: BrickletPiezoBuzzer,
     BrickletPiezoSpeaker.DEVICE_IDENTIFIER: BrickletPiezoSpeaker,
     BrickletPiezoSpeakerV2.DEVICE_IDENTIFIER: BrickletPiezoSpeakerV2,
@@ -815,6 +855,8 @@ DEVICE_CLASSES = {
     BrickletRS485.DEVICE_IDENTIFIER: BrickletRS485,
     BrickletSegmentDisplay4x7.DEVICE_IDENTIFIER: BrickletSegmentDisplay4x7,
     BrickletSegmentDisplay4x7V2.DEVICE_IDENTIFIER: BrickletSegmentDisplay4x7V2,
+    BrickletServoV2.DEVICE_IDENTIFIER: BrickletServoV2,
+    BrickletSilentStepperV2.DEVICE_IDENTIFIER: BrickletSilentStepperV2,
     BrickletSolidStateRelay.DEVICE_IDENTIFIER: BrickletSolidStateRelay,
     BrickletSolidStateRelayV2.DEVICE_IDENTIFIER: BrickletSolidStateRelayV2,
     BrickletSoundIntensity.DEVICE_IDENTIFIER: BrickletSoundIntensity,

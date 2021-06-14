@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -43,7 +43,7 @@ class BrickletSegmentDisplay4x7(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletSegmentDisplay4x7.DEVICE_IDENTIFIER, BrickletSegmentDisplay4x7.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -53,8 +53,9 @@ class BrickletSegmentDisplay4x7(Device):
         self.response_expected[BrickletSegmentDisplay4x7.FUNCTION_GET_COUNTER_VALUE] = BrickletSegmentDisplay4x7.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletSegmentDisplay4x7.FUNCTION_GET_IDENTITY] = BrickletSegmentDisplay4x7.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletSegmentDisplay4x7.CALLBACK_COUNTER_FINISHED] = ''
+        self.callback_formats[BrickletSegmentDisplay4x7.CALLBACK_COUNTER_FINISHED] = (8, '')
 
+        ipcon.add_device(self)
 
     def set_segments(self, segments, brightness, colon):
         """
@@ -72,42 +73,45 @@ class BrickletSegmentDisplay4x7(Device):
         The brightness can be set between 0 (dark) and 7 (bright). The colon
         parameter turns the colon of the display on or off.
         """
+        self.check_validity()
+
         segments = list(map(int, segments))
         brightness = int(brightness)
         colon = bool(colon)
 
-        self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_SET_SEGMENTS, (segments, brightness, colon), '4B B !', '')
+        self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_SET_SEGMENTS, (segments, brightness, colon), '4B B !', 0, '')
 
     def get_segments(self):
         """
         Returns the segment, brightness and color data as set by
         :func:`Set Segments`.
         """
-        return GetSegments(*self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_GET_SEGMENTS, (), '', '4B B !'))
+        self.check_validity()
+
+        return GetSegments(*self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_GET_SEGMENTS, (), '', 14, '4B B !'))
 
     def start_counter(self, value_from, value_to, increment, length):
         """
         Starts a counter with the *from* value that counts to the *to*
         value with the each step incremented by *increment*.
-        The *length* of the increment is given in ms.
+        *length* is the pause between each increment.
 
         Example: If you set *from* to 0, *to* to 100, *increment* to 1 and
         *length* to 1000, a counter that goes from 0 to 100 with one second
         pause between each increment will be started.
 
-        The maximum values for *from*, *to* and *increment* is 9999,
-        the minimum value is -999.
-
         Using a negative increment allows to count backwards.
 
         You can stop the counter at every time by calling :func:`Set Segments`.
         """
+        self.check_validity()
+
         value_from = int(value_from)
         value_to = int(value_to)
         increment = int(increment)
         length = int(length)
 
-        self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_START_COUNTER, (value_from, value_to, increment, length), 'h h h I', '')
+        self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_START_COUNTER, (value_from, value_to, increment, length), 'h h h I', 0, '')
 
     def get_counter_value(self):
         """
@@ -115,7 +119,9 @@ class BrickletSegmentDisplay4x7(Device):
 
         If there is no counter running a 0 will be returned.
         """
-        return self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_GET_COUNTER_VALUE, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_GET_COUNTER_VALUE, (), '', 10, 'H')
 
     def get_identity(self):
         """
@@ -123,12 +129,14 @@ class BrickletSegmentDisplay4x7(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletSegmentDisplay4x7.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

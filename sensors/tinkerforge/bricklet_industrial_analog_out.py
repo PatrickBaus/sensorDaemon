@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -52,7 +52,7 @@ class BrickletIndustrialAnalogOut(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletIndustrialAnalogOut.DEVICE_IDENTIFIER, BrickletIndustrialAnalogOut.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -68,6 +68,7 @@ class BrickletIndustrialAnalogOut(Device):
         self.response_expected[BrickletIndustrialAnalogOut.FUNCTION_GET_IDENTITY] = BrickletIndustrialAnalogOut.RESPONSE_EXPECTED_ALWAYS_TRUE
 
 
+        ipcon.add_device(self)
 
     def enable(self):
         """
@@ -75,7 +76,9 @@ class BrickletIndustrialAnalogOut(Device):
 
         The default is disabled.
         """
-        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_ENABLE, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_ENABLE, (), '', 0, '')
 
     def disable(self):
         """
@@ -83,13 +86,17 @@ class BrickletIndustrialAnalogOut(Device):
 
         The default is disabled.
         """
-        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_DISABLE, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_DISABLE, (), '', 0, '')
 
     def is_enabled(self):
         """
         Returns *true* if output of voltage and current is enabled, *false* otherwise.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_IS_ENABLED, (), '', '!')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_IS_ENABLED, (), '', 9, '!')
 
     def set_voltage(self, voltage):
         """
@@ -98,15 +105,19 @@ class BrickletIndustrialAnalogOut(Device):
         The output voltage and output current are linked. Changing the output voltage
         also changes the output current.
         """
+        self.check_validity()
+
         voltage = int(voltage)
 
-        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_SET_VOLTAGE, (voltage,), 'H', '')
+        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_SET_VOLTAGE, (voltage,), 'H', 0, '')
 
     def get_voltage(self):
         """
         Returns the voltage as set by :func:`Set Voltage`.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_GET_VOLTAGE, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_GET_VOLTAGE, (), '', 10, 'H')
 
     def set_current(self, current):
         """
@@ -115,15 +126,19 @@ class BrickletIndustrialAnalogOut(Device):
         The output current and output voltage are linked. Changing the output current
         also changes the output voltage.
         """
+        self.check_validity()
+
         current = int(current)
 
-        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_SET_CURRENT, (current,), 'H', '')
+        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_SET_CURRENT, (current,), 'H', 0, '')
 
     def get_current(self):
         """
         Returns the current as set by :func:`Set Current`.
         """
-        return self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_GET_CURRENT, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_GET_CURRENT, (), '', 10, 'H')
 
     def set_configuration(self, voltage_range, current_range):
         """
@@ -143,16 +158,20 @@ class BrickletIndustrialAnalogOut(Device):
         The resolution will always be 12 bit. This means, that the
         precision is higher with a smaller range.
         """
+        self.check_validity()
+
         voltage_range = int(voltage_range)
         current_range = int(current_range)
 
-        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_SET_CONFIGURATION, (voltage_range, current_range), 'B B', '')
+        self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_SET_CONFIGURATION, (voltage_range, current_range), 'B B', 0, '')
 
     def get_configuration(self):
         """
         Returns the configuration as set by :func:`Set Configuration`.
         """
-        return GetConfiguration(*self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_GET_CONFIGURATION, (), '', 'B B'))
+        self.check_validity()
+
+        return GetConfiguration(*self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_GET_CONFIGURATION, (), '', 10, 'B B'))
 
     def get_identity(self):
         """
@@ -160,11 +179,13 @@ class BrickletIndustrialAnalogOut(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialAnalogOut.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
 IndustrialAnalogOut = BrickletIndustrialAnalogOut # for backward compatibility

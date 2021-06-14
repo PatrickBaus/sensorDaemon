@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -77,7 +77,7 @@ class BrickletIsolator(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletIsolator.DEVICE_IDENTIFIER, BrickletIsolator.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -102,14 +102,17 @@ class BrickletIsolator(Device):
         self.response_expected[BrickletIsolator.FUNCTION_READ_UID] = BrickletIsolator.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletIsolator.FUNCTION_GET_IDENTITY] = BrickletIsolator.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletIsolator.CALLBACK_STATISTICS] = 'I I H 8s'
+        self.callback_formats[BrickletIsolator.CALLBACK_STATISTICS] = (26, 'I I H 8s')
 
+        ipcon.add_device(self)
 
     def get_statistics(self):
         """
         Returns statistics for the Isolator Bricklet.
         """
-        return GetStatistics(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_STATISTICS, (), '', 'I I H 8s'))
+        self.check_validity()
+
+        return GetStatistics(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_STATISTICS, (), '', 26, 'I I H 8s'))
 
     def set_spitfp_baudrate_config(self, enable_dynamic_baudrate, minimum_dynamic_baudrate):
         """
@@ -120,8 +123,8 @@ class BrickletIsolator(Device):
         The baudrate for communication config between
         Brick and Isolator Bricklet can be set through the API of the Brick.
 
-        The baudrate will be increased exponentially if lots of data is send/received and
-        decreased linearly if little data is send/received.
+        The baudrate will be increased exponentially if lots of data is sent/received and
+        decreased linearly if little data is sent/received.
 
         This lowers the baudrate in applications where little data is transferred (e.g.
         a weather station) and increases the robustness. If there is lots of data to transfer
@@ -135,16 +138,20 @@ class BrickletIsolator(Device):
         :func:`Set SPITFP Baudrate`. If the dynamic baudrate is disabled, the baudrate
         as set by :func:`Set SPITFP Baudrate` will be used statically.
         """
+        self.check_validity()
+
         enable_dynamic_baudrate = bool(enable_dynamic_baudrate)
         minimum_dynamic_baudrate = int(minimum_dynamic_baudrate)
 
-        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_SPITFP_BAUDRATE_CONFIG, (enable_dynamic_baudrate, minimum_dynamic_baudrate), '! I', '')
+        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_SPITFP_BAUDRATE_CONFIG, (enable_dynamic_baudrate, minimum_dynamic_baudrate), '! I', 0, '')
 
     def get_spitfp_baudrate_config(self):
         """
         Returns the baudrate config, see :func:`Set SPITFP Baudrate Config`.
         """
-        return GetSPITFPBaudrateConfig(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_SPITFP_BAUDRATE_CONFIG, (), '', '! I'))
+        self.check_validity()
+
+        return GetSPITFPBaudrateConfig(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_SPITFP_BAUDRATE_CONFIG, (), '', 13, '! I'))
 
     def set_spitfp_baudrate(self, baudrate):
         """
@@ -161,18 +168,22 @@ class BrickletIsolator(Device):
         function corresponds to the maximum baudrate (see :func:`Set SPITFP Baudrate Config`).
 
         Regulatory testing is done with the default baudrate. If CE compatibility
-        or similar is necessary in you applications we recommend to not change
+        or similar is necessary in your applications we recommend to not change
         the baudrate.
         """
+        self.check_validity()
+
         baudrate = int(baudrate)
 
-        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_SPITFP_BAUDRATE, (baudrate,), 'I', '')
+        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_SPITFP_BAUDRATE, (baudrate,), 'I', 0, '')
 
     def get_spitfp_baudrate(self):
         """
         Returns the baudrate, see :func:`Set SPITFP Baudrate`.
         """
-        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_SPITFP_BAUDRATE, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_SPITFP_BAUDRATE, (), '', 12, 'I')
 
     def get_isolator_spitfp_error_count(self):
         """
@@ -187,7 +198,9 @@ class BrickletIsolator(Device):
         * framing errors and
         * overflow errors.
         """
-        return GetIsolatorSPITFPErrorCount(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_ISOLATOR_SPITFP_ERROR_COUNT, (), '', 'I I I I'))
+        self.check_validity()
+
+        return GetIsolatorSPITFPErrorCount(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_ISOLATOR_SPITFP_ERROR_COUNT, (), '', 24, 'I I I I'))
 
     def set_statistics_callback_configuration(self, period, value_has_to_change):
         """
@@ -203,10 +216,12 @@ class BrickletIsolator(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
 
-        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_STATISTICS_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', '')
+        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_STATISTICS_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', 0, '')
 
     def get_statistics_callback_configuration(self):
         """
@@ -215,7 +230,9 @@ class BrickletIsolator(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
-        return GetStatisticsCallbackConfiguration(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_STATISTICS_CALLBACK_CONFIGURATION, (), '', 'I !'))
+        self.check_validity()
+
+        return GetStatisticsCallbackConfiguration(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_STATISTICS_CALLBACK_CONFIGURATION, (), '', 13, 'I !'))
 
     def get_spitfp_error_count(self):
         """
@@ -231,7 +248,9 @@ class BrickletIsolator(Device):
         The errors counts are for errors that occur on the Bricklet side. All
         Bricks have a similar function that returns the errors on the Brick side.
         """
-        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 'I I I I'))
+        self.check_validity()
+
+        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 24, 'I I I I'))
 
     def set_bootloader_mode(self, mode):
         """
@@ -245,15 +264,19 @@ class BrickletIsolator(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         mode = int(mode)
 
-        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 'B')
+        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 9, 'B')
 
     def get_bootloader_mode(self):
         """
         Returns the current bootloader mode, see :func:`Set Bootloader Mode`.
         """
-        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_BOOTLOADER_MODE, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_BOOTLOADER_MODE, (), '', 9, 'B')
 
     def set_write_firmware_pointer(self, pointer):
         """
@@ -264,9 +287,11 @@ class BrickletIsolator(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         pointer = int(pointer)
 
-        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', '')
+        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', 0, '')
 
     def write_firmware(self, data):
         """
@@ -279,9 +304,11 @@ class BrickletIsolator(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         data = list(map(int, data))
 
-        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 'B')
+        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 9, 'B')
 
     def set_status_led_config(self, config):
         """
@@ -293,26 +320,32 @@ class BrickletIsolator(Device):
 
         If the Bricklet is in bootloader mode, the LED is will show heartbeat by default.
         """
+        self.check_validity()
+
         config = int(config)
 
-        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', '')
+        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', 0, '')
 
     def get_status_led_config(self):
         """
         Returns the configuration as set by :func:`Set Status LED Config`
         """
-        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 9, 'B')
 
     def get_chip_temperature(self):
         """
-        Returns the temperature in °C as measured inside the microcontroller. The
+        Returns the temperature as measured inside the microcontroller. The
         value returned is not the ambient temperature!
 
         The temperature is only proportional to the real temperature and it has bad
         accuracy. Practically it is only useful as an indicator for
         temperature changes.
         """
-        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 'h')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 10, 'h')
 
     def reset(self):
         """
@@ -323,7 +356,9 @@ class BrickletIsolator(Device):
         calling functions on the existing ones will result in
         undefined behavior!
         """
-        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_RESET, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_RESET, (), '', 0, '')
 
     def write_uid(self, uid):
         """
@@ -333,16 +368,20 @@ class BrickletIsolator(Device):
 
         We recommend that you use Brick Viewer to change the UID.
         """
+        self.check_validity()
+
         uid = int(uid)
 
-        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_WRITE_UID, (uid,), 'I', '')
+        self.ipcon.send_request(self, BrickletIsolator.FUNCTION_WRITE_UID, (uid,), 'I', 0, '')
 
     def read_uid(self):
         """
         Returns the current UID as an integer. Encode as
         Base58 to get the usual string version.
         """
-        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_READ_UID, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletIsolator.FUNCTION_READ_UID, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -350,12 +389,14 @@ class BrickletIsolator(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletIsolator.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

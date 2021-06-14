@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -70,7 +70,7 @@ class BrickletAmbientLightV2(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletAmbientLightV2.DEVICE_IDENTIFIER, BrickletAmbientLightV2.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -85,26 +85,30 @@ class BrickletAmbientLightV2(Device):
         self.response_expected[BrickletAmbientLightV2.FUNCTION_GET_CONFIGURATION] = BrickletAmbientLightV2.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletAmbientLightV2.FUNCTION_GET_IDENTITY] = BrickletAmbientLightV2.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletAmbientLightV2.CALLBACK_ILLUMINANCE] = 'I'
-        self.callback_formats[BrickletAmbientLightV2.CALLBACK_ILLUMINANCE_REACHED] = 'I'
+        self.callback_formats[BrickletAmbientLightV2.CALLBACK_ILLUMINANCE] = (12, 'I')
+        self.callback_formats[BrickletAmbientLightV2.CALLBACK_ILLUMINANCE_REACHED] = (12, 'I')
 
+        ipcon.add_device(self)
 
     def get_illuminance(self):
         """
         Returns the illuminance of the ambient light sensor. The measurement range goes
         up to about 100000lux, but above 64000lux the precision starts to drop.
-        The illuminance is given in lux/100, i.e. a value of 450000 means that an
-        illuminance of 4500lux is measured.
 
         .. versionchanged:: 2.0.2$nbsp;(Plugin)
-          An illuminance of 0lux indicates that the sensor is saturated and the
-          configuration should be modified, see :func:`Set Configuration`.
+          An illuminance of 0lux indicates an error condition where the sensor cannot
+          perform a reasonable measurement. This can happen with very dim or very bright
+          light conditions. In bright light conditions this might indicate that the sensor
+          is saturated and the configuration should be modified (:func:`Set Configuration`)
+          to better match the light conditions.
 
         If you want to get the illuminance periodically, it is recommended to use the
         :cb:`Illuminance` callback and set the period with
         :func:`Set Illuminance Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_ILLUMINANCE, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_ILLUMINANCE, (), '', 12, 'I')
 
     def set_illuminance_callback_period(self, period):
         """
@@ -114,15 +118,19 @@ class BrickletAmbientLightV2(Device):
         The :cb:`Illuminance` callback is only triggered if the illuminance has changed
         since the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_SET_ILLUMINANCE_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_SET_ILLUMINANCE_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_illuminance_callback_period(self):
         """
         Returns the period as set by :func:`Set Illuminance Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_ILLUMINANCE_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_ILLUMINANCE_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_illuminance_callback_threshold(self, option, min, max):
         """
@@ -139,20 +147,22 @@ class BrickletAmbientLightV2(Device):
          "'i'",    "Callback is triggered when the illuminance is *inside* the min and max values"
          "'<'",    "Callback is triggered when the illuminance is smaller than the min value (max is ignored)"
          "'>'",    "Callback is triggered when the illuminance is greater than the min value (max is ignored)"
-
-        The default value is ('x', 0, 0).
         """
+        self.check_validity()
+
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_SET_ILLUMINANCE_CALLBACK_THRESHOLD, (option, min, max), 'c I I', '')
+        self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_SET_ILLUMINANCE_CALLBACK_THRESHOLD, (option, min, max), 'c I I', 0, '')
 
     def get_illuminance_callback_threshold(self):
         """
         Returns the threshold as set by :func:`Set Illuminance Callback Threshold`.
         """
-        return GetIlluminanceCallbackThreshold(*self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_ILLUMINANCE_CALLBACK_THRESHOLD, (), '', 'c I I'))
+        self.check_validity()
+
+        return GetIlluminanceCallbackThreshold(*self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_ILLUMINANCE_CALLBACK_THRESHOLD, (), '', 17, 'c I I'))
 
     def set_debounce_period(self, debounce):
         """
@@ -166,15 +176,19 @@ class BrickletAmbientLightV2(Device):
 
         keep being reached.
         """
+        self.check_validity()
+
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', '')
+        self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', 0, '')
 
     def get_debounce_period(self):
         """
         Returns the debounce period as set by :func:`Set Debounce Period`.
         """
-        return self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 12, 'I')
 
     def set_configuration(self, illuminance_range, integration_time):
         """
@@ -201,19 +215,21 @@ class BrickletAmbientLightV2(Device):
         If the measurement is out-of-range or the sensor is saturated then you should
         configure the next higher illuminance range. If the highest range is already
         in use, then start to reduce the integration time.
-
-        The default values are 0-8000lux illuminance range and 200ms integration time.
         """
+        self.check_validity()
+
         illuminance_range = int(illuminance_range)
         integration_time = int(integration_time)
 
-        self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_SET_CONFIGURATION, (illuminance_range, integration_time), 'B B', '')
+        self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_SET_CONFIGURATION, (illuminance_range, integration_time), 'B B', 0, '')
 
     def get_configuration(self):
         """
         Returns the configuration as set by :func:`Set Configuration`.
         """
-        return GetConfiguration(*self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_CONFIGURATION, (), '', 'B B'))
+        self.check_validity()
+
+        return GetConfiguration(*self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_CONFIGURATION, (), '', 10, 'B B'))
 
     def get_identity(self):
         """
@@ -221,12 +237,14 @@ class BrickletAmbientLightV2(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletAmbientLightV2.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

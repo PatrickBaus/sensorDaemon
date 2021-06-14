@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -59,7 +59,7 @@ class BrickletRealTimeClock(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletRealTimeClock.DEVICE_IDENTIFIER, BrickletRealTimeClock.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -74,25 +74,14 @@ class BrickletRealTimeClock(Device):
         self.response_expected[BrickletRealTimeClock.FUNCTION_GET_ALARM] = BrickletRealTimeClock.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletRealTimeClock.FUNCTION_GET_IDENTITY] = BrickletRealTimeClock.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletRealTimeClock.CALLBACK_DATE_TIME] = 'H B B B B B B B q'
-        self.callback_formats[BrickletRealTimeClock.CALLBACK_ALARM] = 'H B B B B B B B q'
+        self.callback_formats[BrickletRealTimeClock.CALLBACK_DATE_TIME] = (25, 'H B B B B B B B q')
+        self.callback_formats[BrickletRealTimeClock.CALLBACK_ALARM] = (25, 'H B B B B B B B q')
 
+        ipcon.add_device(self)
 
     def set_date_time(self, year, month, day, hour, minute, second, centisecond, weekday):
         """
-        Sets the current date (including weekday) and the current time with hundredths
-        of a second resolution.
-
-        Possible value ranges:
-
-        * Year: 2000 to 2099
-        * Month: 1 to 12 (January to December)
-        * Day: 1 to 31
-        * Hour: 0 to 23
-        * Minute: 0 to 59
-        * Second: 0 to 59
-        * Centisecond: 0 to 99
-        * Weekday: 1 to 7 (Monday to Sunday)
+        Sets the current date (including weekday) and the current time.
 
         If the backup battery is installed then the real-time clock keeps date and
         time even if the Bricklet is not powered by a Brick.
@@ -101,6 +90,8 @@ class BrickletRealTimeClock(Device):
         accordingly. But leap seconds, time zones and daylight saving time are not
         handled.
         """
+        self.check_validity()
+
         year = int(year)
         month = int(month)
         day = int(day)
@@ -110,22 +101,26 @@ class BrickletRealTimeClock(Device):
         centisecond = int(centisecond)
         weekday = int(weekday)
 
-        self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_SET_DATE_TIME, (year, month, day, hour, minute, second, centisecond, weekday), 'H B B B B B B B', '')
+        self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_SET_DATE_TIME, (year, month, day, hour, minute, second, centisecond, weekday), 'H B B B B B B B', 0, '')
 
     def get_date_time(self):
         """
         Returns the current date (including weekday) and the current time of the
-        real-time clock with hundredths of a second resolution.
+        real-time clock.
         """
-        return GetDateTime(*self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_DATE_TIME, (), '', 'H B B B B B B B'))
+        self.check_validity()
+
+        return GetDateTime(*self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_DATE_TIME, (), '', 17, 'H B B B B B B B'))
 
     def get_timestamp(self):
         """
-        Returns the current date and the time of the real-time clock converted to
-        milliseconds. The timestamp has an effective resolution of hundredths of a
-        second.
+        Returns the current date and the time of the real-time clock.
+        The timestamp has an effective resolution of hundredths of a
+        second and is an offset to 2000-01-01 00:00:00.000.
         """
-        return self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_TIMESTAMP, (), '', 'q')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_TIMESTAMP, (), '', 16, 'q')
 
     def set_offset(self, offset):
         """
@@ -155,15 +150,19 @@ class BrickletRealTimeClock(Device):
         The offset is saved in the EEPROM of the Bricklet and only needs to be
         configured once.
         """
+        self.check_validity()
+
         offset = int(offset)
 
-        self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_SET_OFFSET, (offset,), 'b', '')
+        self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_SET_OFFSET, (offset,), 'b', 0, '')
 
     def get_offset(self):
         """
         Returns the offset as set by :func:`Set Offset`.
         """
-        return self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_OFFSET, (), '', 'b')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_OFFSET, (), '', 9, 'b')
 
     def set_date_time_callback_period(self, period):
         """
@@ -175,9 +174,11 @@ class BrickletRealTimeClock(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_SET_DATE_TIME_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_SET_DATE_TIME_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_date_time_callback_period(self):
         """
@@ -185,7 +186,9 @@ class BrickletRealTimeClock(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
-        return self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_DATE_TIME_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_DATE_TIME_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_alarm(self, month, day, hour, minute, second, weekday, interval):
         """
@@ -216,6 +219,8 @@ class BrickletRealTimeClock(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
+        self.check_validity()
+
         month = int(month)
         day = int(day)
         hour = int(hour)
@@ -224,7 +229,7 @@ class BrickletRealTimeClock(Device):
         weekday = int(weekday)
         interval = int(interval)
 
-        self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_SET_ALARM, (month, day, hour, minute, second, weekday, interval), 'b b b b b b i', '')
+        self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_SET_ALARM, (month, day, hour, minute, second, weekday, interval), 'b b b b b b i', 0, '')
 
     def get_alarm(self):
         """
@@ -232,7 +237,9 @@ class BrickletRealTimeClock(Device):
 
         .. versionadded:: 2.0.1$nbsp;(Plugin)
         """
-        return GetAlarm(*self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_ALARM, (), '', 'b b b b b b i'))
+        self.check_validity()
+
+        return GetAlarm(*self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_ALARM, (), '', 18, 'b b b b b b i'))
 
     def get_identity(self):
         """
@@ -240,12 +247,14 @@ class BrickletRealTimeClock(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletRealTimeClock.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

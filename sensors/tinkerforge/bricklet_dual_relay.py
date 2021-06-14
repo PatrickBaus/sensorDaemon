@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -45,7 +45,7 @@ class BrickletDualRelay(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletDualRelay.DEVICE_IDENTIFIER, BrickletDualRelay.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -56,8 +56,9 @@ class BrickletDualRelay(Device):
         self.response_expected[BrickletDualRelay.FUNCTION_SET_SELECTED_STATE] = BrickletDualRelay.RESPONSE_EXPECTED_FALSE
         self.response_expected[BrickletDualRelay.FUNCTION_GET_IDENTITY] = BrickletDualRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletDualRelay.CALLBACK_MONOFLOP_DONE] = 'B !'
+        self.callback_formats[BrickletDualRelay.CALLBACK_MONOFLOP_DONE] = (10, 'B !')
 
+        ipcon.add_device(self)
 
     def set_state(self, relay1, relay2):
         """
@@ -70,16 +71,20 @@ class BrickletDualRelay(Device):
 
         All running monoflop timers will be aborted if this function is called.
         """
+        self.check_validity()
+
         relay1 = bool(relay1)
         relay2 = bool(relay2)
 
-        self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_SET_STATE, (relay1, relay2), '! !', '')
+        self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_SET_STATE, (relay1, relay2), '! !', 0, '')
 
     def get_state(self):
         """
         Returns the state of the relays, *true* means on and *false* means off.
         """
-        return GetState(*self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_GET_STATE, (), '', '! !'))
+        self.check_validity()
+
+        return GetState(*self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_GET_STATE, (), '', 10, '! !'))
 
     def set_monoflop(self, relay, state, time):
         """
@@ -97,11 +102,13 @@ class BrickletDualRelay(Device):
         of two seconds. The relay will be on all the time. If now the RS485
         connection is lost, the relay will turn off in at most two seconds.
         """
+        self.check_validity()
+
         relay = int(relay)
         state = bool(state)
         time = int(time)
 
-        self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_SET_MONOFLOP, (relay, state, time), 'B ! I', '')
+        self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_SET_MONOFLOP, (relay, state, time), 'B ! I', 0, '')
 
     def get_monoflop(self, relay):
         """
@@ -111,9 +118,11 @@ class BrickletDualRelay(Device):
         If the timer is not running currently, the remaining time will be returned
         as 0.
         """
+        self.check_validity()
+
         relay = int(relay)
 
-        return GetMonoflop(*self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_GET_MONOFLOP, (relay,), 'B', '! I I'))
+        return GetMonoflop(*self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_GET_MONOFLOP, (relay,), 'B', 17, '! I I'))
 
     def set_selected_state(self, relay, state):
         """
@@ -123,10 +132,12 @@ class BrickletDualRelay(Device):
 
         The other relay remains untouched.
         """
+        self.check_validity()
+
         relay = int(relay)
         state = bool(state)
 
-        self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_SET_SELECTED_STATE, (relay, state), 'B !', '')
+        self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_SET_SELECTED_STATE, (relay, state), 'B !', 0, '')
 
     def get_identity(self):
         """
@@ -134,12 +145,14 @@ class BrickletDualRelay(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletDualRelay.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -160,7 +160,7 @@ class BrickletLCD128x64(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletLCD128x64.DEVICE_IDENTIFIER, BrickletLCD128x64.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -224,12 +224,13 @@ class BrickletLCD128x64(Device):
         self.response_expected[BrickletLCD128x64.FUNCTION_READ_UID] = BrickletLCD128x64.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletLCD128x64.FUNCTION_GET_IDENTITY] = BrickletLCD128x64.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletLCD128x64.CALLBACK_TOUCH_POSITION] = 'H H H I'
-        self.callback_formats[BrickletLCD128x64.CALLBACK_TOUCH_GESTURE] = 'B I H H H H H I'
-        self.callback_formats[BrickletLCD128x64.CALLBACK_GUI_BUTTON_PRESSED] = 'B !'
-        self.callback_formats[BrickletLCD128x64.CALLBACK_GUI_SLIDER_VALUE] = 'B B'
-        self.callback_formats[BrickletLCD128x64.CALLBACK_GUI_TAB_SELECTED] = 'b'
+        self.callback_formats[BrickletLCD128x64.CALLBACK_TOUCH_POSITION] = (18, 'H H H I')
+        self.callback_formats[BrickletLCD128x64.CALLBACK_TOUCH_GESTURE] = (27, 'B I H H H H H I')
+        self.callback_formats[BrickletLCD128x64.CALLBACK_GUI_BUTTON_PRESSED] = (10, 'B !')
+        self.callback_formats[BrickletLCD128x64.CALLBACK_GUI_SLIDER_VALUE] = (10, 'B B')
+        self.callback_formats[BrickletLCD128x64.CALLBACK_GUI_TAB_SELECTED] = (9, 'b')
 
+        ipcon.add_device(self)
 
     def write_pixels_low_level(self, x_start, y_start, x_end, y_end, pixels_length, pixels_chunk_offset, pixels_chunk_data):
         """
@@ -250,6 +251,8 @@ class BrickletLCD128x64(Device):
         Automatic draw can be configured with the :func:`Set Display Configuration`
         function.
         """
+        self.check_validity()
+
         x_start = int(x_start)
         y_start = int(y_start)
         x_end = int(x_end)
@@ -258,7 +261,7 @@ class BrickletLCD128x64(Device):
         pixels_chunk_offset = int(pixels_chunk_offset)
         pixels_chunk_data = list(map(bool, pixels_chunk_data))
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_WRITE_PIXELS_LOW_LEVEL, (x_start, y_start, x_end, y_end, pixels_length, pixels_chunk_offset, pixels_chunk_data), 'B B B B H H 448!', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_WRITE_PIXELS_LOW_LEVEL, (x_start, y_start, x_end, y_end, pixels_length, pixels_chunk_offset, pixels_chunk_data), 'B B B B H H 448!', 0, '')
 
     def read_pixels_low_level(self, x_start, y_start, x_end, y_end):
         """
@@ -276,12 +279,14 @@ class BrickletLCD128x64(Device):
         Automatic draw can be configured with the :func:`Set Display Configuration`
         function.
         """
+        self.check_validity()
+
         x_start = int(x_start)
         y_start = int(y_start)
         x_end = int(x_end)
         y_end = int(y_end)
 
-        return ReadPixelsLowLevel(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_READ_PIXELS_LOW_LEVEL, (x_start, y_start, x_end, y_end), 'B B B B', 'H H 480!'))
+        return ReadPixelsLowLevel(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_READ_PIXELS_LOW_LEVEL, (x_start, y_start, x_end, y_end), 'B B B B', 72, 'H H 480!'))
 
     def clear_display(self):
         """
@@ -297,7 +302,9 @@ class BrickletLCD128x64(Device):
         Automatic draw can be configured with the :func:`Set Display Configuration`
         function.
         """
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_CLEAR_DISPLAY, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_CLEAR_DISPLAY, (), '', 0, '')
 
     def set_display_configuration(self, contrast, backlight, invert, automatic_draw):
         """
@@ -308,18 +315,22 @@ class BrickletLCD128x64(Device):
         changes are written into an internal buffer and only shown on the display after
         a call of :func:`Draw Buffered Frame`.
         """
+        self.check_validity()
+
         contrast = int(contrast)
         backlight = int(backlight)
         invert = bool(invert)
         automatic_draw = bool(automatic_draw)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_DISPLAY_CONFIGURATION, (contrast, backlight, invert, automatic_draw), 'B B ! !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_DISPLAY_CONFIGURATION, (contrast, backlight, invert, automatic_draw), 'B B ! !', 0, '')
 
     def get_display_configuration(self):
         """
         Returns the configuration as set by :func:`Set Display Configuration`.
         """
-        return GetDisplayConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_DISPLAY_CONFIGURATION, (), '', 'B B ! !'))
+        self.check_validity()
+
+        return GetDisplayConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_DISPLAY_CONFIGURATION, (), '', 12, 'B B ! !'))
 
     def write_line(self, line, position, text):
         """
@@ -347,11 +358,13 @@ class BrickletLCD128x64(Device):
         in the LCD 20x4 Bricklet. You can draw text at a specific pixel position
         and with different font sizes with the :func:`Draw Text` function.
         """
+        self.check_validity()
+
         line = int(line)
         position = int(position)
         text = create_string(text)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_WRITE_LINE, (line, position, text), 'B B 22s', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_WRITE_LINE, (line, position, text), 'B B 22s', 0, '')
 
     def draw_buffered_frame(self, force_complete_redraw):
         """
@@ -365,9 +378,11 @@ class BrickletLCD128x64(Device):
         instead of only the changed parts. Normally it should not be necessary to set this to
         *true*. It may only become necessary in case of stuck pixels because of errors.
         """
+        self.check_validity()
+
         force_complete_redraw = bool(force_complete_redraw)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_DRAW_BUFFERED_FRAME, (force_complete_redraw,), '!', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_DRAW_BUFFERED_FRAME, (force_complete_redraw,), '!', 0, '')
 
     def get_touch_position(self):
         """
@@ -376,9 +391,11 @@ class BrickletLCD128x64(Device):
         * Pressure: Amount of pressure applied by the user
         * X: Touch position on x-axis
         * Y: Touch position on y-axis
-        * Age: Age of touch press in ms (how long ago it was)
+        * Age: Age of touch press (how long ago it was)
         """
-        return GetTouchPosition(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_POSITION, (), '', 'H H H I'))
+        self.check_validity()
+
+        return GetTouchPosition(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_POSITION, (), '', 18, 'H H H I'))
 
     def set_touch_position_callback_configuration(self, period, value_has_to_change):
         """
@@ -392,17 +409,21 @@ class BrickletLCD128x64(Device):
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_TOUCH_POSITION_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_TOUCH_POSITION_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', 0, '')
 
     def get_touch_position_callback_configuration(self):
         """
         Returns the callback configuration as set by
         :func:`Set Touch Position Callback Configuration`.
         """
-        return GetTouchPositionCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_POSITION_CALLBACK_CONFIGURATION, (), '', 'I !'))
+        self.check_validity()
+
+        return GetTouchPositionCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_POSITION_CALLBACK_CONFIGURATION, (), '', 13, 'I !'))
 
     def get_touch_gesture(self):
         """
@@ -416,7 +437,9 @@ class BrickletLCD128x64(Device):
 
         The age parameter corresponds to the age of gesture (how long ago it was).
         """
-        return GetTouchGesture(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_GESTURE, (), '', 'B I H H H H H I'))
+        self.check_validity()
+
+        return GetTouchGesture(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_GESTURE, (), '', 27, 'B I H H H H H I'))
 
     def set_touch_gesture_callback_configuration(self, period, value_has_to_change):
         """
@@ -430,17 +453,21 @@ class BrickletLCD128x64(Device):
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_TOUCH_GESTURE_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_TOUCH_GESTURE_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', 0, '')
 
     def get_touch_gesture_callback_configuration(self):
         """
         Returns the callback configuration as set by
         :func:`Set Touch Gesture Callback Configuration`.
         """
-        return GetTouchGestureCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_GESTURE_CALLBACK_CONFIGURATION, (), '', 'I !'))
+        self.check_validity()
+
+        return GetTouchGestureCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_GESTURE_CALLBACK_CONFIGURATION, (), '', 13, 'I !'))
 
     def draw_line(self, position_x_start, position_y_start, position_x_end, position_y_end, color):
         """
@@ -448,13 +475,15 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         position_x_start = int(position_x_start)
         position_y_start = int(position_y_start)
         position_x_end = int(position_x_end)
         position_y_end = int(position_y_end)
         color = bool(color)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_DRAW_LINE, (position_x_start, position_y_start, position_x_end, position_y_end, color), 'B B B B !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_DRAW_LINE, (position_x_start, position_y_start, position_x_end, position_y_end, color), 'B B B B !', 0, '')
 
     def draw_box(self, position_x_start, position_y_start, position_x_end, position_y_end, fill, color):
         """
@@ -465,6 +494,8 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         position_x_start = int(position_x_start)
         position_y_start = int(position_y_start)
         position_x_end = int(position_x_end)
@@ -472,7 +503,7 @@ class BrickletLCD128x64(Device):
         fill = bool(fill)
         color = bool(color)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_DRAW_BOX, (position_x_start, position_y_start, position_x_end, position_y_end, fill, color), 'B B B B ! !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_DRAW_BOX, (position_x_start, position_y_start, position_x_end, position_y_end, fill, color), 'B B B B ! !', 0, '')
 
     def draw_text(self, position_x, position_y, font, color, text):
         """
@@ -482,13 +513,15 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         position_x = int(position_x)
         position_y = int(position_y)
         font = int(font)
         color = bool(color)
         text = create_string(text)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_DRAW_TEXT, (position_x, position_y, font, color, text), 'B B B ! 22s', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_DRAW_TEXT, (position_x, position_y, font, color, text), 'B B B ! 22s', 0, '')
 
     def set_gui_button(self, index, position_x, position_y, width, height, text):
         """
@@ -514,6 +547,8 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
         position_x = int(position_x)
         position_y = int(position_y)
@@ -521,7 +556,7 @@ class BrickletLCD128x64(Device):
         height = int(height)
         text = create_string(text)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_BUTTON, (index, position_x, position_y, width, height, text), 'B B B B B 16s', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_BUTTON, (index, position_x, position_y, width, height, text), 'B B B B B 16s', 0, '')
 
     def get_gui_button(self, index):
         """
@@ -532,9 +567,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        return GetGUIButton(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_BUTTON, (index,), 'B', '! B B B B 16s'))
+        return GetGUIButton(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_BUTTON, (index,), 'B', 29, '! B B B B 16s'))
 
     def remove_gui_button(self, index):
         """
@@ -544,9 +581,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_GUI_BUTTON, (index,), 'B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_GUI_BUTTON, (index,), 'B', 0, '')
 
     def set_gui_button_pressed_callback_configuration(self, period, value_has_to_change):
         """
@@ -562,10 +601,12 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_BUTTON_PRESSED_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_BUTTON_PRESSED_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', 0, '')
 
     def get_gui_button_pressed_callback_configuration(self):
         """
@@ -574,7 +615,9 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
-        return GetGUIButtonPressedCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_BUTTON_PRESSED_CALLBACK_CONFIGURATION, (), '', 'I !'))
+        self.check_validity()
+
+        return GetGUIButtonPressedCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_BUTTON_PRESSED_CALLBACK_CONFIGURATION, (), '', 13, 'I !'))
 
     def get_gui_button_pressed(self, index):
         """
@@ -584,9 +627,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_BUTTON_PRESSED, (index,), 'B', '!')
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_BUTTON_PRESSED, (index,), 'B', 9, '!')
 
     def set_gui_slider(self, index, position_x, position_y, length, direction, value):
         """
@@ -616,6 +661,8 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
         position_x = int(position_x)
         position_y = int(position_y)
@@ -623,7 +670,7 @@ class BrickletLCD128x64(Device):
         direction = int(direction)
         value = int(value)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_SLIDER, (index, position_x, position_y, length, direction, value), 'B B B B B B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_SLIDER, (index, position_x, position_y, length, direction, value), 'B B B B B B', 0, '')
 
     def get_gui_slider(self, index):
         """
@@ -634,9 +681,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        return GetGUISlider(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_SLIDER, (index,), 'B', '! B B B B B'))
+        return GetGUISlider(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_SLIDER, (index,), 'B', 14, '! B B B B B'))
 
     def remove_gui_slider(self, index):
         """
@@ -646,9 +695,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_GUI_SLIDER, (index,), 'B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_GUI_SLIDER, (index,), 'B', 0, '')
 
     def set_gui_slider_value_callback_configuration(self, period, value_has_to_change):
         """
@@ -664,10 +715,12 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_SLIDER_VALUE_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_SLIDER_VALUE_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', 0, '')
 
     def get_gui_slider_value_callback_configuration(self):
         """
@@ -676,7 +729,9 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
-        return GetGUISliderValueCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_SLIDER_VALUE_CALLBACK_CONFIGURATION, (), '', 'I !'))
+        self.check_validity()
+
+        return GetGUISliderValueCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_SLIDER_VALUE_CALLBACK_CONFIGURATION, (), '', 13, 'I !'))
 
     def get_gui_slider_value(self, index):
         """
@@ -684,9 +739,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_SLIDER_VALUE, (index,), 'B', 'B')
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_SLIDER_VALUE, (index,), 'B', 9, 'B')
 
     def set_gui_tab_configuration(self, change_tab_config, clear_gui):
         """
@@ -698,10 +755,12 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         change_tab_config = int(change_tab_config)
         clear_gui = bool(clear_gui)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_CONFIGURATION, (change_tab_config, clear_gui), 'B !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_CONFIGURATION, (change_tab_config, clear_gui), 'B !', 0, '')
 
     def get_gui_tab_configuration(self):
         """
@@ -709,7 +768,9 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
-        return GetGUITabConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_CONFIGURATION, (), '', 'B !'))
+        self.check_validity()
+
+        return GetGUITabConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_CONFIGURATION, (), '', 10, 'B !'))
 
     def set_gui_tab_text(self, index, text):
         """
@@ -721,10 +782,12 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
         text = create_string(text)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_TEXT, (index, text), 'B 5s', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_TEXT, (index, text), 'B 5s', 0, '')
 
     def get_gui_tab_text(self, index):
         """
@@ -735,9 +798,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        return GetGUITabText(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_TEXT, (index,), 'B', '! 5s'))
+        return GetGUITabText(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_TEXT, (index,), 'B', 14, '! 5s'))
 
     def set_gui_tab_icon(self, index, icon):
         """
@@ -750,10 +815,12 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
         icon = list(map(bool, icon))
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_ICON, (index, icon), 'B 168!', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_ICON, (index, icon), 'B 168!', 0, '')
 
     def get_gui_tab_icon(self, index):
         """
@@ -764,9 +831,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        return GetGUITabIcon(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_ICON, (index,), 'B', '! 168!'))
+        return GetGUITabIcon(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_ICON, (index,), 'B', 30, '! 168!'))
 
     def remove_gui_tab(self, index):
         """
@@ -776,9 +845,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_GUI_TAB, (index,), 'B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_GUI_TAB, (index,), 'B', 0, '')
 
     def set_gui_tab_selected(self, index):
         """
@@ -786,9 +857,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_SELECTED, (index,), 'B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_SELECTED, (index,), 'B', 0, '')
 
     def set_gui_tab_selected_callback_configuration(self, period, value_has_to_change):
         """
@@ -804,10 +877,12 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_SELECTED_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_TAB_SELECTED_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', 0, '')
 
     def get_gui_tab_selected_callback_configuration(self):
         """
@@ -816,7 +891,9 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
-        return GetGUITabSelectedCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_SELECTED_CALLBACK_CONFIGURATION, (), '', 'I !'))
+        self.check_validity()
+
+        return GetGUITabSelectedCallbackConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_SELECTED_CALLBACK_CONFIGURATION, (), '', 13, 'I !'))
 
     def get_gui_tab_selected(self):
         """
@@ -825,7 +902,9 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_SELECTED, (), '', 'b')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_TAB_SELECTED, (), '', 9, 'b')
 
     def set_gui_graph_configuration(self, index, graph_type, position_x, position_y, width, height, text_x, text_y):
         """
@@ -849,6 +928,8 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
         graph_type = int(graph_type)
         position_x = int(position_x)
@@ -858,7 +939,7 @@ class BrickletLCD128x64(Device):
         text_x = create_string(text_x)
         text_y = create_string(text_y)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_GRAPH_CONFIGURATION, (index, graph_type, position_x, position_y, width, height, text_x, text_y), 'B B B B B B 4s 4s', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_GRAPH_CONFIGURATION, (index, graph_type, position_x, position_y, width, height, text_x, text_y), 'B B B B B B 4s 4s', 0, '')
 
     def get_gui_graph_configuration(self, index):
         """
@@ -869,9 +950,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        return GetGUIGraphConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_GRAPH_CONFIGURATION, (index,), 'B', '! B B B B B 4s 4s'))
+        return GetGUIGraphConfiguration(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_GRAPH_CONFIGURATION, (index,), 'B', 22, '! B B B B B 4s 4s'))
 
     def set_gui_graph_data_low_level(self, index, data_length, data_chunk_offset, data_chunk_data):
         """
@@ -890,12 +973,14 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
         data_length = int(data_length)
         data_chunk_offset = int(data_chunk_offset)
         data_chunk_data = list(map(int, data_chunk_data))
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_GRAPH_DATA_LOW_LEVEL, (index, data_length, data_chunk_offset, data_chunk_data), 'B H H 59B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_GUI_GRAPH_DATA_LOW_LEVEL, (index, data_length, data_chunk_offset, data_chunk_data), 'B H H 59B', 0, '')
 
     def get_gui_graph_data_low_level(self, index):
         """
@@ -903,9 +988,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        return GetGUIGraphDataLowLevel(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_GRAPH_DATA_LOW_LEVEL, (index,), 'B', 'H H 59B'))
+        return GetGUIGraphDataLowLevel(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_GUI_GRAPH_DATA_LOW_LEVEL, (index,), 'B', 71, 'H H 59B'))
 
     def remove_gui_graph(self, index):
         """
@@ -915,9 +1002,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         index = int(index)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_GUI_GRAPH, (index,), 'B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_GUI_GRAPH, (index,), 'B', 0, '')
 
     def remove_all_gui(self):
         """
@@ -925,7 +1014,9 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_ALL_GUI, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_REMOVE_ALL_GUI, (), '', 0, '')
 
     def set_touch_led_config(self, config):
         """
@@ -938,9 +1029,11 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
+        self.check_validity()
+
         config = int(config)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_TOUCH_LED_CONFIG, (config,), 'B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_TOUCH_LED_CONFIG, (config,), 'B', 0, '')
 
     def get_touch_led_config(self):
         """
@@ -948,7 +1041,9 @@ class BrickletLCD128x64(Device):
 
         .. versionadded:: 2.0.2$nbsp;(Plugin)
         """
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_LED_CONFIG, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_TOUCH_LED_CONFIG, (), '', 9, 'B')
 
     def get_spitfp_error_count(self):
         """
@@ -964,7 +1059,9 @@ class BrickletLCD128x64(Device):
         The errors counts are for errors that occur on the Bricklet side. All
         Bricks have a similar function that returns the errors on the Brick side.
         """
-        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 'I I I I'))
+        self.check_validity()
+
+        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 24, 'I I I I'))
 
     def set_bootloader_mode(self, mode):
         """
@@ -978,15 +1075,19 @@ class BrickletLCD128x64(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         mode = int(mode)
 
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 'B')
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 9, 'B')
 
     def get_bootloader_mode(self):
         """
         Returns the current bootloader mode, see :func:`Set Bootloader Mode`.
         """
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_BOOTLOADER_MODE, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_BOOTLOADER_MODE, (), '', 9, 'B')
 
     def set_write_firmware_pointer(self, pointer):
         """
@@ -997,9 +1098,11 @@ class BrickletLCD128x64(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         pointer = int(pointer)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', 0, '')
 
     def write_firmware(self, data):
         """
@@ -1012,9 +1115,11 @@ class BrickletLCD128x64(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         data = list(map(int, data))
 
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 'B')
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 9, 'B')
 
     def set_status_led_config(self, config):
         """
@@ -1026,26 +1131,32 @@ class BrickletLCD128x64(Device):
 
         If the Bricklet is in bootloader mode, the LED is will show heartbeat by default.
         """
+        self.check_validity()
+
         config = int(config)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', 0, '')
 
     def get_status_led_config(self):
         """
         Returns the configuration as set by :func:`Set Status LED Config`
         """
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 9, 'B')
 
     def get_chip_temperature(self):
         """
-        Returns the temperature in °C as measured inside the microcontroller. The
+        Returns the temperature as measured inside the microcontroller. The
         value returned is not the ambient temperature!
 
         The temperature is only proportional to the real temperature and it has bad
         accuracy. Practically it is only useful as an indicator for
         temperature changes.
         """
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 'h')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 10, 'h')
 
     def reset(self):
         """
@@ -1056,7 +1167,9 @@ class BrickletLCD128x64(Device):
         calling functions on the existing ones will result in
         undefined behavior!
         """
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_RESET, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_RESET, (), '', 0, '')
 
     def write_uid(self, uid):
         """
@@ -1066,16 +1179,20 @@ class BrickletLCD128x64(Device):
 
         We recommend that you use Brick Viewer to change the UID.
         """
+        self.check_validity()
+
         uid = int(uid)
 
-        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_WRITE_UID, (uid,), 'I', '')
+        self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_WRITE_UID, (uid,), 'I', 0, '')
 
     def read_uid(self):
         """
         Returns the current UID as an integer. Encode as
         Base58 to get the usual string version.
         """
-        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_READ_UID, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_READ_UID, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -1083,12 +1200,14 @@ class BrickletLCD128x64(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletLCD128x64.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def write_pixels(self, x_start, y_start, x_end, y_end, pixels):
         """

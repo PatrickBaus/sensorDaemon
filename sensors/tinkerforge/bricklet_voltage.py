@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -60,7 +60,7 @@ class BrickletVoltage(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletVoltage.DEVICE_IDENTIFIER, BrickletVoltage.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -78,27 +78,28 @@ class BrickletVoltage(Device):
         self.response_expected[BrickletVoltage.FUNCTION_GET_DEBOUNCE_PERIOD] = BrickletVoltage.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletVoltage.FUNCTION_GET_IDENTITY] = BrickletVoltage.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletVoltage.CALLBACK_VOLTAGE] = 'H'
-        self.callback_formats[BrickletVoltage.CALLBACK_ANALOG_VALUE] = 'H'
-        self.callback_formats[BrickletVoltage.CALLBACK_VOLTAGE_REACHED] = 'H'
-        self.callback_formats[BrickletVoltage.CALLBACK_ANALOG_VALUE_REACHED] = 'H'
+        self.callback_formats[BrickletVoltage.CALLBACK_VOLTAGE] = (10, 'H')
+        self.callback_formats[BrickletVoltage.CALLBACK_ANALOG_VALUE] = (10, 'H')
+        self.callback_formats[BrickletVoltage.CALLBACK_VOLTAGE_REACHED] = (10, 'H')
+        self.callback_formats[BrickletVoltage.CALLBACK_ANALOG_VALUE_REACHED] = (10, 'H')
 
+        ipcon.add_device(self)
 
     def get_voltage(self):
         """
-        Returns the voltage of the sensor. The value is in mV and
-        between 0mV and 50000mV.
+        Returns the voltage of the sensor.
 
         If you want to get the voltage periodically, it is recommended to use the
         :cb:`Voltage` callback and set the period with
         :func:`Set Voltage Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_VOLTAGE, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_VOLTAGE, (), '', 10, 'H')
 
     def get_analog_value(self):
         """
         Returns the value as read by a 12-bit analog-to-digital converter.
-        The value is between 0 and 4095.
 
         .. note::
          The value returned by :func:`Get Voltage` is averaged over several samples
@@ -110,7 +111,9 @@ class BrickletVoltage(Device):
         :cb:`Analog Value` callback and set the period with
         :func:`Set Analog Value Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_ANALOG_VALUE, (), '', 'H')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_ANALOG_VALUE, (), '', 10, 'H')
 
     def set_voltage_callback_period(self, period):
         """
@@ -120,15 +123,19 @@ class BrickletVoltage(Device):
         The :cb:`Voltage` callback is only triggered if the voltage has changed since
         the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_VOLTAGE_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_VOLTAGE_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_voltage_callback_period(self):
         """
         Returns the period as set by :func:`Set Voltage Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_VOLTAGE_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_VOLTAGE_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_analog_value_callback_period(self, period):
         """
@@ -138,15 +145,19 @@ class BrickletVoltage(Device):
         The :cb:`Analog Value` callback is only triggered if the analog value has
         changed since the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_ANALOG_VALUE_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_ANALOG_VALUE_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_analog_value_callback_period(self):
         """
         Returns the period as set by :func:`Set Analog Value Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_ANALOG_VALUE_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_ANALOG_VALUE_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_voltage_callback_threshold(self, option, min, max):
         """
@@ -163,20 +174,22 @@ class BrickletVoltage(Device):
          "'i'",    "Callback is triggered when the voltage is *inside* the min and max values"
          "'<'",    "Callback is triggered when the voltage is smaller than the min value (max is ignored)"
          "'>'",    "Callback is triggered when the voltage is greater than the min value (max is ignored)"
-
-        The default value is ('x', 0, 0).
         """
+        self.check_validity()
+
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_VOLTAGE_CALLBACK_THRESHOLD, (option, min, max), 'c H H', '')
+        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_VOLTAGE_CALLBACK_THRESHOLD, (option, min, max), 'c H H', 0, '')
 
     def get_voltage_callback_threshold(self):
         """
         Returns the threshold as set by :func:`Set Voltage Callback Threshold`.
         """
-        return GetVoltageCallbackThreshold(*self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_VOLTAGE_CALLBACK_THRESHOLD, (), '', 'c H H'))
+        self.check_validity()
+
+        return GetVoltageCallbackThreshold(*self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_VOLTAGE_CALLBACK_THRESHOLD, (), '', 13, 'c H H'))
 
     def set_analog_value_callback_threshold(self, option, min, max):
         """
@@ -193,20 +206,22 @@ class BrickletVoltage(Device):
          "'i'",    "Callback is triggered when the analog value is *inside* the min and max values"
          "'<'",    "Callback is triggered when the analog value is smaller than the min value (max is ignored)"
          "'>'",    "Callback is triggered when the analog value is greater than the min value (max is ignored)"
-
-        The default value is ('x', 0, 0).
         """
+        self.check_validity()
+
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_ANALOG_VALUE_CALLBACK_THRESHOLD, (option, min, max), 'c H H', '')
+        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_ANALOG_VALUE_CALLBACK_THRESHOLD, (option, min, max), 'c H H', 0, '')
 
     def get_analog_value_callback_threshold(self):
         """
         Returns the threshold as set by :func:`Set Analog Value Callback Threshold`.
         """
-        return GetAnalogValueCallbackThreshold(*self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_ANALOG_VALUE_CALLBACK_THRESHOLD, (), '', 'c H H'))
+        self.check_validity()
+
+        return GetAnalogValueCallbackThreshold(*self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_ANALOG_VALUE_CALLBACK_THRESHOLD, (), '', 13, 'c H H'))
 
     def set_debounce_period(self, debounce):
         """
@@ -222,15 +237,19 @@ class BrickletVoltage(Device):
 
         keep being reached.
         """
+        self.check_validity()
+
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', '')
+        self.ipcon.send_request(self, BrickletVoltage.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', 0, '')
 
     def get_debounce_period(self):
         """
         Returns the debounce period as set by :func:`Set Debounce Period`.
         """
-        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -238,12 +257,14 @@ class BrickletVoltage(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletVoltage.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

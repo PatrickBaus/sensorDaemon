@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -107,7 +107,7 @@ class BrickletAirQuality(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletAirQuality.DEVICE_IDENTIFIER, BrickletAirQuality.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 1)
 
@@ -144,17 +144,18 @@ class BrickletAirQuality(Device):
         self.response_expected[BrickletAirQuality.FUNCTION_READ_UID] = BrickletAirQuality.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletAirQuality.FUNCTION_GET_IDENTITY] = BrickletAirQuality.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletAirQuality.CALLBACK_ALL_VALUES] = 'i B i i i'
-        self.callback_formats[BrickletAirQuality.CALLBACK_IAQ_INDEX] = 'i B'
-        self.callback_formats[BrickletAirQuality.CALLBACK_TEMPERATURE] = 'i'
-        self.callback_formats[BrickletAirQuality.CALLBACK_HUMIDITY] = 'i'
-        self.callback_formats[BrickletAirQuality.CALLBACK_AIR_PRESSURE] = 'i'
+        self.callback_formats[BrickletAirQuality.CALLBACK_ALL_VALUES] = (25, 'i B i i i')
+        self.callback_formats[BrickletAirQuality.CALLBACK_IAQ_INDEX] = (13, 'i B')
+        self.callback_formats[BrickletAirQuality.CALLBACK_TEMPERATURE] = (12, 'i')
+        self.callback_formats[BrickletAirQuality.CALLBACK_HUMIDITY] = (12, 'i')
+        self.callback_formats[BrickletAirQuality.CALLBACK_AIR_PRESSURE] = (12, 'i')
 
+        ipcon.add_device(self)
 
     def get_all_values(self):
         """
         Returns all values measured by the Air Quality Bricklet. The values are
-        IAQ (Indoor Air Quality) Index, IAQ Index Accuracy, Temperature, Humidity and
+        IAQ (Indoor Air Quality) Index (higher value means greater level of air pollution), IAQ Index Accuracy, Temperature, Humidity and
         Air Pressure.
 
         .. image:: /Images/Misc/bricklet_air_quality_iaq_index.png
@@ -162,21 +163,14 @@ class BrickletAirQuality(Device):
            :alt: Air Quality Index description
            :align: center
            :target: ../../_images/Misc/bricklet_air_quality_iaq_index.png
-
-        The values have these ranges and units:
-
-        * IAQ Index: 0 to 500, higher value means greater level of air pollution
-        * IAQ Index Accuracy: 0 = unreliable to 3 = high
-        * Temperature: in steps of 0.01 °C
-        * Humidity: in steps of 0.01 %RH
-        * Air Pressure: in steps of 0.01 hPa
         """
-        return GetAllValues(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_ALL_VALUES, (), '', 'i B i i i'))
+        self.check_validity()
+
+        return GetAllValues(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_ALL_VALUES, (), '', 25, 'i B i i i'))
 
     def set_temperature_offset(self, offset):
         """
-        Sets a temperature offset with resolution 1/100 °C. A offset of 10 will decrease
-        the measured temperature by 0.1 °C.
+        Sets a temperature offset. A offset of 10 will decrease the measured temperature by 0.1 °C.
 
         If you install this Bricklet into an enclosure and you want to measure the ambient
         temperature, you may have to decrease the measured temperature by some value to
@@ -188,19 +182,23 @@ class BrickletAirQuality(Device):
 
         This temperature offset is used to calculate the relative humidity and
         IAQ index measurements. In case the Bricklet is installed in an enclosure, we
-        recommend to measure and set the temperature offset to imporve the accuracy of
+        recommend to measure and set the temperature offset to improve the accuracy of
         the measurements.
         """
+        self.check_validity()
+
         offset = int(offset)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_TEMPERATURE_OFFSET, (offset,), 'i', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_TEMPERATURE_OFFSET, (offset,), 'i', 0, '')
 
     def get_temperature_offset(self):
         """
         Returns the temperature offset as set by
         :func:`Set Temperature Offset`.
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_TEMPERATURE_OFFSET, (), '', 'i')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_TEMPERATURE_OFFSET, (), '', 12, 'i')
 
     def set_all_values_callback_configuration(self, period, value_has_to_change):
         """
@@ -214,22 +212,25 @@ class BrickletAirQuality(Device):
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_ALL_VALUES_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_ALL_VALUES_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', 0, '')
 
     def get_all_values_callback_configuration(self):
         """
         Returns the callback configuration as set by
         :func:`Set All Values Callback Configuration`.
         """
-        return GetAllValuesCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_ALL_VALUES_CALLBACK_CONFIGURATION, (), '', 'I !'))
+        self.check_validity()
+
+        return GetAllValuesCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_ALL_VALUES_CALLBACK_CONFIGURATION, (), '', 13, 'I !'))
 
     def get_iaq_index(self):
         """
-        Returns the IAQ index and accuracy. The IAQ index goes from
-        0 to 500. The higher the IAQ index, the greater the level of air pollution.
+        Returns the IAQ index and accuracy. The higher the IAQ index, the greater the level of air pollution.
 
         .. image:: /Images/Misc/bricklet_air_quality_iaq_index.png
            :scale: 100 %
@@ -241,7 +242,9 @@ class BrickletAirQuality(Device):
         :cb:`IAQ Index` callback. You can set the callback configuration
         with :func:`Set IAQ Index Callback Configuration`.
         """
-        return GetIAQIndex(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_IAQ_INDEX, (), '', 'i B'))
+        self.check_validity()
+
+        return GetIAQIndex(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_IAQ_INDEX, (), '', 13, 'i B'))
 
     def set_iaq_index_callback_configuration(self, period, value_has_to_change):
         """
@@ -255,28 +258,34 @@ class BrickletAirQuality(Device):
         If it is set to false, the callback is continuously triggered with the period,
         independent of the value.
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_IAQ_INDEX_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_IAQ_INDEX_CALLBACK_CONFIGURATION, (period, value_has_to_change), 'I !', 0, '')
 
     def get_iaq_index_callback_configuration(self):
         """
         Returns the callback configuration as set by
         :func:`Set IAQ Index Callback Configuration`.
         """
-        return GetIAQIndexCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_IAQ_INDEX_CALLBACK_CONFIGURATION, (), '', 'I !'))
+        self.check_validity()
+
+        return GetIAQIndexCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_IAQ_INDEX_CALLBACK_CONFIGURATION, (), '', 13, 'I !'))
 
     def get_temperature(self):
         """
-        Returns temperature in steps of 0.01 °C.
+        Returns temperature.
 
 
         If you want to get the value periodically, it is recommended to use the
         :cb:`Temperature` callback. You can set the callback configuration
         with :func:`Set Temperature Callback Configuration`.
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_TEMPERATURE, (), '', 'i')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_TEMPERATURE, (), '', 12, 'i')
 
     def set_temperature_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
@@ -308,30 +317,36 @@ class BrickletAirQuality(Device):
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_TEMPERATURE_CALLBACK_CONFIGURATION, (period, value_has_to_change, option, min, max), 'I ! c i i', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_TEMPERATURE_CALLBACK_CONFIGURATION, (period, value_has_to_change, option, min, max), 'I ! c i i', 0, '')
 
     def get_temperature_callback_configuration(self):
         """
         Returns the callback configuration as set by :func:`Set Temperature Callback Configuration`.
         """
-        return GetTemperatureCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_TEMPERATURE_CALLBACK_CONFIGURATION, (), '', 'I ! c i i'))
+        self.check_validity()
+
+        return GetTemperatureCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_TEMPERATURE_CALLBACK_CONFIGURATION, (), '', 22, 'I ! c i i'))
 
     def get_humidity(self):
         """
-        Returns relative humidity in steps of 0.01 %RH.
+        Returns relative humidity.
 
 
         If you want to get the value periodically, it is recommended to use the
         :cb:`Humidity` callback. You can set the callback configuration
         with :func:`Set Humidity Callback Configuration`.
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_HUMIDITY, (), '', 'i')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_HUMIDITY, (), '', 12, 'i')
 
     def set_humidity_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
@@ -363,30 +378,36 @@ class BrickletAirQuality(Device):
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_HUMIDITY_CALLBACK_CONFIGURATION, (period, value_has_to_change, option, min, max), 'I ! c i i', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_HUMIDITY_CALLBACK_CONFIGURATION, (period, value_has_to_change, option, min, max), 'I ! c i i', 0, '')
 
     def get_humidity_callback_configuration(self):
         """
         Returns the callback configuration as set by :func:`Set Humidity Callback Configuration`.
         """
-        return GetHumidityCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_HUMIDITY_CALLBACK_CONFIGURATION, (), '', 'I ! c i i'))
+        self.check_validity()
+
+        return GetHumidityCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_HUMIDITY_CALLBACK_CONFIGURATION, (), '', 22, 'I ! c i i'))
 
     def get_air_pressure(self):
         """
-        Returns air pressure in steps of 0.01 hPa.
+        Returns air pressure.
 
 
         If you want to get the value periodically, it is recommended to use the
         :cb:`Air Pressure` callback. You can set the callback configuration
         with :func:`Set Air Pressure Callback Configuration`.
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_AIR_PRESSURE, (), '', 'i')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_AIR_PRESSURE, (), '', 12, 'i')
 
     def set_air_pressure_callback_configuration(self, period, value_has_to_change, option, min, max):
         """
@@ -418,19 +439,23 @@ class BrickletAirQuality(Device):
 
         If the option is set to 'x' (threshold turned off) the callback is triggered with the fixed period.
         """
+        self.check_validity()
+
         period = int(period)
         value_has_to_change = bool(value_has_to_change)
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_AIR_PRESSURE_CALLBACK_CONFIGURATION, (period, value_has_to_change, option, min, max), 'I ! c i i', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_AIR_PRESSURE_CALLBACK_CONFIGURATION, (period, value_has_to_change, option, min, max), 'I ! c i i', 0, '')
 
     def get_air_pressure_callback_configuration(self):
         """
         Returns the callback configuration as set by :func:`Set Air Pressure Callback Configuration`.
         """
-        return GetAirPressureCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_AIR_PRESSURE_CALLBACK_CONFIGURATION, (), '', 'I ! c i i'))
+        self.check_validity()
+
+        return GetAirPressureCallbackConfiguration(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_AIR_PRESSURE_CALLBACK_CONFIGURATION, (), '', 22, 'I ! c i i'))
 
     def remove_calibration(self):
         """
@@ -445,7 +470,9 @@ class BrickletAirQuality(Device):
 
         .. versionadded:: 2.0.3$nbsp;(Plugin)
         """
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_REMOVE_CALIBRATION, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_REMOVE_CALIBRATION, (), '', 0, '')
 
     def set_background_calibration_duration(self, duration):
         """
@@ -472,9 +499,11 @@ class BrickletAirQuality(Device):
 
         .. versionadded:: 2.0.3$nbsp;(Plugin)
         """
+        self.check_validity()
+
         duration = int(duration)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_BACKGROUND_CALIBRATION_DURATION, (duration,), 'B', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_BACKGROUND_CALIBRATION_DURATION, (duration,), 'B', 0, '')
 
     def get_background_calibration_duration(self):
         """
@@ -483,7 +512,9 @@ class BrickletAirQuality(Device):
 
         .. versionadded:: 2.0.3$nbsp;(Plugin)
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_BACKGROUND_CALIBRATION_DURATION, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_BACKGROUND_CALIBRATION_DURATION, (), '', 9, 'B')
 
     def get_spitfp_error_count(self):
         """
@@ -499,7 +530,9 @@ class BrickletAirQuality(Device):
         The errors counts are for errors that occur on the Bricklet side. All
         Bricks have a similar function that returns the errors on the Brick side.
         """
-        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 'I I I I'))
+        self.check_validity()
+
+        return GetSPITFPErrorCount(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_SPITFP_ERROR_COUNT, (), '', 24, 'I I I I'))
 
     def set_bootloader_mode(self, mode):
         """
@@ -513,15 +546,19 @@ class BrickletAirQuality(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         mode = int(mode)
 
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 'B')
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_BOOTLOADER_MODE, (mode,), 'B', 9, 'B')
 
     def get_bootloader_mode(self):
         """
         Returns the current bootloader mode, see :func:`Set Bootloader Mode`.
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_BOOTLOADER_MODE, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_BOOTLOADER_MODE, (), '', 9, 'B')
 
     def set_write_firmware_pointer(self, pointer):
         """
@@ -532,9 +569,11 @@ class BrickletAirQuality(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         pointer = int(pointer)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_WRITE_FIRMWARE_POINTER, (pointer,), 'I', 0, '')
 
     def write_firmware(self, data):
         """
@@ -547,9 +586,11 @@ class BrickletAirQuality(Device):
         This function is used by Brick Viewer during flashing. It should not be
         necessary to call it in a normal user program.
         """
+        self.check_validity()
+
         data = list(map(int, data))
 
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 'B')
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_WRITE_FIRMWARE, (data,), '64B', 9, 'B')
 
     def set_status_led_config(self, config):
         """
@@ -561,26 +602,32 @@ class BrickletAirQuality(Device):
 
         If the Bricklet is in bootloader mode, the LED is will show heartbeat by default.
         """
+        self.check_validity()
+
         config = int(config)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_SET_STATUS_LED_CONFIG, (config,), 'B', 0, '')
 
     def get_status_led_config(self):
         """
         Returns the configuration as set by :func:`Set Status LED Config`
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 'B')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_STATUS_LED_CONFIG, (), '', 9, 'B')
 
     def get_chip_temperature(self):
         """
-        Returns the temperature in °C as measured inside the microcontroller. The
+        Returns the temperature as measured inside the microcontroller. The
         value returned is not the ambient temperature!
 
         The temperature is only proportional to the real temperature and it has bad
         accuracy. Practically it is only useful as an indicator for
         temperature changes.
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 'h')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_CHIP_TEMPERATURE, (), '', 10, 'h')
 
     def reset(self):
         """
@@ -591,7 +638,9 @@ class BrickletAirQuality(Device):
         calling functions on the existing ones will result in
         undefined behavior!
         """
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_RESET, (), '', '')
+        self.check_validity()
+
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_RESET, (), '', 0, '')
 
     def write_uid(self, uid):
         """
@@ -601,16 +650,20 @@ class BrickletAirQuality(Device):
 
         We recommend that you use Brick Viewer to change the UID.
         """
+        self.check_validity()
+
         uid = int(uid)
 
-        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_WRITE_UID, (uid,), 'I', '')
+        self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_WRITE_UID, (uid,), 'I', 0, '')
 
     def read_uid(self):
         """
         Returns the current UID as an integer. Encode as
         Base58 to get the usual string version.
         """
-        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_READ_UID, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_READ_UID, (), '', 12, 'I')
 
     def get_identity(self):
         """
@@ -618,12 +671,14 @@ class BrickletAirQuality(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletAirQuality.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

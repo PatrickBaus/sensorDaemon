@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -75,7 +75,7 @@ class BrickletThermocouple(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletThermocouple.DEVICE_IDENTIFIER, BrickletThermocouple.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -91,21 +91,23 @@ class BrickletThermocouple(Device):
         self.response_expected[BrickletThermocouple.FUNCTION_GET_ERROR_STATE] = BrickletThermocouple.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletThermocouple.FUNCTION_GET_IDENTITY] = BrickletThermocouple.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletThermocouple.CALLBACK_TEMPERATURE] = 'i'
-        self.callback_formats[BrickletThermocouple.CALLBACK_TEMPERATURE_REACHED] = 'i'
-        self.callback_formats[BrickletThermocouple.CALLBACK_ERROR_STATE] = '! !'
+        self.callback_formats[BrickletThermocouple.CALLBACK_TEMPERATURE] = (12, 'i')
+        self.callback_formats[BrickletThermocouple.CALLBACK_TEMPERATURE_REACHED] = (12, 'i')
+        self.callback_formats[BrickletThermocouple.CALLBACK_ERROR_STATE] = (10, '! !')
 
+        ipcon.add_device(self)
 
     def get_temperature(self):
         """
-        Returns the temperature of the thermocouple. The value is given in °C/100,
-        e.g. a value of 4223 means that a temperature of 42.23 °C is measured.
+        Returns the temperature of the thermocouple.
 
         If you want to get the temperature periodically, it is recommended
         to use the :cb:`Temperature` callback and set the period with
         :func:`Set Temperature Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_TEMPERATURE, (), '', 'i')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_TEMPERATURE, (), '', 12, 'i')
 
     def set_temperature_callback_period(self, period):
         """
@@ -115,15 +117,19 @@ class BrickletThermocouple(Device):
         The :cb:`Temperature` callback is only triggered if the temperature has changed
         since the last triggering.
         """
+        self.check_validity()
+
         period = int(period)
 
-        self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_SET_TEMPERATURE_CALLBACK_PERIOD, (period,), 'I', '')
+        self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_SET_TEMPERATURE_CALLBACK_PERIOD, (period,), 'I', 0, '')
 
     def get_temperature_callback_period(self):
         """
         Returns the period as set by :func:`Set Temperature Callback Period`.
         """
-        return self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_TEMPERATURE_CALLBACK_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_TEMPERATURE_CALLBACK_PERIOD, (), '', 12, 'I')
 
     def set_temperature_callback_threshold(self, option, min, max):
         """
@@ -140,20 +146,22 @@ class BrickletThermocouple(Device):
          "'i'",    "Callback is triggered when the temperature is *inside* the min and max values"
          "'<'",    "Callback is triggered when the temperature is smaller than the min value (max is ignored)"
          "'>'",    "Callback is triggered when the temperature is greater than the min value (max is ignored)"
-
-        The default value is ('x', 0, 0).
         """
+        self.check_validity()
+
         option = create_char(option)
         min = int(min)
         max = int(max)
 
-        self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_SET_TEMPERATURE_CALLBACK_THRESHOLD, (option, min, max), 'c i i', '')
+        self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_SET_TEMPERATURE_CALLBACK_THRESHOLD, (option, min, max), 'c i i', 0, '')
 
     def get_temperature_callback_threshold(self):
         """
         Returns the threshold as set by :func:`Set Temperature Callback Threshold`.
         """
-        return GetTemperatureCallbackThreshold(*self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_TEMPERATURE_CALLBACK_THRESHOLD, (), '', 'c i i'))
+        self.check_validity()
+
+        return GetTemperatureCallbackThreshold(*self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_TEMPERATURE_CALLBACK_THRESHOLD, (), '', 17, 'c i i'))
 
     def set_debounce_period(self, debounce):
         """
@@ -167,15 +175,19 @@ class BrickletThermocouple(Device):
 
         keeps being reached.
         """
+        self.check_validity()
+
         debounce = int(debounce)
 
-        self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', '')
+        self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_SET_DEBOUNCE_PERIOD, (debounce,), 'I', 0, '')
 
     def get_debounce_period(self):
         """
         Returns the debounce period as set by :func:`Set Debounce Period`.
         """
-        return self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 'I')
+        self.check_validity()
+
+        return self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_DEBOUNCE_PERIOD, (), '', 12, 'I')
 
     def set_configuration(self, averaging, thermocouple_type, filter):
         """
@@ -202,20 +214,22 @@ class BrickletThermocouple(Device):
 
         * 60Hz: ``time = 82 + (samples - 1) * 16.67``
         * 50Hz: ``time = 98 + (samples - 1) * 20``
-
-        The default configuration is 16 samples, K type and 50Hz.
         """
+        self.check_validity()
+
         averaging = int(averaging)
         thermocouple_type = int(thermocouple_type)
         filter = int(filter)
 
-        self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_SET_CONFIGURATION, (averaging, thermocouple_type, filter), 'B B B', '')
+        self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_SET_CONFIGURATION, (averaging, thermocouple_type, filter), 'B B B', 0, '')
 
     def get_configuration(self):
         """
         Returns the configuration as set by :func:`Set Configuration`.
         """
-        return GetConfiguration(*self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_CONFIGURATION, (), '', 'B B B'))
+        self.check_validity()
+
+        return GetConfiguration(*self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_CONFIGURATION, (), '', 11, 'B B B'))
 
     def get_error_state(self):
         """
@@ -231,7 +245,9 @@ class BrickletThermocouple(Device):
         You can use the :cb:`Error State` callback to automatically get triggered
         when the error state changes.
         """
-        return GetErrorState(*self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_ERROR_STATE, (), '', '! !'))
+        self.check_validity()
+
+        return GetErrorState(*self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_ERROR_STATE, (), '', 10, '! !'))
 
     def get_identity(self):
         """
@@ -239,12 +255,14 @@ class BrickletThermocouple(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletThermocouple.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """

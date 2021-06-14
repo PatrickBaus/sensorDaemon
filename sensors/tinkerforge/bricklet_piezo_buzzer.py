@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2019-11-25.      #
+# This file was automatically generated on 2021-05-06.      #
 #                                                           #
-# Python Bindings Version 2.1.24                            #
+# Python Bindings Version 2.1.29                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -41,7 +41,7 @@ class BrickletPiezoBuzzer(Device):
         Creates an object with the unique device ID *uid* and adds it to
         the IP Connection *ipcon*.
         """
-        Device.__init__(self, uid, ipcon)
+        Device.__init__(self, uid, ipcon, BrickletPiezoBuzzer.DEVICE_IDENTIFIER, BrickletPiezoBuzzer.DEVICE_DISPLAY_NAME)
 
         self.api_version = (2, 0, 0)
 
@@ -49,17 +49,20 @@ class BrickletPiezoBuzzer(Device):
         self.response_expected[BrickletPiezoBuzzer.FUNCTION_MORSE_CODE] = BrickletPiezoBuzzer.RESPONSE_EXPECTED_FALSE
         self.response_expected[BrickletPiezoBuzzer.FUNCTION_GET_IDENTITY] = BrickletPiezoBuzzer.RESPONSE_EXPECTED_ALWAYS_TRUE
 
-        self.callback_formats[BrickletPiezoBuzzer.CALLBACK_BEEP_FINISHED] = ''
-        self.callback_formats[BrickletPiezoBuzzer.CALLBACK_MORSE_CODE_FINISHED] = ''
+        self.callback_formats[BrickletPiezoBuzzer.CALLBACK_BEEP_FINISHED] = (8, '')
+        self.callback_formats[BrickletPiezoBuzzer.CALLBACK_MORSE_CODE_FINISHED] = (8, '')
 
+        ipcon.add_device(self)
 
     def beep(self, duration):
         """
         Beeps for the given duration.
         """
+        self.check_validity()
+
         duration = int(duration)
 
-        self.ipcon.send_request(self, BrickletPiezoBuzzer.FUNCTION_BEEP, (duration,), 'I', '')
+        self.ipcon.send_request(self, BrickletPiezoBuzzer.FUNCTION_BEEP, (duration,), 'I', 0, '')
 
     def morse_code(self, morse):
         """
@@ -71,9 +74,11 @@ class BrickletPiezoBuzzer(Device):
         nine times with the durations "short short short long long long short
         short short".
         """
+        self.check_validity()
+
         morse = create_string(morse)
 
-        self.ipcon.send_request(self, BrickletPiezoBuzzer.FUNCTION_MORSE_CODE, (morse,), '60s', '')
+        self.ipcon.send_request(self, BrickletPiezoBuzzer.FUNCTION_MORSE_CODE, (morse,), '60s', 0, '')
 
     def get_identity(self):
         """
@@ -81,12 +86,14 @@ class BrickletPiezoBuzzer(Device):
         the position, the hardware and firmware version as well as the
         device identifier.
 
-        The position can be 'a', 'b', 'c' or 'd'.
+        The position can be 'a', 'b', 'c', 'd', 'e', 'f', 'g' or 'h' (Bricklet Port).
+        A Bricklet connected to an :ref:`Isolator Bricklet <isolator_bricklet>` is always at
+        position 'z'.
 
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
-        return GetIdentity(*self.ipcon.send_request(self, BrickletPiezoBuzzer.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
+        return GetIdentity(*self.ipcon.send_request(self, BrickletPiezoBuzzer.FUNCTION_GET_IDENTITY, (), '', 33, '8s 8s c 3B 3B H'))
 
     def register_callback(self, callback_id, function):
         """
