@@ -33,6 +33,7 @@ from .temperature_v2 import TemperatureSensorV2
 from .ptc import PTCSensor
 from .ptc_v2 import PTCSensorV2
 from .industrial_dual_analog_in_v2 import IndustrialDualAnalogInV2
+from .industrial_ptc import IndustrialPTC
 
 
 class SensorHost():
@@ -228,6 +229,9 @@ class SensorHost():
             # Industrial Dual Analog In v2.0 bricklet
             elif device_identifier == IndustrialDualAnalogInV2.DEVICE_IDENTIFIER:
                 self.__connect_sensor(IndustrialDualAnalogInV2, uid, connected_uid, position, self.host_name, enumeration_type)
+            # Industrial PTC bricklet
+            elif device_identifier == IndustrialPTC.DEVICE_IDENTIFIER:
+                self.__connect_sensor(IndustrialPTC, uid, connected_uid, position, self.host_name, enumeration_type)
             # Device is not a bricklet
             elif device_identifier < 128:
                 pass

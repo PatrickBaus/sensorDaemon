@@ -22,7 +22,7 @@ from .sensor import Sensor
 from .tinkerforge.bricklet_industrial_ptc import BrickletIndustrialPTC
 
 
-class IndustrialDualAnalogInV2(Sensor):
+class IndustrialPTC(Sensor):
     """
     API Wrapper for the Tinkerforge Industrial PTC bricklet
     """
