@@ -59,7 +59,7 @@ class IndustrialPTC(Sensor):
         """
         return self.__bricklet
 
-    def callback(self, channel, value):
+    def callback(self, value):
         """
         This method will be called by the API, when a new value is available.
         It does all the conversion to the apropriate SI unit specified by getUnit().
