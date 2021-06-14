@@ -19,7 +19,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from .sensor import Sensor
-from .tinkerforge.bricklet_industrial_ptc import BrickletIndustrialPTC
+from .tinkerforge.bricklet_industrial_ptc import BrickletIndustrialPTC as Bricklet
 
 
 class IndustrialPTC(Sensor):
