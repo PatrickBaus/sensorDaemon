@@ -21,7 +21,6 @@
 import asyncio
 import logging
 from abc import ABCMeta, abstractmethod, abstractproperty
-from sensors.tinkerforge.ip_connection import Error as IPConError
 import time
 
 from .tinkerforgeAsync.source.device_factory import device_factory

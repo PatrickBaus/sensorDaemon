@@ -41,6 +41,7 @@ def we_are_frozen():
 
     return hasattr(sys, "frozen")
 
+
 def module_path():
     """ This will get us the program's directory,
     even if we are frozen using py2exe"""
@@ -49,6 +50,7 @@ def module_path():
         return os.path.dirname(sys.executable)
 
     return os.path.dirname(__file__)
+
 
 CONFIG_PATH = module_path() + '/sensors.conf'
 
@@ -226,7 +228,7 @@ def load_config():
 warnings.simplefilter('always', ResourceWarning)
 logging.basicConfig(
     format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-    level=logging.WARNING,    # Enable logs from the ip connection. Set to debug for even more info
+    level=logging.INFO,    # Enable logs from the ip connection. Set to debug for even more info
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
