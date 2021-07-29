@@ -108,10 +108,14 @@ class SensorDaemon():
         self.__logger.warning("#################################################")
         self.__logger.warning("Stopping Daemon...")
         self.__logger.warning("#################################################")
-        await asyncio.gather(
-            self.__host_manager.disconnect(),
-            self.__database_manager.disconnect()
-        )
+        try:
+            await asyncio.gather(
+                self.__host_manager.disconnect(),
+                self.__database_manager.disconnect()
+            )
+        except BaseException:
+            self.__logger.exception("Error during shutdown")
+
         self.__shutting_down.set()  # Kills the run() call
 
         # Get all running tasks
@@ -123,6 +127,8 @@ class SensorDaemon():
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             pass
+        except Exception:
+            self.__logger.exception("Error while reaping tasks during shutdown")
 
 
 async def main():

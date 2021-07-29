@@ -101,5 +101,9 @@ class HostManager():
 
         try:
             await asyncio.gather(*self.__running_tasks)
+        except asyncio.CancelledError:
+            pass
         except Exception:
             self.__logger.exception("Error while reaping hanging tasks")
+        finally:
+            self.__running_tasks.clear()
