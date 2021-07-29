@@ -19,8 +19,6 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-__version__ = "3.0.0"
-
 import asyncio
 import asyncpg
 import os
@@ -33,6 +31,9 @@ import warnings
 from configParser import parse_config_from_env, parse_config_from_file
 from daemon import Daemon
 from sensors.sensorHost import host_factory
+
+from _version import __version__
+
 
 def we_are_frozen():
     """Returns whether we are frozen via py2exe.
