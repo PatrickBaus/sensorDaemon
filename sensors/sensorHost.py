@@ -21,10 +21,11 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 import logging
-from socket import error as socketError
 
 from .sensor import TinkerforgeSensor
-from .tinkerforgeAsync.source.ip_connection import EnumerationType, IPConnectionAsync as IPConnection
+from tinkerforge_async.ip_connection import EnumerationType, NotConnectedError, IPConnectionAsync as IPConnection
+from tinkerforge_async.devices import DeviceIdentifier
+from tinkerforge_async.device_factory import device_factory
 from .tinkerforge.ip_connection import Error as IPConError
 
 
@@ -59,6 +60,13 @@ class SensorHost(metaclass=ABCMeta):
         return self.__port
 
     @property
+    def config(self):
+        """
+        Returns the configuration of the host
+        """
+        return self.__config
+
+    @property
     def parent(self):
         """
         Returns the sensor daemon object.
@@ -72,6 +80,9 @@ class SensorHost(metaclass=ABCMeta):
     @abstractmethod
     async def disconnect(self):
         pass
+
+    async def process_value(self, pid, sid, value):
+        print("foo", pid, sid, value)
 
     def __init__(self, hostname, port, config, parent):
         self.__hostname = hostname
@@ -93,81 +104,22 @@ class TinkerforgeSensorHost(SensorHost):
         """
         return self.__failed_connection_attemps
 
-    @property
-    def sensors(self):
+    def __init__(self, hostname, port, config, parent):
         """
-        Returns a dictionary of all sensors registered with this host. getSensors()[%sensor_uid] will return a sensor object.
+        Create new sensorHost Object.
+        hostName: IP or hostname of the machine hosting the sensor daemon
+        port: port on the host
+        parent: sensorDaemon object managing all sensor hosts
         """
-        return self.__sensors
+        super().__init__(hostname, port, config, parent)
+        self.__logger = logging.getLogger(__name__)
+        self.__conn = IPConnection()
+        self.__failed_connection_attemps = 0
+        self.__running_tasks = []
+        self.__sensors = {}
 
-    def append_sensor(self, sensor):
-        """
-        Appends a new sensor to the host.
-        """
-        self.sensors[sensor.uid] = sensor
-
-    def remove_sensor(self, sensor):
-        """
-        Removes a sensor from the host. This will be done gracefully.
-        """
-        try:
-            sensor.disconnect()
-        except IPConError as e:
-            if (e.value == IPConError.TIMEOUT):
-                self.logger.warning('Warning. Cannot disconnect from sensor "%s" on host "%s". The sensor or host does not respond. Will now forcefully remove the sensor.', sensor.uid, self.__hostname)
-                if sensor.uid in self.sensors:
-                    # If the sensor was disconnected by hand before we could remove it, it might already be gone
-                    del self.sensors[sensor.uid]
-
-    def __enumeration_id_to_string(self, id):
-        """
-        Returns a human readable string when given an IPConnection enum.
-        """
-        result = "Unknown"
-        if id == IPConnection.ENUMERATION_TYPE_AVAILABLE:
-            result = 'User request'
-        elif id == IPConnection.ENUMERATION_TYPE_CONNECTED:
-            result = 'Device connected'
-        elif id == IPConnection.ENUMERATION_TYPE_DISCONNECTED:
-            result = 'Device discconnected from host'
-        return result
-
-    def __connect_sensor(self, sensor_class, uid, connected_uid, port, name, enumeration_type):
-        self.logger.warning('%s sensor "%s" connected to brick "%s" (Port: "%s") on host "%s". Reason: %s (%i).', sensor_class.TYPE.title(), uid, connected_uid, port, name, self.__enumeration_id_to_string(enumeration_type), enumeration_type)
-        # Retrieve the callback period from the database
-        callback_period = self.parent.get_callback_period(uid)
-        # Create new sensor obect and set up callbacks
-        if (callback_period > 0):
-            self.append_sensor(sensor_class(uid, self, self.sensor_callback, callback_period))
-
-    def ping(self):
-        """
-        Check the connection to the brick daemon and subsequently all sensors connected to a host.
-        """
-        self.logger.debug('Pinging host "%s"', self.__hostname)
-        if self.is_connected:
-            self.logger.debug('Host "%s" seems connected. Checking %i sensors.', self.__hostname, len(self.sensors))
-            if len(self.sensors) > 0:
-                try:
-                    # Remove the sensor if it cannot be found. Copy
-                    # those sensors to a list first, because we can't remove any sensors
-                    # from the dict while iterating over it.
-                    offline_sensors = []
-                    for sensor in self.sensors.values():
-                        self.logger.debug('Checking sensor "%s".', sensor.uid)
-                        if not sensor.check_callback():
-                            offline_sensors.append(sensor)
-                    for sensor in offline_sensors:
-                        self.remove_sensor(sensor)
-
-                except IPConError as e:
-                    if (e.value == IPConError.TIMEOUT):
-                        self.logger.error('Error. Lost connection to host "%s".', self.__hostname)
-                    else:
-                        raise
-        else:
-            self.logger.debug('Host "%s" seems disconnected. Trying to reconnect.', self.__hostname)
-            self.connect()
+    def __repr__(self):
+        return f'{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.hostname}, port={self.port}, config={self.config}, parent={self.parent!r})'
 
     def sensor_callback(self, sensor, value, previous_update):
         """
@@ -175,56 +127,66 @@ class TinkerforgeSensorHost(SensorHost):
         """
         self.parent.host_callback(sensor.sensor_type, sensor.uid, value, previous_update)
 
-    def connect_callback(self, connected_reason):
-        """
-        This callback is used by the IPConnection object to communicate any chanes in the connection state to the brick daemon.
-        """
-        if self.ipcon.get_connection_state() == IPConnection.CONNECTION_STATE_CONNECTED:
-            # Remove all current sensors from this node, then enumerate
-            self.logger.warning('Enumerating devices on host "%s". Reason: %s (%i).', self.__hostname, self.__enumeration_id_to_string(connected_reason), connected_reason)
-            self.disconnect_sensors()
-            self.ipcon.enumerate()
-        else:
-            self.logger.error('Cannot enumerate host "%s". Host not connected. Reason: %s (%i).', self.__hostname, self.__enumeration_id_to_string(connected_reason), connected_reason)
+    def get_sensor_config(self, uid):
+        return self.parent.get_sensor_config(uid)
 
-    async def get_sensor_config(self, uid):
-        return await self.parent.get_sensor_config(uid)
+    async def process_sensor_data(self, sensor):
+        async for event in sensor.read_events():
+            await self.process_value(sensor.uid, event['sid'], event['payload'])
+        del self.__sensors[sensor.uid]
 
     async def process_enumerations(self):
         """
         This infinite loop pulls events from the internal enumeration queue
         of the ip connection and waits for an enumeration event to create the devices.
         """
-        while "queue not canceled":
-            packet = await self.__conn.enumeration_queue.get()
-            if packet["enumeration_type"] in (EnumerationType.CONNECTED, EnumerationType.AVAILABLE):
-                try:
-                    device = TinkerforgeSensor(packet["device_id"], packet["uid"], self.__conn, self)
-                except ValueError:
-                    self.__logger.warning("Unsupported device id '%s' with uid '%s' found on host '%s'", packet["uid"], packet["device_id"], self.hostname)
-
-                if device.uid in self.__sensor_tasks:
-                    self.__sensor_tasks[device.uid].cancel()
-                    await self.__sensor_tasks[device.uid]
-                self.__sensor_tasks[device.uid] = asyncio.create_task(device.run(), name=device.uid)
-            elif packet["enumeration_type"] is EnumerationType.DICCONNECTED:
-                # Check whether the sensor is actually connected to this host, then remove it.
-                if packet["uid"] in __sensor_tasks:
-                    self.__logger.warning("Sensor '%s' disconnected from host '%s'.", packet["uid"], self.hostname)
-                    self.__sensor_tasks[packet["uid"]].cancel()
-                    await self.__sensor_tasks[packet["uid"]]
-                    del self.__sensor_tasks[packet["uid"]]
+        try:
+            async for packet in self.__conn.read_enumeration():
+                if packet["enumeration_type"] in (EnumerationType.CONNECTED, EnumerationType.AVAILABLE):
+                    async for sensor_config in self.get_sensor_config(packet["uid"]):
+                        if sensor_config is not None:
+                            try:
+                                if packet["uid"] not in self.__sensors:
+                                    device = TinkerforgeSensor(packet["device_id"], packet["uid"], self.__conn, self)
+                                    await device.run()
+                                    self.__sensors[device.uid] = (device, asyncio.create_task(self.process_sensor_data(device), name='sensor-'+str(device.uid)))
+                            except ValueError:
+                                # raised by the sensor factory if a device_id cannot be found
+                                self.__logger.warning("Unsupported device id '%s' with uid '%s' found on host '%s'", packet["uid"], packet["device_id"], self.hostname)
+                            except Exception:
+                                self.__logger.exception("Error during sensor init.")
+                elif packet["enumeration_type"] is EnumerationType.DISCONNECTED:
+                    # Check whether the sensor was actually connected to this host, then remove it.
+                    try:
+                        _, device_task = self.__sensors.pop(packet["uid"])
+                        device_task.cancel()
+                        try:
+                            await device_task
+                        except asyncio.CancelledError:
+                            pass
+                        except Exception:
+                            self.__logger.exception("Error while removing sensor '%s' from host '%s'", packet["uid"], self.hostname)
+                    except KeyError:
+                        pass    # Do nothing if the device is not registered
+        except NotConnectedError:
+            self.__logger.debug("Cannot process enumerations. Waiting for connection to host '%s%i'", self.hostname, self.port)
 
     async def connect(self):
         """
         Start up the ip connection
         """
+        # TODO: Add incremental delay after connection failure
         if self.failed_connection_attemps == 0:
-            self.__logger.warning("Connecting to brick daemon on '%s'...", self.hostname)
+            self.__logger.warning("Connecting to brick daemon on '%s:%i'...", self.hostname, self.port)
         try:
-            await self.__conn.connect(self.hostname, self.port)
-            self.__logger.info("Connected to host '%s'.", self.hostname)
-        except socketError as e:
+            task = asyncio.create_task(self.__conn.connect(host=self.hostname, port=self.port))
+            self.__running_tasks.append(task)
+            try:
+                await task
+            finally:
+                self.__running_tasks.remove(task)
+            self.__logger.info("Connected to host '%s:%i'.", self.hostname, self.port)
+        except (OSError, asyncio.TimeoutError) as e:
             self.__failed_connection_attemps += 1
             # Suppress the warning after __MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
             if (self.failed_connection_attemps < self.__MAXIMUM_FAILED_CONNECTIONS):
@@ -246,51 +208,45 @@ class TinkerforgeSensorHost(SensorHost):
         """
         return self.__conn.is_connected
 
-    def disconnect_sensors(self):
-        """
-        Disconnect and remove all sensors from this node.
-        """
-        for uid in list(self.sensors):
-            self.remove_sensor(self.sensors[uid])
-
     async def disconnect(self):
         """
         Disconnect all sensors from the host. This will disable the callbacks of the sensors.
         """
-        if self.is_connected:
-            await self.__conn.disconnect()
+        tasks = [sensor.disconnect() for sensor, _ in self.__sensors.values()]
+        await asyncio.gather(*tasks)
+
+        await self.__conn.disconnect()
+
+        tasks = [task for task in self.__running_tasks]
+        [task.cancel() for task in tasks]
+        try:
+            await asyncio.gather(*tasks)
+        except asyncio.CancelledError:
+            pass
+        self.__running_tasks.clear()
+
+    async def connection_watchdog(self):
+        try:
+            while "loop not canceled":
+                if not self.is_connected:
+                    await self.connect()
+                    if self.is_connected:
+                        # Start the enumeration callback task
+                        enumeration_task = asyncio.create_task(self.process_enumerations())
+                        self.__running_tasks.append(enumeration_task)
+                        # Enumerate all sensors
+                        await self.__conn.enumerate()
+                        await enumeration_task  # This will return on disconnect
+                    else:
+                        # If we cannot connect, stay a while and listen
+                        await asyncio.sleep(5)    # TODO: make the timeout configurable
+        finally:
+            self.__logger.debug("Shutting down sensor host %s:%i", self.hostname, self.port)
 
     async def run(self):
-        try:
-            self.__running_tasks.append(asyncio.create_task(self.process_enumerations()))
-
-            # TODO: Catch connection error
-            while not self.is_connected:
-                await self.connect()
-
-            await self.__conn.enumerate()
-
-            while "loop not canceled":
-                await asyncio.sleep(1)
-        except asyncio.CancelledError:
-            await self.disconnect()
-            raise
-
-    def __init__(self, hostname, port, config, parent):
-        """
-        Create new sensorHost Object.
-        hostName: IP or hostname of the machine hosting the sensor daemon
-        port: port on the host
-        parent: sensorDaemon object managing all sensor hosts
-        """
-        super().__init__(hostname, port, config, parent)
-        self.__logger = logging.getLogger(__name__)
-        self.__sensors = {}
-        self.__conn = IPConnection()
-        self.__running_tasks = []
-        self.__failed_connection_attemps = 0
-        self.__running_tasks = []
-        self.__sensor_tasks = {}
+        task = asyncio.create_task(self.connection_watchdog())
+        self.__running_tasks.append(task)
+        await task
 
 
 host_factory = SensorHostFactory()

@@ -63,8 +63,6 @@ def parse_config_from_env():
     postgres["username"] = os.getenv("POSTGRES_USER", "sensors")
     postgres["password"] = os.getenv("POSTGRES_PASSWORD")
     postgres["database"] = os.getenv("POSTGRES_DATABASE", "sensors")
-    if postgres["password"] is None:
-        raise RuntimeError("Postgtres password not set")
 
     sensors = {}
     sensors["keepalive_interval"] = int(os.getenv("SENSORS_KEEPALIVE_INTERVAL", "60"))

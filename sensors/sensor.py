@@ -23,7 +23,9 @@ import logging
 from abc import ABCMeta, abstractmethod, abstractproperty
 import time
 
-from .tinkerforgeAsync.source.device_factory import device_factory
+from sensors.tinkerforge.ip_connection import Error as IPConError
+from tinkerforge_async.devices import GetCallbackConfiguration, ThresholdOption
+from tinkerforge_async.device_factory import device_factory
 
 
 class TinkerforgeSensor():
@@ -34,20 +36,28 @@ class TinkerforgeSensor():
     def uid(self):
         return self.__sensor.uid
 
-    async def disconnect(self):
-        """
-        Cleanup method
-        """
-        pass
+    def __init__(self, device_id, uid, ipcon, parent):
+        self.__sensor = device_factory.get(device_id, uid, ipcon)
+        self.__parent = parent
+        self.__config = None
+        self.__logger = logging.getLogger(__name__)
+        self.__callback_config = {}
+        self.__running_tasks = []
 
-    async def __init_sensor(self):
-        config = self.__config.get("on_connect")
-        if config is not None:
-            for cmd in config:
+    def __str__(self):
+        return f'Tinkerforge {str(self.__sensor)}'
+
+    def __repr__(self):
+        return f'{self.__class__.__module__}.{self.__class__.__qualname__}(device_id={self.__sensor.DEVICE_IDENTIFIER!r}, uid={self.__sensor.uid}, ipcon={self.__sensor.ipcon!r})'
+
+    async def __init_sensor(self, config):
+        on_connect = config.get("on_connect")
+        if on_connect is not None:
+            for cmd in on_connect:
                 try:
                     function = getattr(self.__sensor, cmd["function"])
                 except AttributeError:
-                    self.__logger.error("Invalid config parameter '%s' for sensor %s on host '%s'", cmd["function"], self.__sensor.uid, self.__parent.hostname)
+                    self.__logger.error("Invalid config parameter '%s' for sensor %s", cmd["function"], self.__sensor)
                     continue
 
                 try:
@@ -58,22 +68,89 @@ class TinkerforgeSensor():
                     self.__logger.exception("Error running config for sensor %s on host '%s'", self.__sensor.uid, self.__parent.hostname)
                     continue
 
-    async def run(self):
+        # Enable the callback
+        self.__callback_config[config['sid']] = GetCallbackConfiguration(
+            period=config['period'],
+            value_has_to_change=False,
+            option=ThresholdOption.OFF,
+            minimum=0,
+            maximum=0
+        )
+        await self.__register_callback(config['sid'], self.__callback_config[config['sid']])
+
+    async def __register_callback(self, sid, config):
+        await self.__sensor.set_callback_configuration(sid, *config)
+        self.__sensor.register_event(sid=sid)
+
+    async def __test_callback(self, sid):
+        config = await self.__sensor.get_callback_configuration(sid)
+        if config != self.__callback_config[sid]:
+            await self.__sensor.set_callback_configuration(sid, *self.__callback_config)
+
+    async def read_events(self):
+        last_update = {sid: time.time() - self.__callback_config[sid].period / 1000 for sid in self.__callback_config.keys()}
+        check_callback_job = None
+        async for event in self.__sensor.read_events():
+            sid = event['sid']
+            if (event['timestamp'] - last_update[sid] <= 0.9 * self.__callback_config[sid].period / 1000):
+                self.__logger.warning(f"Callback {event} was {self.__callback_config[sid].period / 1000 - float(data['timestamp'] - last_update[sid])} ms too soon. Callback is set to {self.__callback_config[sid].period} ms.")
+                if check_callback_job is None or check_callback_job.done():
+                    # Schedule a test of the callback config with background job
+                    # manager. It will take care of cleanup as well.
+                    # Skip the test if we have a test scheduled already
+                    check_callback_job = asyncio.create_task(self.__test_callback(sid))
+                    await self.__background_job_queue.put(check_callback_job)
+            last_update[sid] = event['timestamp']
+            yield event
+
+    async def __background_job_manager(self):
+        while "loop not canceled":
+            job = await self.__background_job_queue.get()
+            try:
+                await job
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self.__logger.exception("Exception during background job.")
+                pass
+            finally:
+                self.__background_job_queue.task_done()
+
+    async def __test_connection(self):
+        while "loop not canceled":
+            await asyncio.sleep(5)  # TODO: Make configurable
+            self.__logger.debug(f"Pinging sensor {self.__sensor}.")
+            try:
+                await asyncio.gather(*[self.__test_callback(sid) for sid in self.__callback_config.keys()])
+            except asyncio.TimeoutError:
+                asyncio.create_task(self.__shutdown())
+                break
+
+    async def __shutdown(self):
         try:
-            self.__config = await self.__parent.get_sensor_config(self.__sensor.uid)
-            await self.__init_sensor()
+            [task.cancel() for task in self.__running_tasks if task is not asyncio.current_task()]
+            try:
+                await asyncio.gather(*self.__running_tasks)
+            except asyncio.CancelledError:
+                # We cancelled the tasks, so asyncio.CancelledError is expected.
+                pass
+        except Exception:
+            self.__logger.exception("Error during shutdown of the sensor manager.")
+        finally:
+            self.__running_tasks.clear()
 
-            while "loop not canceled":
-                await asyncio.sleep(1)
-        except asyncio.CancelledError:
-            await self.disconnect()
-            raise
+    async def disconnect(self):
+        await self.__shutdown()
 
-    def __init__(self, device_id, uid, ipcon, parent):
-        self.__sensor = device_factory.get(device_id, uid, ipcon)
-        self.__config = None
-        self.__parent = parent
-        self.__logger = logging.getLogger(__name__)
+    async def run(self):
+        self.__background_job_queue = asyncio.Queue()
+        self.__running_tasks.append(asyncio.create_task(self.__background_job_manager()))
+        self.__running_tasks.append(asyncio.create_task(self.__test_connection()))
+
+        async for config in self.__parent.get_sensor_config(self.uid):
+            await self.__init_sensor(config)
+
+        self.__logger.info("Sensor '%s' connected.", self)
 
 
 class Sensor(metaclass=ABCMeta):
@@ -82,7 +159,7 @@ class Sensor(metaclass=ABCMeta):
     """
 
     @property
-    def uid(self):
+    def pid(self):
         """
         Returns the UID of the bricklet
         """
@@ -103,24 +180,6 @@ class Sensor(metaclass=ABCMeta):
         else:
             self.check_callback()
             self.logger.warning('Warning. Discarding value "%s" from sensor "%s", because the last update was too recent. Was %i s ago, but supposed to be every %i s.', value, self.uid, last_update / 1000, self.callback_period / 1000)
-
-    def check_callback(self):
-        """
-        Check whether the callback ist still properly registered. A bricklet can only manage one registered callback. So make sure this is ours!
-        Returns true if the sensor was found else false.
-        """
-        try: 
-            current_period = self.sensor_callback_period
-            if current_period != self.callback_period:
-                self.logger.warning('Warning. Callback for sensor "%s" is set to %d ms instead of %d ms. Resetting.', self.uid, current_period, self.callback_period)
-                self.set_callback()
-            return True
-        except IPConError as e:
-            if (e.value == IPConError.TIMEOUT):
-                self.logger.warning('Warning. Lost connection to sensor "%s".', self.uid)
-            else:
-                raise
-        return False
 
     def disconnect(self):
         """
@@ -197,13 +256,6 @@ class Sensor(metaclass=ABCMeta):
         Returns the callback period in ms.
         """
         return self.__callback_period
-
-    @abstractproperty
-    def sensor_callback_period(self):
-        """
-        Returns the callback period in ms.
-        """
-        pass
 
     def __init__(self, uid, parent, callback_method, callback_period=0):
         """

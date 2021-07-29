@@ -22,6 +22,7 @@
 import asyncio
 import asyncpg
 import os
+import json
 import logging
 import signal
 import sys
@@ -55,10 +56,151 @@ def module_path():
 CONFIG_PATH = module_path() + '/sensors.conf'
 
 POSTGRES_STMS = {
-    'insert_data' : "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
-    'select_period': "SELECT callback_period FROM sensors WHERE sensor_uid=%s AND enabled",
-    'select_hosts' : "SELECT hostname, port, (SELECT drivers.name FROM drivers WHERE drivers.id=driver_id) as driver FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
+    'insert_data': "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
+    'select_sensor_config': "SELECT config FROM sensors WHERE sensor_uid=%s AND enabled",
+    'select_hosts': "SELECT hostname, port, (SELECT drivers.name FROM drivers WHERE drivers.id=driver_id) as driver FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
 }
+mock_database = {
+    'hosts': [
+        {
+            'hostname': '10.0.0.5',
+            'port': 4223,
+            'driver': 'tinkerforge',
+            'config': '{"on_connect": []}',
+        },
+        {
+            'hostname': '192.168.1.152',
+            'port': 4223,
+            'driver': 'tinkerforge',
+            'config': '{"on_connect": []}',
+        },
+        {
+            'hostname': '127.0.0.1',
+            'port': 4223,
+            'driver': 'tinkerforge',
+            'config': '{"on_connect": []}',
+        },
+    ],
+    'sensor_config': {
+        125633: [
+            {
+                "sid": 0,
+                "period": 0,
+                "config": '{"on_connect": []}',
+            },
+            {
+                "sid": 1,
+                "period": 2000,
+                "config": '',
+            }
+        ],
+        169087: [
+            {
+                "sid": 0,
+                "period": 1000,
+                "config": '{"on_connect": [{"function": "set_status_led_config", "kwargs": {"config": 2} }, {"function": "set_status_led_config", "args": [2] } ]}',
+            },
+        ]
+    }
+}
+
+
+class MockDatabase():
+    def __init__(self):
+        self.__logger = logging.getLogger(__name__)
+
+    async def get_hosts(self):
+        for host in mock_database['hosts']:
+            host['config'] = json.loads(host['config'])
+            yield host
+            await asyncio.sleep(0)
+
+    async def get_sensor_config(self, uid):
+        for config in mock_database['sensor_config'].get(uid, (None, )):
+            self.__logger.debug("Got config: %s", config)
+            if config is None:
+                yield None
+            else:
+                config_copy = config.copy()
+                try:
+                    if config_copy.get("config"):
+                        config_copy["config"] = json.loads(config_copy["config"])
+                    else:
+                        config_copy["config"] = {}
+                except json.decoder.JSONDecodeError as e:
+                    self.__logger.error('Error. Invalid config for sensor: %i. Error: %s', uid, e)
+                    config_copy["config"] = {}
+                yield config_copy
+            await asyncio.sleep(0)
+
+
+class DatabaseManager():
+    def __init__(self):
+        self.__logger = logging.getLogger(__name__)
+        self.__database = MockDatabase()
+
+    async def run(self):
+        pass
+
+    def get_sensor_config(self, pid):
+        return self.__database.get_sensor_config(pid)
+
+    @property
+    def hosts(self):
+        return self.__database.get_hosts()
+
+    async def disconnect(self):
+        pass
+
+
+class HostManager():
+    def __init__(self, database):
+        self.__logger = logging.getLogger(__name__)
+        self.__database = database
+        self.__hosts = {}
+
+    def add_host(self, host):
+        new_host = host_factory.get(
+            driver=host['driver'],
+            hostname=host['hostname'],
+            port=host['port'],
+            config=host['config'],
+            parent=self,
+        )
+        # TODO: Only add a host, if is not already managed.
+        self.__hosts[(host['hostname'], host['port'])] = new_host
+        asyncio.create_task(new_host.run())
+
+    def get_sensor_config(self, pid):
+        self.__logger.debug("Getting sensor config for sensor id %i", pid)
+        return self.__database.get_sensor_config(pid)
+
+    async def connect(self):
+        # Retrieve all hosts from the database
+        # and connect
+        async for host in self.__database.hosts:
+            self.add_host(host)
+
+    async def update_config(self, config_update):
+        update_type, hosts = config_update
+        if update_type == "remove":
+            for host in hosts:
+                if host in self.__hosts:
+                    try:
+                        await host.disconnect()
+                    except Exception:
+                        self.__logger.exception("Error removing host %s:%i", *host)
+                        raise
+                    finally:
+                        del hosts[host]
+        elif update_type == "add":
+            pass
+        elif update_type == "update":
+            pass
+
+    async def disconnect(self):
+        tasks = [host.disconnect() for host in self.__hosts.values()]
+        await asyncio.gather(*tasks)
 
 
 class SensorDaemon():
@@ -67,67 +209,6 @@ class SensorDaemon():
     configure them according to options set in the database and then place the
     returned data in the database as well.
     """
-    async def __get_hosts(self):
-        """
-        Reads hosts from the database and returns a list of host nodes.
-        """
-        hosts = {}
-        postgrescon = None
-        options = self.__config["postgres"]
-        self.logger.info("Fetching sensor hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
-        try:
-            postgrescon = await asyncpg.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], database=options['database'])
-            stmt = await postgrescon.prepare(POSTGRES_STMS['select_hosts'])
-            async with postgrescon.transaction():
-                async for record in stmt.cursor():
-                    self.logger.debug('Found host "%s:%s"', record["hostname"], record["port"])
-                    hosts[record["hostname"]] = host_factory.get(driver=record["driver"], hostname=record["hostname"], port=record["port"], parent=self)
-        except asyncpg.InterfaceError as e:
-            self.logger.critical('Error. Cannot get hosts from database: %s.', e)
-            raise
-        finally:
-            if postgrescon is not None:
-                await postgrescon.close()
-
-        return hosts
-
-    def get_callback_period(self, sensor_uid):
-        """
-        Called by each sensor through its host to query for the callback period. This is the minimum intervall a node is allowed to return data.
-        """
-        postgrescon = None
-        options = self.config.postgres
-        self.logger.info("Fetching Brick Daemon hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
-        try:
-            postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], dbname=options['database'])
-            cur = postgrescon.cursor()
-            cur.execute(POSTGRES_STMS['select_period'], (sensor_uid, ))
-            row = cur.fetchone()
-            if row is not None:
-                period = row[0]
-                self.logger.debug('Period for sensor "%s" is %s ms', sensor_uid, period)
-            else:
-                self.logger.error('Error. Sensor "%s" not found in database. Please add the uid to the database to enable logging of this sensor.', sensor_uid)
-                period = 0
-        except psycopg2.DatabaseError as e:
-            self.logger.critical('Error. Cannot get hosts from database: %s.', e)
-            sys.exit(1)
-        finally:
-            if postgrescon:
-                postgrescon.close()
-
-        if isinstance(period, int):
-            return period
-        else:
-            return 0
-
-    @property
-    def logger(self):
-        """
-        Returns the logger to send messages to the console/file
-        """
-        return self.__logger
-
     @property
     def config(self):
         """
@@ -135,6 +216,45 @@ class SensorDaemon():
         the config file
         """
         return self.__config
+
+    def __init__(self, config):
+        """
+        Creates a sensorDaemon object.
+        config: A config dict containing the configuration options
+        """
+        self.__config = config
+        self.__logger = logging.getLogger(__name__)
+        self.__shutting_down = asyncio.Event()
+        self.__shutting_down.clear()
+
+    async def __get_hosts(self):
+        """
+        Reads hosts from the database and returns a list of host nodes.
+        """
+        return
+        postgrescon = None
+        options = self.config["postgres"]
+        self.__logger.info("Fetching sensor hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
+
+        try:
+            postgrescon = await asyncpg.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], database=options['database'])
+            stmt = await postgrescon.prepare(POSTGRES_STMS['select_hosts'])
+            async with postgrescon.transaction():
+                async for record in stmt.cursor():
+                    self.__logger.debug('Found host "%s:%s"', record["hostname"], record["port"])
+                    hosts[record["hostname"]] = host_factory.get(driver=record["driver"], hostname=record["hostname"], port=record["port"], parent=self)
+        except asyncpg.InterfaceError as e:
+            self.__logger.critical('Error. Cannot get hosts from database: %s.', e)
+            raise
+        finally:
+            if postgrescon is not None:
+                await postgrescon.close()
+
+    async def get_sensor_config(self, sensor_uid):
+        """
+        Called by each sensor through its host to query for its config.
+        """
+        return self.__database.get_sensor_config(sensor_uid)
 
     def host_callback(self, sensor_type, sensor_uid, value, previous_update):
         """
@@ -154,66 +274,62 @@ class SensorDaemon():
             cur.execute(POSTGRES_STMS['insert_data'], (sensor_uid, value))
             # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
             postgrescon.commit()
-            self.logger.debug('Successfully written to database: value %s from sensor %s.', value, sensor_uid)
+            self.__logger.debug('Successfully written to database: value %s from sensor %s.', value, sensor_uid)
         except psycopg2.DatabaseError as e:
             if postgrescon:
                 postgrescon.rollback()
-            self.logger.error('Error. Cannot insert value "%s" from sensor "%s" into database: %s.', value, sensor_uid, e)
+            self.__logger.error('Error. Cannot insert value "%s" from sensor "%s" into database: %s.', value, sensor_uid, e)
         finally:
             if postgrescon:
                 postgrescon.close()
-
-    def __init__(self, config):
-        """
-        Creates a sensorDaemon object.
-        config: A config dict containing the configuration options
-        """
-        self.__config = config
-        self.__logger = logging.getLogger(__name__)
-        self.__running_tasks = []
 
     async def run(self):
         """
         Start the daemon and keep it running through the while (True)
         loop. Execute shutdown() to kill it.
         """
-        self.logger.warning("##################################################")
-        self.logger.warning("Starting Daemon...")
-        self.logger.warning("##################################################")
+        self.__logger.warning("#################################################")
+        self.__logger.warning("Starting Daemon...")
+        self.__logger.warning("#################################################")
 
-        # Retrieve all hosts from the database
-        self.hosts = await self.__get_hosts()
-        # Stop the daemon if no hosts where found
-        if (len(self.hosts) == 0):
-            self.logger.error("No hosts where found in the database...")
-            sys.exit(1)
+        # Catch signals and shutdown
+        signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+        for sig in signals:
+            asyncio.get_running_loop().add_signal_handler(
+                sig, lambda: asyncio.create_task(self.shutdown()))
 
-        # Connect to all hosts. The connection will be kept open.
-        try:
-            for host in self.hosts.values():
-                self.__running_tasks.append(asyncio.create_task(host.run()))
+        # Start database manager
+        self.__database_manager = DatabaseManager()
+        asyncio.create_task(self.__database_manager.run())
 
-            while "loop not canceled":
-                await asyncio.sleep(1)
-        finally:
-            for task in self.__running_tasks:
-                task.cancel()
-            try:
-                await asyncio.gather(*self.__running_tasks)
-            except asyncio.CancelledError:
-                pass
+        # Start host manager
+        self.__host_manager = HostManager(self.__database_manager)
+        asyncio.create_task(self.__host_manager.connect())
 
-    def shutdown(self, sig_number, frame):
+        await self.__shutting_down.wait()
+
+    async def shutdown(self):
         """
         Stops the daemon and gracefully disconnect from all clients.
         """
-        self.logger.warning("##################################################")
-        self.logger.warning("Stopping Daemon...")
-        self.logger.warning("##################################################")
-        for host in self.hosts.values():
-            host.disconnect()
-        # Shutdown logging system
-        sys.exit(0)
+        self.__logger.warning("#################################################")
+        self.__logger.warning("Stopping Daemon...")
+        self.__logger.warning("#################################################")
+        await asyncio.gather(
+            self.__host_manager.disconnect(),
+            self.__database_manager.disconnect()
+        )
+        self.__shutting_down.set()  # Kills the run() call
+
+        # Get all running tasks
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        # and stop them
+        [task.cancel() for task in tasks]
+        # finally wait for them to terminate
+        try:
+            await asyncio.gather(*tasks)
+        except asyncio.CancelledError:
+            pass
 
 
 async def main():
@@ -233,6 +349,7 @@ def load_config():
         return parse_config_from_file(CONFIG_PATH)
     else:
         return parse_config_from_env()
+
 
 # Report all mistakes managing asynchronous resources.
 warnings.simplefilter('always', ResourceWarning)
