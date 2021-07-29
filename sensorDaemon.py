@@ -20,7 +20,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import asyncio
-import asyncpg
 import os
 import logging
 import signal
@@ -67,14 +66,6 @@ class SensorDaemon():
     configure them according to options set in the database and then place the
     returned data in the database as well.
     """
-    @property
-    def config(self):
-        """
-        Returns the configParser object, which contains all options read from
-        the config file
-        """
-        return self.__config
-
     def __init__(self, config):
         """
         Creates a sensorDaemon object.
@@ -84,62 +75,6 @@ class SensorDaemon():
         self.__logger = logging.getLogger(__name__)
         self.__shutting_down = asyncio.Event()
         self.__shutting_down.clear()
-
-    async def __get_hosts(self):
-        """
-        Reads hosts from the database and returns a list of host nodes.
-        """
-        return
-        postgrescon = None
-        options = self.config["postgres"]
-        self.__logger.info("Fetching sensor hosts from database on '{host}:{port}'...".format(host=options['host'], port=options['port']))
-
-        try:
-            postgrescon = await asyncpg.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], database=options['database'])
-            stmt = await postgrescon.prepare(POSTGRES_STMS['select_hosts'])
-            async with postgrescon.transaction():
-                async for record in stmt.cursor():
-                    self.__logger.debug('Found host "%s:%s"', record["hostname"], record["port"])
-                    hosts[record["hostname"]] = host_factory.get(driver=record["driver"], hostname=record["hostname"], port=record["port"], parent=self)
-        except asyncpg.InterfaceError as e:
-            self.__logger.critical('Error. Cannot get hosts from database: %s.', e)
-            raise
-        finally:
-            if postgrescon is not None:
-                await postgrescon.close()
-
-    async def get_sensor_config(self, sensor_uid):
-        """
-        Called by each sensor through its host to query for its config.
-        """
-        return self.__database.get_sensor_config(sensor_uid)
-
-    def host_callback(self, sensor_type, sensor_uid, value, previous_update):
-        """
-        Callback function used by the sensors to write data to the database.
-        It will be called by the host.
-        sensor_type: String that states the type of sensor
-        sensor_uid: String that represents the sensors unique id (embedded in the flash rom)
-        value: Float to be written to the database
-        previous_update: Integer representing the number of ms between this callback and the previous.
-            If there was no previous update, set this to None.
-        """
-        postgrescon = None
-        options = self.config.postgres
-        try:
-            postgrescon = psycopg2.connect(host=options['host'], port=int(options['port']), user=options['username'], password=options['password'], dbname=options['database'])
-            cur = postgrescon.cursor()
-            cur.execute(POSTGRES_STMS['insert_data'], (sensor_uid, value))
-            # Only works on InnoDB databases, not needed on MyISAM tables, but it doesn't hurt. On MyISAM tables data will be committed immediately.
-            postgrescon.commit()
-            self.__logger.debug('Successfully written to database: value %s from sensor %s.', value, sensor_uid)
-        except psycopg2.DatabaseError as e:
-            if postgrescon:
-                postgrescon.rollback()
-            self.__logger.error('Error. Cannot insert value "%s" from sensor "%s" into database: %s.', value, sensor_uid, e)
-        finally:
-            if postgrescon:
-                postgrescon.close()
 
     async def run(self):
         """
