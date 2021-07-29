@@ -18,78 +18,15 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from abc import ABCMeta, abstractmethod
 import asyncio
 import logging
 
-from .sensor import TinkerforgeSensor
 from tinkerforge_async.ip_connection import EnumerationType, NotConnectedError, IPConnectionAsync as IPConnection
 from tinkerforge_async.devices import DeviceIdentifier
 from tinkerforge_async.device_factory import device_factory
-from .tinkerforge.ip_connection import Error as IPConError
 
-
-class SensorHostFactory:
-    def __init__(self):
-        self.__available_hosts = {}
-
-    def register(self, driver, host):
-        self.__available_hosts[driver] = host
-
-    def get(self, driver, hostname, port, config, parent):
-        host = self.__available_hosts.get(driver)
-        if host is None:
-            raise ValueError(f"No driver available for {driver}")
-        return host(hostname, port, config, parent)
-
-
-class SensorHost(metaclass=ABCMeta):
-
-    @property
-    def hostname(self):
-        """
-        Returns the hostname of the Tinkerforge brick daemon, where this host can be found
-        """
-        return self.__hostname
-
-    @property
-    def port(self):
-        """
-        Returns the port at which the Tinkerforge brick daemon is listening
-        """
-        return self.__port
-
-    @property
-    def config(self):
-        """
-        Returns the configuration of the host
-        """
-        return self.__config
-
-    @property
-    def parent(self):
-        """
-        Returns the sensor daemon object.
-        """
-        return self.__parent
-
-    @abstractmethod
-    async def connect(self):
-        pass
-
-    @abstractmethod
-    async def disconnect(self):
-        pass
-
-    async def process_value(self, pid, sid, value):
-        print("foo", pid, sid, value)
-
-    def __init__(self, hostname, port, config, parent):
-        self.__hostname = hostname
-        self.__port = port
-        self.__config = config
-        self.__parent = parent
-
+from .tinkerforge import TinkerforgeSensor
+from .sensor_host import SensorHost
 
 class TinkerforgeSensorHost(SensorHost):
     """
@@ -247,7 +184,3 @@ class TinkerforgeSensorHost(SensorHost):
         task = asyncio.create_task(self.connection_watchdog())
         self.__running_tasks.append(task)
         await task
-
-
-host_factory = SensorHostFactory()
-host_factory.register(driver="tinkerforge", host=TinkerforgeSensorHost)

@@ -23,7 +23,6 @@ import logging
 from abc import ABCMeta, abstractmethod, abstractproperty
 import time
 
-from sensors.tinkerforge.ip_connection import Error as IPConError
 from tinkerforge_async.devices import GetCallbackConfiguration, ThresholdOption
 from tinkerforge_async.device_factory import device_factory
 

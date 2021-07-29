@@ -31,7 +31,7 @@ import warnings
 
 from configParser import parse_config_from_env, parse_config_from_file
 from daemon import Daemon
-from sensors.sensorHost import host_factory
+from sensors.host_factory import host_factory
 
 from _version import __version__
 
