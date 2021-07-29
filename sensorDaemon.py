@@ -22,16 +22,15 @@
 import asyncio
 import asyncpg
 import os
-import json
 import logging
 import signal
 import sys
-import time
 import warnings
 
 from configParser import parse_config_from_env, parse_config_from_file
 from daemon import Daemon
 from sensors.host_factory import host_factory
+from managers import DatabaseManager, HostManager
 
 from _version import __version__
 
@@ -60,147 +59,6 @@ POSTGRES_STMS = {
     'select_sensor_config': "SELECT config FROM sensors WHERE sensor_uid=%s AND enabled",
     'select_hosts': "SELECT hostname, port, (SELECT drivers.name FROM drivers WHERE drivers.id=driver_id) as driver FROM sensor_nodes WHERE id IN (SELECT DISTINCT node_id FROM sensors WHERE enabled)"
 }
-mock_database = {
-    'hosts': [
-        {
-            'hostname': '10.0.0.5',
-            'port': 4223,
-            'driver': 'tinkerforge',
-            'config': '{"on_connect": []}',
-        },
-        {
-            'hostname': '192.168.1.152',
-            'port': 4223,
-            'driver': 'tinkerforge',
-            'config': '{"on_connect": []}',
-        },
-        {
-            'hostname': '127.0.0.1',
-            'port': 4223,
-            'driver': 'tinkerforge',
-            'config': '{"on_connect": []}',
-        },
-    ],
-    'sensor_config': {
-        125633: [
-            {
-                "sid": 0,
-                "period": 0,
-                "config": '{"on_connect": []}',
-            },
-            {
-                "sid": 1,
-                "period": 2000,
-                "config": '',
-            }
-        ],
-        169087: [
-            {
-                "sid": 0,
-                "period": 1000,
-                "config": '{"on_connect": [{"function": "set_status_led_config", "kwargs": {"config": 2} }, {"function": "set_status_led_config", "args": [2] } ]}',
-            },
-        ]
-    }
-}
-
-
-class MockDatabase():
-    def __init__(self):
-        self.__logger = logging.getLogger(__name__)
-
-    async def get_hosts(self):
-        for host in mock_database['hosts']:
-            host['config'] = json.loads(host['config'])
-            yield host
-            await asyncio.sleep(0)
-
-    async def get_sensor_config(self, uid):
-        for config in mock_database['sensor_config'].get(uid, (None, )):
-            self.__logger.debug("Got config: %s", config)
-            if config is None:
-                yield None
-            else:
-                config_copy = config.copy()
-                try:
-                    if config_copy.get("config"):
-                        config_copy["config"] = json.loads(config_copy["config"])
-                    else:
-                        config_copy["config"] = {}
-                except json.decoder.JSONDecodeError as e:
-                    self.__logger.error('Error. Invalid config for sensor: %i. Error: %s', uid, e)
-                    config_copy["config"] = {}
-                yield config_copy
-            await asyncio.sleep(0)
-
-
-class DatabaseManager():
-    def __init__(self):
-        self.__logger = logging.getLogger(__name__)
-        self.__database = MockDatabase()
-
-    async def run(self):
-        pass
-
-    def get_sensor_config(self, pid):
-        return self.__database.get_sensor_config(pid)
-
-    @property
-    def hosts(self):
-        return self.__database.get_hosts()
-
-    async def disconnect(self):
-        pass
-
-
-class HostManager():
-    def __init__(self, database):
-        self.__logger = logging.getLogger(__name__)
-        self.__database = database
-        self.__hosts = {}
-
-    def add_host(self, host):
-        new_host = host_factory.get(
-            driver=host['driver'],
-            hostname=host['hostname'],
-            port=host['port'],
-            config=host['config'],
-            parent=self,
-        )
-        # TODO: Only add a host, if is not already managed.
-        self.__hosts[(host['hostname'], host['port'])] = new_host
-        asyncio.create_task(new_host.run())
-
-    def get_sensor_config(self, pid):
-        self.__logger.debug("Getting sensor config for sensor id %i", pid)
-        return self.__database.get_sensor_config(pid)
-
-    async def connect(self):
-        # Retrieve all hosts from the database
-        # and connect
-        async for host in self.__database.hosts:
-            self.add_host(host)
-
-    async def update_config(self, config_update):
-        update_type, hosts = config_update
-        if update_type == "remove":
-            for host in hosts:
-                if host in self.__hosts:
-                    try:
-                        await host.disconnect()
-                    except Exception:
-                        self.__logger.exception("Error removing host %s:%i", *host)
-                        raise
-                    finally:
-                        del hosts[host]
-        elif update_type == "add":
-            pass
-        elif update_type == "update":
-            pass
-
-    async def disconnect(self):
-        tasks = [host.disconnect() for host in self.__hosts.values()]
-        await asyncio.gather(*tasks)
 
 
 class SensorDaemon():

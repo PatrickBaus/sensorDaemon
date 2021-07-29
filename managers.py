@@ -18,55 +18,29 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from abc import ABCMeta, abstractmethod
+import asyncio
+import logging
 
+from databases import MockDatabase
+from sensors.host_factory import host_factory
 
-class SensorHost(metaclass=ABCMeta):
+class DatabaseManager():
+    def __init__(self):
+        self.__logger = logging.getLogger(__name__)
+        self.__database = MockDatabase()
 
-    @property
-    def hostname(self):
-        """
-        Returns the hostname of the Tinkerforge brick daemon, where this host can be found
-        """
-        return self.__hostname
-
-    @property
-    def port(self):
-        """
-        Returns the port at which the Tinkerforge brick daemon is listening
-        """
-        return self.__port
-
-    @property
-    def config(self):
-        """
-        Returns the configuration of the host
-        """
-        return self.__config
-
-    @property
-    def parent(self):
-        """
-        Returns the sensor daemon object.
-        """
-        return self.__parent
-
-    @abstractmethod
-    async def connect(self):
+    async def run(self):
         pass
 
-    @abstractmethod
+    def get_sensor_config(self, pid):
+        return self.__database.get_sensor_config(pid)
+
+    @property
+    def hosts(self):
+        return self.__database.get_hosts()
+
     async def disconnect(self):
         pass
-
-    async def process_value(self, pid, sid, value):
-        print("foo", pid, sid, value)
-
-    def __init__(self, hostname, port, config, parent):
-        self.__hostname = hostname
-        self.__port = port
-        self.__config = config
-        self.__parent = parent
 
 
 class HostManager():
