@@ -215,6 +215,16 @@ class SensorDaemon():
         # Shutdown logging system
         sys.exit(0)
 
+
+async def main():
+    config = load_config()
+    daemon = SensorDaemon(config)
+    try:
+        await daemon.run()
+    except asyncio.CancelledError:
+        pass
+
+
 def load_config():
     """
     Tries to load the config either from a file or from environment variables
@@ -232,13 +242,4 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-try:
-    config = load_config()
-    daemon = SensorDaemon(config)
-
-    asyncio.run(daemon.run(), debug=False)
-except KeyboardInterrupt:
-    # The loop will be canceled on a KeyboardInterrupt by the run() method, we
-    # just want to suppress the exception
-    pass
-
+asyncio.run(main(), debug=True)
