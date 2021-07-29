@@ -156,10 +156,13 @@ class TinkerforgeSensorHost(SensorHost):
 
         tasks = [task for task in self.__running_tasks]
         [task.cancel() for task in tasks]
+        # TODO: Maybe use return_exceptions=True
         try:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             pass
+        except Exception:
+            self.__logger.exception("Exception during disconnect of host %s:%i", self.hostname, self.port)
         self.__running_tasks.clear()
 
     async def connection_watchdog(self):

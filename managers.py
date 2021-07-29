@@ -48,6 +48,7 @@ class HostManager():
         self.__logger = logging.getLogger(__name__)
         self.__database = database
         self.__hosts = {}
+        self.__running_tasks = []
 
     def add_host(self, host):
         new_host = host_factory.get(
@@ -59,7 +60,7 @@ class HostManager():
         )
         # TODO: Only add a host, if is not already managed.
         self.__hosts[(host['hostname'], host['port'])] = new_host
-        asyncio.create_task(new_host.run())
+        self.__running_tasks.append(asyncio.create_task(new_host.run()))
 
     def get_sensor_config(self, pid):
         self.__logger.debug("Getting sensor config for sensor id %i", pid)
@@ -90,4 +91,15 @@ class HostManager():
 
     async def disconnect(self):
         tasks = [host.disconnect() for host in self.__hosts.values()]
-        await asyncio.gather(*tasks)
+        try:
+            await asyncio.gather(*tasks)
+        except Exception:
+            self.__logger.exception("Error while disconnecting hosts")
+
+        # Cancel any remaining tasks
+        [task.cancel() for task in self.__running_tasks if not task.done()]
+
+        try:
+            await asyncio.gather(*self.__running_tasks)
+        except Exception:
+            self.__logger.exception("Error while reaping hanging tasks")
