@@ -1,276 +1,258 @@
 # -*- coding: utf-8 -*-
-# ##### BEGIN GPL LICENSE BLOCK #####
-#
-# Copyright (C) 2020  Patrick Baus
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ##### END GPL LICENSE BLOCK #####
-
+"""
+This file contains the wrapper for the Tinkerforge sensor class
+"""
 import asyncio
 import logging
-from abc import ABCMeta, abstractmethod, abstractproperty
 import time
 
 from tinkerforge_async.devices import GetCallbackConfiguration, ThresholdOption
 from tinkerforge_async.device_factory import device_factory
+from tinkerforge_async.ip_connection import NotConnectedError
+
+
+# Event bus topics
+EVENT_BUS_BASE = "/sensors/tinkerforge/"
+EVENT_BUS_CONFIG_UPDATE_BY_UID = EVENT_BUS_BASE + "by_uid{uid}/update"
+EVENT_BUS_DISCONNECT_BY_UID = EVENT_BUS_BASE + "by_uid/{uid}/disconnect"
+EVENT_BUS_STATUS = EVENT_BUS_BASE
 
 
 class TinkerforgeSensor():
     """
-    Base class for all Tinkerforge Sensors
+    The wrapper class for all Tinkerforge sensors. It combines the database config
+    with the underlying hardware.
     """
+    @property
+    def uuid(self):
+        """
+        Returns
+        -------
+        uuid.UUID
+            The sensor config uuid.
+        """
+        return self.__uuid
+
     @property
     def uid(self):
+        """
+        Returns
+        -------
+        int
+            The sensor hardware uid.
+        """
         return self.__sensor.uid
 
-    def __init__(self, device_id, uid, ipcon, parent):
-        self.__sensor = device_factory.get(device_id, uid, ipcon)
-        self.__parent = parent
-        self.__config = None
-        self.__logger = logging.getLogger(__name__)
-        self.__callback_config = {}
-        self.__running_tasks = []
-
-    def __str__(self):
-        return f'Tinkerforge {str(self.__sensor)}'
-
-    def __repr__(self):
-        return f'{self.__class__.__module__}.{self.__class__.__qualname__}(device_id={self.__sensor.DEVICE_IDENTIFIER!r}, uid={self.__sensor.uid}, ipcon={self.__sensor.ipcon!r})'
-
-    async def __init_sensor(self, config):
-        on_connect = config.get("on_connect")
-        if on_connect is not None:
-            for cmd in on_connect:
-                try:
-                    function = getattr(self.__sensor, cmd["function"])
-                except AttributeError:
-                    self.__logger.error("Invalid config parameter '%s' for sensor %s", cmd["function"], self.__sensor)
-                    continue
-
-                try:
-                    result = function(*cmd.get("args", []), **cmd.get("kwargs", {}))
-                    if asyncio.iscoroutine(result):
-                        await result
-                except Exception:
-                    self.__logger.exception("Error running config for sensor %s on host '%s'", self.__sensor.uid, self.__parent.hostname)
-                    continue
-
-        # Enable the callback
-        self.__callback_config[config['sid']] = GetCallbackConfiguration(
-            period=config['period'],
-            value_has_to_change=False,
-            option=ThresholdOption.OFF,
-            minimum=0,
-            maximum=0
-        )
-        await self.__register_callback(config['sid'], self.__callback_config[config['sid']])
-
-    async def __register_callback(self, sid, config):
-        await self.__sensor.set_callback_configuration(sid, *config)
-        self.__sensor.register_event(sid=sid)
-
-    async def __test_callback(self, sid):
-        config = await self.__sensor.get_callback_configuration(sid)
-        if config != self.__callback_config[sid]:
-            await self.__sensor.set_callback_configuration(sid, *self.__callback_config)
-
-    async def read_events(self):
-        last_update = {sid: time.time() - self.__callback_config[sid].period / 1000 for sid in self.__callback_config.keys()}
-        check_callback_job = None
-        async for event in self.__sensor.read_events():
-            sid = event['sid']
-            if (event['timestamp'] - last_update[sid] <= 0.9 * self.__callback_config[sid].period / 1000):
-                self.__logger.warning(f"Callback {event} was {self.__callback_config[sid].period / 1000 - float(data['timestamp'] - last_update[sid])} ms too soon. Callback is set to {self.__callback_config[sid].period} ms.")
-                if check_callback_job is None or check_callback_job.done():
-                    # Schedule a test of the callback config with background job
-                    # manager. It will take care of cleanup as well.
-                    # Skip the test if we have a test scheduled already
-                    check_callback_job = asyncio.create_task(self.__test_callback(sid))
-                    await self.__background_job_queue.put(check_callback_job)
-            last_update[sid] = event['timestamp']
-            yield event
-
-    async def __background_job_manager(self):
-        while "loop not canceled":
-            job = await self.__background_job_queue.get()
-            try:
-                await job
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                self.__logger.exception("Exception during background job.")
-                pass
-            finally:
-                self.__background_job_queue.task_done()
-
-    async def __test_connection(self):
-        while "loop not canceled":
-            await asyncio.sleep(5)  # TODO: Make configurable
-            self.__logger.debug(f"Pinging sensor {self.__sensor}.")
-            try:
-                await asyncio.gather(*[self.__test_callback(sid) for sid in self.__callback_config.keys()])
-            except asyncio.TimeoutError:
-                asyncio.create_task(self.__shutdown())
-                break
-
-    async def __shutdown(self):
-        try:
-            [task.cancel() for task in self.__running_tasks if task is not asyncio.current_task()]
-            try:
-                await asyncio.gather(*self.__running_tasks)
-            except asyncio.CancelledError:
-                # We cancelled the tasks, so asyncio.CancelledError is expected.
-                pass
-        except Exception:
-            self.__logger.exception("Error during shutdown of the sensor manager.")
-        finally:
-            self.__running_tasks.clear()
-
-    async def disconnect(self):
-        await self.__shutdown()
-
-    async def run(self):
-        self.__background_job_queue = asyncio.Queue()
-        self.__running_tasks.append(asyncio.create_task(self.__background_job_manager()))
-        self.__running_tasks.append(asyncio.create_task(self.__test_connection()))
-
-        async for config in self.__parent.get_sensor_config(self.uid):
-            await self.__init_sensor(config)
-
-        self.__logger.info("Sensor '%s' connected.", self)
-
-
-class Sensor(metaclass=ABCMeta):
-    """
-    Base class for all Tinkerforge API wrappers
-    """
-
     @property
-    def pid(self):
+    def host(self):
         """
-        Returns the UID of the bricklet
-        """
-        return self.__uid
-
-    def callback(self, value):
-        """
-        Checks all values before sending them to the sensor host. If a value was returned too early, that means before the callback period is over,
-        the value will be discarded. This is most probably due to another process like the BrickViewer registering its own callback with the bricklet.
-        """
-        last_update = self.last_update
-
-        # If the callback was too soon.
-        # This takes care of diverging clocks in each device.
-        if (last_update is None or last_update >= self.callback_period * 0.9):
-            self.last_update = time.time()
-            self.__callback_method(self, float(value), last_update)
-        else:
-            self.check_callback()
-            self.logger.warning('Warning. Discarding value "%s" from sensor "%s", because the last update was too recent. Was %i s ago, but supposed to be every %i s.', value, self.uid, last_update / 1000, self.callback_period / 1000)
-
-    def disconnect(self):
-        """
-        Disable the callback on the bricklet.
-        """
-        self.logger.debug('Disconnecting sensor "%s" from host "%s".', self.uid, self.parent.host_name)
-        self.__callback_period = 0
-        self.set_callback()
-
-    @abstractproperty
-    def unit(self):
-        """
-        Returns the SI unit of the measurand.
-        """
-        pass
-
-    @abstractproperty
-    def bricklet(self):
-        """
-        Returns the Tinkerforge API bricklet object
-        """
-        pass
-
-    @abstractproperty
-    def sensor_type(self):
-        """
-        Return the type of mesurand beeing measured.
-        """
-        pass
-
-    @abstractmethod
-    def set_callback(self):
-        """
-        Sets the callback period and registers the method callback() with the Tinkerforge API.
-        """
-        pass
-
-    @property
-    def parent(self):
-        """
-        Returns the SensorHost object to which the sensor is connected
+        Returns
+        -------
+        TinkerforgeSensorHost
+            The Tinkerforge host the sensor is connected to.
         """
         return self.__parent
 
-    @property
-    def logger(self):
-        """
-        Returns the return the logger object for this sensor
-        """
-        return self.parent.logger
-
-    @property
-    def last_update(self):
-        """
-        Returns the timedelta between now and the last update registered in ms.
-        Return None if there was no update so far.
-        """
-        if (self.__last_update is not None):
-            return int((time.time() - self.__last_update) * 1000)
-        else:
-            return None
-
-    @last_update.setter
-    def last_update(self, value):
-        """
-        Sets the time in seconds since the epoch as a floating point number.
-        Set to None to if there was no update so far.
-        """
-        self.__last_update = value
-
-    @property
-    def callback_period(self):
-        """
-        Returns the callback period in ms.
-        """
-        return self.__callback_period
-
-    def __init__(self, uid, parent, callback_method, callback_period=0):
-        """
-        Create new sensor Object.
-        uid: UID of the sensor
-        parent: The SensorHost object to which the sensor is connected
-        callbackMethod: The SensorHost callback to deliver to the data to.
-        callbackPeriod: The callback period in ms. A value of 0 will turn off the callback.
-        """
-        if callback_period == 0:
-            parent.logger.debug('Disabling %s sensor "%s". No callback period set.', self.sensor_type, uid, callback_period)
-        else:
-            parent.logger.debug('Adding %s sensor "%s" with callback period %d ms.', self.sensor_type, uid, callback_period)
-
-        self.__uid = uid
+    def __init__(self, device_id, uid, ipcon, parent):
+        self.__sensor = device_factory.get(device_id, uid, ipcon)
+        self.__uuid = None
         self.__parent = parent
-        self.__callback_method = callback_method
-        self.__callback_period = callback_period
-        self.__last_update = None
+        self.__logger = logging.getLogger(__name__)
+        self.__callback_config = {}
+
+    def __str__(self):
+        return f"Tinkerforge {str(self.__sensor)}"
+
+    def __repr__(self):
+        return f"{self.__class__.__module__}.{self.__class__.__qualname__}(device_id={self.__sensor.DEVICE_IDENTIFIER!r}, uid={self.__sensor.uid}, ipcon={self.__sensor.ipcon!r})"
+
+    async def __configure(self, config):
+        self.__uuid = config.get('id')
+        self.__callback_config = {}
+        if self.__uuid is not None:
+            on_connect = config.get("on_connect")
+            if on_connect is not None:
+                for cmd in on_connect:
+                    try:
+                        function = getattr(self.__sensor, cmd["function"])
+                    except AttributeError:
+                        self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__sensor)
+                        continue
+
+                    try:
+                        result = function(*cmd.get("args", []), **cmd.get("kwargs", {}))
+                        if asyncio.iscoroutine(result):
+                            await result
+                    except Exception:   # pylint: disable=broad-except
+                        # Catch all exceptions and log them, because this is an external input
+                        self.__logger.exception("Error running config for sensor %s on host '%s'", self.__sensor.uid, self.__parent.hostname)
+                        continue
+            # configure the callbacks
+            for sid, sid_config in config['config'].items():
+                last_update = time.time() - sid_config['interval'] / 1000
+                callback_config = GetCallbackConfiguration(
+                    period=sid_config['interval'],
+                    value_has_to_change=sid_config['trigger_only_on_change'],
+                    option=ThresholdOption.OFF,
+                    minimum=0,
+                    maximum=0
+                )
+                try:
+                    await self.__sensor.set_callback_configuration(int(sid), *callback_config)
+                except AssertionError:
+                    self.__logger.error("Invalid configuration for %s: sid=%i, config=%s", self.__sensor, int(sid), callback_config)
+                else:
+                    self.__callback_config[int(sid)] = (
+                        last_update,
+                        callback_config,
+                    )
+
+    async def __test_callback(self, sid):
+        remote_config = await self.__sensor.get_callback_configuration(sid)
+        _, local_config = self.__callback_config[sid]
+        if remote_config != local_config:
+            self.__logger.warning("Remote callback configuration was changed by a third party. Remote config: {%s}, Local config: {%s}", remote_config, local_config)
+            await self.__sensor.set_callback_configuration(sid, *local_config)
+        return sid
+
+    async def __data_producer(self, sids, output_queue):
+        async for data in self.__sensor.read_events(sids=sids):
+            output_queue.put_nowait(data)
+
+    async def __disconnect_watcher(self, event_bus):
+        async for _ in event_bus.register(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uid)):
+            break
+
+    async def __config_update_producer(self, event_bus, output_queue):
+        async for data in event_bus.register(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)):
+            # Check if the sensor is enabled
+            sids = {int(sid) for sid, sid_config in data.get('config', {}).items() if sid_config['interval']}
+            output_queue.put_nowait((sids, data))
+
+    async def __read_data(self, event_bus, output_queue):
+        pending = set()
+        critical_tasks = set()
+        config_queue = asyncio.Queue()
+        config_update_producer_task = asyncio.create_task(
+            self.__config_update_producer(
+                event_bus,
+                output_queue=config_queue
+            ),
+            name=f"TF sensor {self.__sensor.uid} config producer."
+        )
+        pending.add(config_update_producer_task)
+        critical_tasks.add(config_update_producer_task)
+        config_update_task = asyncio.create_task(config_queue.get())
+        pending.add(config_update_task)
+
+        data_producer_task = None
+        pending.add(config_update_producer_task)
+
+        try:
+            while pending:
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    if task == config_update_task:
+                        try:
+                            sids, config = task.result()
+                            pending.discard(data_producer_task)
+                            if data_producer_task is not None:
+                                data_producer_task.cancel()     # No need to await that task
+                            await self.__configure(config)
+                            config_update_task = asyncio.create_task(config_queue.get())
+                            pending.add(config_update_task)
+                        finally:
+                            config_queue.task_done()
+                        if sids:
+                            data_producer_task = asyncio.create_task(self.__data_producer(sids, output_queue), name=f"TF sensor {self.__sensor.uid} data producer.")
+                    elif task in critical_tasks:
+                        task.result()
+                        return
+        finally:
+            for task in pending:
+                if not task.done():
+                    task.cancel()
+            results = await asyncio.gather(*pending, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception):
+                    raise result
+
+    async def read_events(self, event_bus, ping_interval):
+        """
+        Read the sensor data, and ping the sensor.
+
+        Returns
+        -------
+        Iterator[dict]
+            The sensor data.
+        """
+        pending = set()
+        critical_tasks = set()  # Add task, that should never terminate to this set. The sensor will shut down if one of them returns.
+
+        is_disconnected_task = asyncio.create_task(self.__disconnect_watcher(event_bus))
+        pending.add(is_disconnected_task)
+        critical_tasks.add(is_disconnected_task)
+
+        ping_sensor_task = asyncio.create_task(self.__test_connection(ping_interval), name=f"Ping_task_{self.__sensor.uid}")
+        pending.add(ping_sensor_task)
+        critical_tasks.add(ping_sensor_task)
+
+        data_queue = asyncio.Queue()
+        data_producer_task = asyncio.create_task(self.__read_data(event_bus, data_queue), name=f"TF sensor {self.__sensor.uid} data producer.")
+        pending.add(data_producer_task)
+        critical_tasks.add(data_producer_task)
+        data_task = asyncio.create_task(data_queue.get())
+        pending.add(data_task)
+
+        check_callback_jobs = {}    # {uid : task}
+
+        # Finally publish, that we are ready
+        event_bus.emit(EVENT_BUS_STATUS, self.uid)
+        try:
+            while pending:
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    if task in critical_tasks:
+                        # This job was supposed to live happliy ever after, so the fairy tale is over now
+                        task.result()   # Open the booby trap
+                        return
+                    if task in check_callback_jobs.values():
+                        sid = task.result()
+                        del check_callback_jobs[sid]
+                    else:
+                        event = task.result()
+                        sid = event['sid']
+                        # We ignore the value, if we haven't registered for that secondary id
+                        if sid in self.__callback_config:
+                            last_update, config = self.__callback_config[sid]
+                            if event['timestamp'] - last_update <= 0.9 * config.period / 1000:
+                                self.__logger.debug("Callback %s was %d} ms too soon. Callback is set to %i ms.", event, config.period / 1000 - (event['timestamp'] - last_update), config.period)
+                                # If the event was too early check the callback. Maybe it was
+                                # modified by someone else. We do not drop the event.
+                                if sid not in check_callback_jobs:
+                                    # Schedule a test of the callback config with a background job
+                                    # worker. It will take care of cleanup as well.
+                                    # Skip the test if we have a test scheduled already
+                                    check_callback_jobs[sid] = asyncio.create_task(self.__test_callback(sid))
+                                    pending.add(check_callback_jobs[sid])
+                            self.__callback_config[sid] = (event['timestamp'], config)      # update the last_update field
+                            data_task = asyncio.create_task(data_queue.get())
+                            pending.add(data_task)
+                            yield event     # Yield the event, no matter if it was too early
+        finally:
+            for task in pending:
+                if not task.done():
+                    task.cancel()
+            results = await asyncio.gather(*pending, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception):
+                    raise result
+
+    async def __test_connection(self, interval):
+        while "loop not cancelled":
+            await asyncio.sleep(interval)
+            self.__logger.debug("Pinging sensor %s.", self.__sensor)
+            try:
+                await asyncio.gather(*[self.__test_callback(sid) for sid in self.__callback_config])
+            except (asyncio.TimeoutError, NotConnectedError):
+                break

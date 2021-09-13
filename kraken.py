@@ -18,6 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
+"""
+Kraken is a sensor data aggregation tool for distributed sensors arrays. It uses
+AsyncIO instead of threads to scale and outputs data to a MQTT broker.
+"""
 
 import asyncio
 import os
@@ -26,11 +30,9 @@ import signal
 import sys
 import warnings
 
-from configParser import parse_config_from_env, parse_config_from_file
-from daemon import Daemon
-from sensors.host_factory import host_factory
-from managers import DatabaseManager, HostManager
+from decouple import config
 
+from managers import HostManager
 from _version import __version__
 
 
@@ -51,8 +53,6 @@ def module_path():
     return os.path.dirname(__file__)
 
 
-CONFIG_PATH = module_path() + '/sensors.conf'
-
 POSTGRES_STMS = {
     'insert_data': "INSERT INTO sensor_data (time ,sensor_id ,value) VALUES (NOW(), (SELECT id FROM sensors WHERE sensor_uid=%s and enabled), %s)",
     'select_sensor_config': "SELECT config FROM sensors WHERE sensor_uid=%s AND enabled",
@@ -66,15 +66,11 @@ class SensorDaemon():
     configure them according to options set in the database and then place the
     returned data in the database as well.
     """
-    def __init__(self, config):
+    def __init__(self):
         """
         Creates a sensorDaemon object.
-        config: A config dict containing the configuration options
         """
-        self.__config = config
         self.__logger = logging.getLogger(__name__)
-        self.__shutting_down = asyncio.Event()
-        self.__shutting_down.clear()
 
     async def run(self):
         """
@@ -91,15 +87,18 @@ class SensorDaemon():
             asyncio.get_running_loop().add_signal_handler(
                 sig, lambda: asyncio.create_task(self.shutdown()))
 
-        # Start database manager
-        self.__database_manager = DatabaseManager()
-        asyncio.create_task(self.__database_manager.run())
+        # Read either environment variable, settings.ini or .env file
+        database_url = config('SENSORS_DATABASE_HOST', default="mongodb://root:example@localhost:27017")
+        mqtt_host = config('MQTT_HOST', default="localhost")
+        mqtt_port = config('MQTT_PORT', cast=int, default=1883)
 
         # Start host manager
-        self.__host_manager = HostManager(self.__database_manager)
-        asyncio.create_task(self.__host_manager.connect())
-
-        await self.__shutting_down.wait()
+        host_manager = HostManager(
+            database_url=database_url,
+            mqtt_host=mqtt_host,
+            mqtt_port=mqtt_port
+        )
+        await host_manager.run()
 
     async def shutdown(self):
         """
@@ -108,46 +107,33 @@ class SensorDaemon():
         self.__logger.warning("#################################################")
         self.__logger.warning("Stopping Daemon...")
         self.__logger.warning("#################################################")
-        try:
-            await asyncio.gather(
-                self.__host_manager.disconnect(),
-                self.__database_manager.disconnect()
-            )
-        except BaseException:
-            self.__logger.exception("Error during shutdown")
-
-        self.__shutting_down.set()  # Kills the run() call
 
         # Get all running tasks
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
         # and stop them
-        [task.cancel() for task in tasks]
+        [task.cancel() for task in tasks]   # pylint: disable=expression-not-assigned
         # finally wait for them to terminate
         try:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             pass
-        except Exception:
+        except Exception:   # pylint: disable=broad-except
+            # We want to catch all exceptions on shutdown, except the asyncio.CancelledError
+            # The exception will then be printed using the logger
             self.__logger.exception("Error while reaping tasks during shutdown")
 
 
 async def main():
-    config = load_config()
-    daemon = SensorDaemon(config)
+    """
+    The main (infinite) loop, that runs until Kraken has shut down.
+    """
+    daemon = SensorDaemon()
     try:
         await daemon.run()
     except asyncio.CancelledError:
+        # Swallow that error, because this is the root task, there is nothing
+        # cancel above it.
         pass
-
-
-def load_config():
-    """
-    Tries to load the config either from a file or from environment variables
-    """
-    if os.path.isfile(CONFIG_PATH):
-        return parse_config_from_file(CONFIG_PATH)
-    else:
-        return parse_config_from_env()
 
 
 # Report all mistakes managing asynchronous resources.

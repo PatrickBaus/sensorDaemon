@@ -1,96 +1,194 @@
 # -*- coding: utf-8 -*-
-# ##### BEGIN GPL LICENSE BLOCK #####
-#
-# Copyright (C) 2020  Patrick Baus
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ##### END GPL LICENSE BLOCK #####
+"""
+The database abstraction layer, that handles all application specific tasks of
+the databases.
+"""
 
 import asyncio
+from enum import Enum, auto
 import logging
-import json
+
+from beanie import init_beanie
+import motor.motor_asyncio
+import pymongo  # to access the error classes
+from pydantic.error_wrappers import ValidationError     # pylint: disable=no-name-in-module
+
+from database.models import TinkerforgeSensor, GpibSensor, SensorHost
 
 
-class MockDatabase():
-    __mock_database = {
-        'hosts': [
-            {
-                'hostname': '10.0.0.5',
-                'port': 4223,
-                'driver': 'tinkerforge',
-                'config': '{"on_connect": []}',
-            },
-            {
-                'hostname': '192.168.1.152',
-                'port': 4223,
-                'driver': 'tinkerforge',
-                'config': '{"on_connect": []}',
-            },
-            {
-                'hostname': '127.0.0.1',
-                'port': 4223,
-                'driver': 'tinkerforge',
-                'config': '{"on_connect": []}',
-            },
-        ],
-        'sensor_config': {
-            125633: [
-                {
-                    "sid": 0,
-                    "period": 0,
-                    "config": '{"on_connect": []}',
-                },
-                {
-                    "sid": 1,
-                    "period": 2000,
-                    "config": '',
-                }
-            ],
-            169087: [
-                {
-                    "sid": 0,
-                    "period": 1000,
-                    "config": '{"on_connect": [{"function": "set_status_led_config", "kwargs": {"config": 2} }, {"function": "set_status_led_config", "args": [2] } ]}',
-                },
-            ]
-        }
-    }
+class ChangeType(Enum):
+    """
+    The type of changes sent out by the database.
+    """
+    ADD = auto()
+    REMOVE = auto()
+    UPDATE = auto()
 
-    def __init__(self):
+
+class MongoDb():
+    """
+    The Mongo DB abstractoin for the Tinkerforge settings database.
+    """
+    def __init__(self, hostname=None, port=None):
+        self.__hostname = hostname
+        self.__port = port
+        self.__client = None
         self.__logger = logging.getLogger(__name__)
 
+    async def __aenter__(self):
+        await self.__connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        pass
+
     async def get_hosts(self):
-        for host in self.__mock_database['hosts']:
-            host['config'] = json.loads(host['config'])
-            yield host
-            await asyncio.sleep(0)
+        """
+        Get all host configs from the database.
+
+        Returns
+        -------
+        AsyncIterator[dict]
+            An iterator that yields host configuration dictionaries.
+        """
+        try:
+            # Get all hosts
+            async for host in SensorHost.find_all():
+                yield host.dict()
+        except ValidationError:
+            # TODO: Update the database in case there are old entries
+            # TODO: Use SensorHost.inspect_collection to check the Schema
+            self.__logger.error("Invalid host schema found. Cannot load database.")
 
     async def get_sensor_config(self, uid):
-        for config in self.__mock_database['sensor_config'].get(uid, (None, )):
-            self.__logger.debug("Got config: %s", config)
-            if config is None:
-                yield None
+        """
+        Get all host configs from the database.
+
+        Parameters
+        ----------
+        uid: int
+            The unique id of the Tinkerforge sensor
+
+        Returns
+        -------
+        dict
+            A dictionary, that contains the configuration of the sensor.
+        """
+        config = await TinkerforgeSensor.find_one(TinkerforgeSensor.uid == uid)
+        if config is not None:
+            return config.dict()
+        return None
+
+    async def monitor_host_changes(self, timeout):
+        """
+        Monitor all changes to the Tinkerforge host config table.
+
+        Parameters
+        ----------
+        timeout: int
+            The timeout in seconds to wait after a connection error.
+
+        Returns
+        -------
+        AsyncIterator[tuple[ChangeType, dict]]
+            An iterator that yields host configuration dictionaries and the
+            type of change
+        """
+        resume_token = None
+        # To watch only for certain events, use:
+        # pipeline = [{'$match': {'operationType': {'$in': ["insert", "update", "delete"]}}}]
+        pipeline = []
+        while "loop not cancelled":
+            try:
+                async with SensorHost.get_motor_collection().watch(pipeline, full_document="updateLookup", resume_after=resume_token) as stream:
+                    async for change in stream:
+                        # TODO: catch parser errors!
+                        if change['operationType'] == 'delete':
+                            yield (ChangeType.REMOVE, change['documentKey']['_id'])
+                        elif change['operationType'] == "update" or change['operationType'] == "replace":
+                            yield (ChangeType.UPDATE, SensorHost.parse_obj(change['fullDocument']).dict())
+                        elif change['operationType'] == "insert":
+                            yield (ChangeType.ADD, SensorHost.parse_obj(change['fullDocument']).dict())
+
+                    resume_token = stream.resume_token
+            except pymongo.errors.PyMongoError:
+                # The ChangeStream encountered an unrecoverable error or the
+                # resume attempt failed to recreate the cursor.
+                if resume_token is None:
+                    # There is no usable resume token because there was a
+                    # failure during ChangeStream initialization.
+                    self.__logger.exception(
+                        "Cannot resume Mongo DB change stream, there is no token. Starting from scratch."
+                    )
+
+                await asyncio.sleep(timeout)
+
+    async def monitor_sensor_changes(self, timeout):
+        """
+        Monitor all changes to the Tinkerforge sensor config table.
+
+        Parameters
+        ----------
+        AsyncIterator[tuple[ChangeType, dict]]
+            An iterator that yields sensor configuration dictionaries and the
+            type of change
+        """
+        resume_token = None
+        while "loop not cancelled":
+            try:
+                async with TinkerforgeSensor.get_motor_collection().watch(full_document="updateLookup", resume_after=resume_token) as stream:
+                    async for change in stream:
+                        if change['operationType'] == 'delete':
+                            yield (ChangeType.REMOVE, change['documentKey']['_id'])
+                        elif change['operationType'] == "update" or change['operationType'] == "replace":
+                            yield (ChangeType.UPDATE, TinkerforgeSensor.parse_obj(change['fullDocument']).dict())
+                        elif change['operationType'] == "insert":
+                            yield (ChangeType.ADD, TinkerforgeSensor.parse_obj(change['fullDocument']).dict())
+
+                        resume_token = stream.resume_token
+            except pymongo.errors.PyMongoError:
+                # The ChangeStream encountered an unrecoverable error or the
+                # resume attempt failed to recreate the cursor.
+                if resume_token is None:
+                    # There is no usable resume token because there was a
+                    # failure during ChangeStream initialization.
+                    self.__logger.exception("Cannot resume, there is no token.")
+                    await asyncio.sleep(timeout)
+                else:
+                    pass
+
+    async def __connect(self):
+        """
+        Connect to the database. Retries if not successful.
+        """
+        connection_attempt = 1
+        timeout = 0.5   # in s TODO: Make configurable
+        while "database not connected":
+            hostname_string = self.__hostname if self.__port is None else f"{self.__hostname}:{self.__port}"
+            if connection_attempt == 1:
+                self.__logger.info("Connecting to MongoDB on %s.", hostname_string)
+            if self.__port is not None:
+                self.__client = motor.motor_asyncio.AsyncIOMotorClient(
+                    self.__hostname,
+                    self.__port,
+                    serverSelectionTimeoutMS=timeout*1000
+                )
             else:
-                config_copy = config.copy()
-                try:
-                    if config_copy.get("config"):
-                        config_copy["config"] = json.loads(config_copy["config"])
-                    else:
-                        config_copy["config"] = {}
-                except json.decoder.JSONDecodeError as e:
-                    self.__logger.error('Error. Invalid config for sensor: %i. Error: %s', uid, e)
-                    config_copy["config"] = {}
-                yield config_copy
-            await asyncio.sleep(0)
+                self.__client = motor.motor_asyncio.AsyncIOMotorClient(
+                    self.__hostname,
+                    serverSelectionTimeoutMS=timeout*1000
+                )
+
+            database = self.__client.sensor_config
+            try:
+                await init_beanie(database=database, document_models=[SensorHost, TinkerforgeSensor, GpibSensor])
+                self.__logger.info("Connected to  MongoDB on %s.", hostname_string)
+            except pymongo.errors.ServerSelectionTimeoutError as exc:
+                if connection_attempt == 1:
+                    # Only log the error once
+                    self.__logger.error("Cannot connect to database on %s. Error: %s. Retrying.", hostname_string, exc)
+                await asyncio.sleep(timeout)
+                continue
+            finally:
+                connection_attempt += 1
+            break

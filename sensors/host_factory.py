@@ -1,38 +1,61 @@
 # -*- coding: utf-8 -*-
-# ##### BEGIN GPL LICENSE BLOCK #####
-#
-# Copyright (C) 2020  Patrick Baus
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ##### END GPL LICENSE BLOCK #####
-
+"""
+This file contains a factory to select the correct driver for all supported
+sensor hosts.
+"""
 from .tinkerforge_host import TinkerforgeSensorHost
 
 
 class SensorHostFactory:
+    """
+    A senor host factory to select the correct driver for given database
+    config.
+    """
     def __init__(self):
         self.__available_hosts = {}
 
     def register(self, driver, host):
+        """
+        Register a driver with the factory. Should only be called in this file.
+
+        Parameters
+        ----------
+        driver: str
+            A string identifying the driver.
+        host: SensorHost
+            The host driver to register.
+        """
         self.__available_hosts[driver] = host
 
-    def get(self, driver, hostname, port, config, parent):
+    def get(self, driver, id, hostname, port, *_args, **_kwargs):  # pylint: disable=redefined-builtin,invalid-name
+        """
+        Look up the driver for a given database entry. Raises a `ValueError` if
+        the driver is not registered.
+
+        Parameters
+        ----------
+        driver: str
+            A string identifying the driver.
+        id: uuid.UUID
+            The uuid of the host configuration.
+        hostname: str
+            The ethernet hostname
+        port: int
+            The port of the host
+
+        Returns
+        -------
+        SensorHost
+            A sensor registered sensor host
+
+        Raises
+        ----------
+        ValueError
+        """
         host = self.__available_hosts.get(driver)
         if host is None:
             raise ValueError(f"No driver available for {driver}")
-        return host(hostname, port, config, parent)
+        return host(uuid=id, hostname=hostname, port=port)
 
 
 host_factory = SensorHostFactory()

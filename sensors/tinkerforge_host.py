@@ -1,189 +1,206 @@
 # -*- coding: utf-8 -*-
-# ##### BEGIN GPL LICENSE BLOCK #####
-#
-# Copyright (C) 2020  Patrick Baus
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ##### END GPL LICENSE BLOCK #####
-
+"""
+This file contains the host, that discovers its sensors and will then configure
+them and aggregate the sensor data.
+"""
 import asyncio
 import logging
 
-from tinkerforge_async.ip_connection import EnumerationType, NotConnectedError, IPConnectionAsync as IPConnection
-from tinkerforge_async.devices import DeviceIdentifier
-from tinkerforge_async.device_factory import device_factory
+from tinkerforge_async.ip_connection import EnumerationType, IPConnectionAsync as IPConnection
 
-from .tinkerforge import TinkerforgeSensor
+from databases import ChangeType
+from errors import DisconnectedDuringConnectError
+from .tinkerforge import TinkerforgeSensor, EVENT_BUS_DISCONNECT_BY_UID as EVENT_BUS_SENSOR_DISCONNECT_BY_UID
 from .sensor_host import SensorHost
+
+
+EVENT_BUS_BASE = "/hosts/tinkerforge/"
+EVENT_BUS_CONFIG_UPDATE = EVENT_BUS_BASE + "by_uuid/{uuid}/update"
+EVENT_BUS_DISCONNECT = EVENT_BUS_BASE + "by_uuid/{uuid}/disconnect"
+
 
 class TinkerforgeSensorHost(SensorHost):
     """
-    Class that wraps a Tinkerforge brick daemon host. This can be either a PC running brickd, or a master brick with an ethernet/wifi extension
+    Class that wraps a Tinkerforge brick daemon host. This can be either a
+    PC running brickd, or a master brick with an ethernet/wifi extension.
     """
     __MAXIMUM_FAILED_CONNECTIONS = 3
 
-    @property
-    def failed_connection_attemps(self):
-        """
-        Returns the number of failed connection attemps.
-        """
-        return self.__failed_connection_attemps
-
-    def __init__(self, hostname, port, config, parent):
+    def __init__(self, uuid, hostname, port, reconnect_interval=3):
         """
         Create new sensorHost Object.
-        hostName: IP or hostname of the machine hosting the sensor daemon
-        port: port on the host
-        parent: sensorDaemon object managing all sensor hosts
+
+        Parameters
+        ----------
+        hostname: str
+            IP or hostname of the machine hosting the sensor daemon
+        port: int
+            port on the host
+        reconnect_interval
         """
-        super().__init__(hostname, port, config, parent)
+        super().__init__(uuid, hostname, port)
         self.__logger = logging.getLogger(__name__)
-        self.__conn = IPConnection()
-        self.__failed_connection_attemps = 0
-        self.__running_tasks = []
+        self.__disconnected = asyncio.Event()
         self.__sensors = {}
+        self.__ipcon = None
+        self.__reconnect_interval = reconnect_interval
 
     def __repr__(self):
-        return f'{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.hostname}, port={self.port}, config={self.config}, parent={self.parent!r})'
+        return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.hostname}, port={self.port})"
 
-    def sensor_callback(self, sensor, value, previous_update):
-        """
-        The callback used by all sensors to send their data to the sensor daemon.
-        """
-        self.parent.host_callback(sensor.sensor_type, sensor.uid, value, previous_update)
+    async def __aenter__(self):
+        self.__logger.info("Connecting to Tinkerforge host '%s:%i'.", self.hostname, self.port)
+        if self.__ipcon is None:
+            self.__ipcon = IPConnection(host=self.hostname, port=self.port)
+        failed_connection_attemps = 0
+        self.__disconnected.clear()
+        while "not connected":
+            try:
+                pending = set()
+                is_disconnected_task = asyncio.create_task(self.__disconnected.wait())
+                pending.add(is_disconnected_task)
+                connect_task = asyncio.create_task(self.__ipcon.connect())
+                pending.add(connect_task)
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    if task == is_disconnected_task:    # pylint: disable=no-else-raise
+                        await self.__ipcon.disconnect()
+                        raise DisconnectedDuringConnectError()
+                    else:
+                        is_disconnected_task.cancel()
+                        task.result()
+                        return self
+            except (OSError, asyncio.TimeoutError) as exc:
+                # OSError includes ConnectionError which includes both
+                # ip_connection.NetworkUnreachableError and
+                # ip_connection.NotConnectedError
+                failed_connection_attemps += 1
+                # Suppress the warning after __MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
+                if failed_connection_attemps < self.__MAXIMUM_FAILED_CONNECTIONS:
+                    if failed_connection_attemps > 1:
+                        failure_count = " (%d times)" % failed_connection_attemps
+                    else:
+                        failure_count = ""
+                    self.__logger.warning("Failed to connect to host '%s'%s. Error: %s.", self.hostname, failure_count, exc)
+                if failed_connection_attemps == self.__MAXIMUM_FAILED_CONNECTIONS:
+                    self.__logger.warning("Failed to connect to host '%s' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.hostname, failed_connection_attemps, "s"[failed_connection_attemps == 1:], exc)
+                await asyncio.sleep(self.__reconnect_interval)
+        return self
 
-    def get_sensor_config(self, uid):
-        return self.parent.get_sensor_config(uid)
+    async def __aexit__(self, exc_type, exc, traceback):
+        await self.__ipcon.disconnect()
 
-    async def process_sensor_data(self, sensor):
-        async for event in sensor.read_events():
-            await self.process_value(sensor.uid, event['sid'], event['payload'])
-        del self.__sensors[sensor.uid]
-
-    async def process_enumerations(self):
+    async def __process_enumerations(self, ipconnection):
         """
         This infinite loop pulls events from the internal enumeration queue
         of the ip connection and waits for an enumeration event to create the devices.
+        The devices are then passed on to __monitor_sensors() via a job_queue.
         """
+        async for packet in ipconnection.read_enumeration():
+            if packet['enumeration_type'] in (EnumerationType.CONNECTED, EnumerationType.AVAILABLE):
+                try:
+                    device = TinkerforgeSensor(packet['device_id'], packet['uid'], ipconnection, self)
+                    yield (ChangeType.ADD, device)
+                except ValueError:
+                    # raised by the TinkerforgeSensor constructor (using the sensor factory) if a device_id cannot be found (i.e. there is no driver)
+                    self.__logger.warning("Unsupported device id '%s' with uid '%s' found on host '%s'", packet["uid"], packet["device_id"], ipconnection.hostname)
+            elif packet['enumeration_type'] is EnumerationType.DISCONNECTED:
+                yield (ChangeType.REMOVE, packet['uid'])
+
+    def disconnect(self, event_bus):
+        """
+        Disconnet the host and all sensors. Call only if the sensor is physically
+        disconnected.
+
+        Parameters
+        ----------
+        event_bus: AsyncEventBus
+            The event bus to publish the disconnect event to
+        """
+        self.__disconnected.set()
+        for sensor in self.__sensors.values():
+            event_bus.emit(
+                EVENT_BUS_SENSOR_DISCONNECT_BY_UID.format(uid=sensor.uid),
+                None)
+        self.__sensors = {}
+
+    async def __sensor_data_producer(self, sensor, event_bus, ping_interval, output_queue):
+        self.__sensors[sensor.uid] = sensor
         try:
-            async for packet in self.__conn.read_enumeration():
-                if packet["enumeration_type"] in (EnumerationType.CONNECTED, EnumerationType.AVAILABLE):
-                    async for sensor_config in self.get_sensor_config(packet["uid"]):
-                        if sensor_config is not None:
-                            try:
-                                if packet["uid"] not in self.__sensors:
-                                    device = TinkerforgeSensor(packet["device_id"], packet["uid"], self.__conn, self)
-                                    await device.run()
-                                    self.__sensors[device.uid] = (device, asyncio.create_task(self.process_sensor_data(device), name='sensor-'+str(device.uid)))
-                            except ValueError:
-                                # raised by the sensor factory if a device_id cannot be found
-                                self.__logger.warning("Unsupported device id '%s' with uid '%s' found on host '%s'", packet["uid"], packet["device_id"], self.hostname)
-                            except Exception:
-                                self.__logger.exception("Error during sensor init.")
-                elif packet["enumeration_type"] is EnumerationType.DISCONNECTED:
-                    # Check whether the sensor was actually connected to this host, then remove it.
-                    try:
-                        _, device_task = self.__sensors.pop(packet["uid"])
-                        device_task.cancel()
-                        try:
-                            await device_task
-                        except asyncio.CancelledError:
-                            pass
-                        except Exception:
-                            self.__logger.exception("Error while removing sensor '%s' from host '%s'", packet["uid"], self.hostname)
-                    except KeyError:
-                        pass    # Do nothing if the device is not registered
-        except NotConnectedError:
-            self.__logger.debug("Cannot process enumerations. Waiting for connection to host '%s%i'", self.hostname, self.port)
-
-    async def connect(self):
-        """
-        Start up the ip connection
-        """
-        # TODO: Add incremental delay after connection failure
-        if self.failed_connection_attemps == 0:
-            self.__logger.warning("Connecting to brick daemon on '%s:%i'...", self.hostname, self.port)
-        try:
-            task = asyncio.create_task(self.__conn.connect(host=self.hostname, port=self.port))
-            self.__running_tasks.append(task)
-            try:
-                await task
-            finally:
-                self.__running_tasks.remove(task)
-            self.__logger.info("Connected to host '%s:%i'.", self.hostname, self.port)
-        except (OSError, asyncio.TimeoutError) as e:
-            self.__failed_connection_attemps += 1
-            # Suppress the warning after __MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
-            if (self.failed_connection_attemps < self.__MAXIMUM_FAILED_CONNECTIONS):
-                if self.failed_connection_attemps > 1:
-                    failure_count = " (%d times)" % self.failed_connection_attemps
-                else:
-                    failure_count = ""
-                self.__logger.warning("Failed to connect to host '%s'%s. Error: %s.", self.hostname, failure_count, e)
-            if (self.failed_connection_attemps == self.__MAXIMUM_FAILED_CONNECTIONS):
-                self.__logger.warning("Failed to connect to host '%s' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.hostname, self.failed_connection_attemps, "s"[self.failed_connection_attemps == 1:], e)
-
-        if self.is_connected:
-            self.__failed_connection_attemps = 0
-
-    @property
-    def is_connected(self):
-        """
-        Checks the state of the ip connection. Will return false if the device is no longer connected.
-        """
-        return self.__conn.is_connected
-
-    async def disconnect(self):
-        """
-        Disconnect all sensors from the host. This will disable the callbacks of the sensors.
-        """
-        tasks = [sensor.disconnect() for sensor, _ in self.__sensors.values()]
-        await asyncio.gather(*tasks)
-
-        await self.__conn.disconnect()
-
-        tasks = [task for task in self.__running_tasks]
-        [task.cancel() for task in tasks]
-        # TODO: Maybe use return_exceptions=True
-        try:
-            await asyncio.gather(*tasks)
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            self.__logger.exception("Exception during disconnect of host %s:%i", self.hostname, self.port)
-        self.__running_tasks.clear()
-
-    async def connection_watchdog(self):
-        try:
-            while "loop not canceled":
-                if not self.is_connected:
-                    await self.connect()
-                    if self.is_connected:
-                        # Start the enumeration callback task
-                        enumeration_task = asyncio.create_task(self.process_enumerations())
-                        self.__running_tasks.append(enumeration_task)
-                        # Enumerate all sensors
-                        await self.__conn.enumerate()
-                        await enumeration_task  # This will return on disconnect
-                    else:
-                        # If we cannot connect, stay a while and listen
-                        await asyncio.sleep(5)    # TODO: make the timeout configurable
+            async for event in sensor.read_events(event_bus, ping_interval=ping_interval):
+                output_queue.put_nowait(event)
         finally:
-            self.__logger.debug("Shutting down sensor host %s:%i", self.hostname, self.port)
+            self.__sensors.pop(sensor.uid, None)
 
-    async def run(self):
-        task = asyncio.create_task(self.connection_watchdog())
-        self.__running_tasks.append(task)
-        await task
+    async def __update_listener(self, event_bus):
+        async for _ in event_bus.register(EVENT_BUS_CONFIG_UPDATE.format(uuid=self.uuid)):
+            self.__logger.error("Implement host config changes")    # TODO: Implement
+
+    async def __sensor_producer(self, ipconnection, output_queue, event_bus):
+        await self.__ipcon.enumerate()
+        async for change_type, sensor in self.__process_enumerations(ipconnection):
+            if change_type == ChangeType.ADD and sensor.uid not in self.__sensors:
+                output_queue.put_nowait(sensor)
+            elif change_type == ChangeType.REMOVE:
+                event_bus.emit(EVENT_BUS_SENSOR_DISCONNECT_BY_UID.format(uid=sensor))
+
+    async def read_data(self, event_bus):
+        """
+        Returns all data from all configured sensors connected to the host.
+
+        Parameters
+        ----------
+        event_bus: AsyncEventBus
+            The event bus passed to the sensors.
+        Returns
+        -------
+        Iterartor[dict]
+            The sensor data.
+        """
+        pending = set()
+        update_task = asyncio.create_task(self.__update_listener(event_bus), name=f"TF host {self.hostname}:{self.port} update listener")
+        pending.add(update_task)
+        sensor_queue = asyncio.Queue()
+        sensor_producer_task = asyncio.create_task(self.__sensor_producer(self.__ipcon, sensor_queue, event_bus), name=f"TF host {self.hostname}:{self.port} sensor generator")
+        pending.add(sensor_producer_task)
+        sensor_task = asyncio.create_task(sensor_queue.get())
+        pending.add(sensor_task)
+        data_queue = asyncio.Queue()
+        data_task = asyncio.create_task(data_queue.get())
+        pending.add(data_task)
+        try:
+            while pending:
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    if task == sensor_task:
+                        try:
+                            sensor = task.result()
+                            pending.add(asyncio.create_task(self.__sensor_data_producer(sensor, event_bus, ping_interval=5, output_queue=data_queue), name=f"TF Sensor reader for {sensor.uid}"))
+                            sensor_task = asyncio.create_task(sensor_queue.get())
+                            pending.add(sensor_task)
+                        finally:
+                            sensor_queue.task_done()
+                    elif task in (sensor_producer_task, update_task):
+                        task.result()   # This *will* blow up
+                    elif task == data_task:
+                        # a sensor returned data
+                        try:
+                            data = task.result()
+                            # crate a new task to read the next value
+                            data_task = asyncio.create_task(data_queue.get())
+                            pending.add(data_task)
+                        finally:
+                            data_queue.task_done()
+                        yield data
+                    else:
+                        # A sensor data producer is shutting down
+                        task.result()
+        finally:
+            # If there are remaining tasks, kill them
+            for task in pending:
+                if not task.done():
+                    task.cancel()
+            results = await asyncio.gather(*pending, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception):
+                    raise result
