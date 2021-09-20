@@ -5,7 +5,6 @@ the databases.
 """
 
 import asyncio
-from enum import Enum, auto
 import logging
 
 from beanie import init_beanie
@@ -13,16 +12,9 @@ import motor.motor_asyncio
 import pymongo  # to access the error classes
 from pydantic.error_wrappers import ValidationError     # pylint: disable=no-name-in-module
 
+from data_types import ChangeType, UpdateChangeEvent, RemoveChangeEvent, AddChangeEvent
 from database.models import TinkerforgeSensor, GpibSensor, SensorHost
-
-
-class ChangeType(Enum):
-    """
-    The type of changes sent out by the database.
-    """
-    ADD = auto()
-    REMOVE = auto()
-    UPDATE = auto()
+from sensors.host_factory import host_factory
 
 
 class MongoDb():
@@ -41,121 +33,6 @@ class MongoDb():
 
     async def __aexit__(self, exc_type, exc, traceback):
         pass
-
-    async def get_hosts(self):
-        """
-        Get all host configs from the database.
-
-        Returns
-        -------
-        AsyncIterator[dict]
-            An iterator that yields host configuration dictionaries.
-        """
-        try:
-            # Get all hosts
-            async for host in SensorHost.find_all():
-                yield host.dict()
-        except ValidationError:
-            # TODO: Update the database in case there are old entries
-            # TODO: Use SensorHost.inspect_collection to check the Schema
-            self.__logger.error("Invalid host schema found. Cannot load database.")
-
-    async def get_sensor_config(self, uid):
-        """
-        Get all host configs from the database.
-
-        Parameters
-        ----------
-        uid: int
-            The unique id of the Tinkerforge sensor
-
-        Returns
-        -------
-        dict
-            A dictionary, that contains the configuration of the sensor.
-        """
-        config = await TinkerforgeSensor.find_one(TinkerforgeSensor.uid == uid)
-        if config is not None:
-            return config.dict()
-        return None
-
-    async def monitor_host_changes(self, timeout):
-        """
-        Monitor all changes to the Tinkerforge host config table.
-
-        Parameters
-        ----------
-        timeout: int
-            The timeout in seconds to wait after a connection error.
-
-        Returns
-        -------
-        AsyncIterator[tuple[ChangeType, dict]]
-            An iterator that yields host configuration dictionaries and the
-            type of change
-        """
-        resume_token = None
-        # To watch only for certain events, use:
-        # pipeline = [{'$match': {'operationType': {'$in': ["insert", "update", "delete"]}}}]
-        pipeline = []
-        while "loop not cancelled":
-            try:
-                async with SensorHost.get_motor_collection().watch(pipeline, full_document="updateLookup", resume_after=resume_token) as stream:
-                    async for change in stream:
-                        # TODO: catch parser errors!
-                        if change['operationType'] == 'delete':
-                            yield (ChangeType.REMOVE, change['documentKey']['_id'])
-                        elif change['operationType'] == "update" or change['operationType'] == "replace":
-                            yield (ChangeType.UPDATE, SensorHost.parse_obj(change['fullDocument']).dict())
-                        elif change['operationType'] == "insert":
-                            yield (ChangeType.ADD, SensorHost.parse_obj(change['fullDocument']).dict())
-
-                    resume_token = stream.resume_token
-            except pymongo.errors.PyMongoError:
-                # The ChangeStream encountered an unrecoverable error or the
-                # resume attempt failed to recreate the cursor.
-                if resume_token is None:
-                    # There is no usable resume token because there was a
-                    # failure during ChangeStream initialization.
-                    self.__logger.exception(
-                        "Cannot resume Mongo DB change stream, there is no token. Starting from scratch."
-                    )
-
-                await asyncio.sleep(timeout)
-
-    async def monitor_sensor_changes(self, timeout):
-        """
-        Monitor all changes to the Tinkerforge sensor config table.
-
-        Parameters
-        ----------
-        AsyncIterator[tuple[ChangeType, dict]]
-            An iterator that yields sensor configuration dictionaries and the
-            type of change
-        """
-        resume_token = None
-        while "loop not cancelled":
-            try:
-                async with TinkerforgeSensor.get_motor_collection().watch(full_document="updateLookup", resume_after=resume_token) as stream:
-                    async for change in stream:
-                        if change['operationType'] == 'delete':
-                            yield (ChangeType.REMOVE, change['documentKey']['_id'])
-                        elif change['operationType'] == "update" or change['operationType'] == "replace":
-                            yield (ChangeType.UPDATE, TinkerforgeSensor.parse_obj(change['fullDocument']).dict())
-                        elif change['operationType'] == "insert":
-                            yield (ChangeType.ADD, TinkerforgeSensor.parse_obj(change['fullDocument']).dict())
-
-                        resume_token = stream.resume_token
-            except pymongo.errors.PyMongoError:
-                # The ChangeStream encountered an unrecoverable error or the
-                # resume attempt failed to recreate the cursor.
-                if resume_token is None:
-                    # There is no usable resume token because there was a
-                    # failure during ChangeStream initialization.
-                    self.__logger.exception("Cannot resume, there is no token.")
-                    await asyncio.sleep(timeout)
-                else:
-                    pass
 
     async def __connect(self):
         """
@@ -192,3 +69,264 @@ class MongoDb():
             finally:
                 connection_attempt += 1
             break
+
+
+class Context():    # pylint: disable=too-few-public-methods
+    """
+    The database context used by all config databases.
+    """
+    def __init__(self, event_bus):
+        self._event_bus = event_bus
+        self.__logger = logging.getLogger(__name__)
+
+    async def _monitor_database(self, database_model, timeout):
+        """
+        Monitor all changes made to a certain database table.
+
+        Parameters
+        ----------
+        database_model: beanie.Document
+            The database model of the table to be monitored
+        timeout: int
+            The timeout in seconds to wait after a connection error.
+
+        Returns
+        -------
+        AsyncIterator[tuple[ChangeType, dict]]
+            An iterator that yields configuration dictionaries and the
+            type of change
+        """
+        resume_token = None
+        # To watch only for certain events, use:
+        # pipeline = [{'$match': {'operationType': {'$in': ["insert", "update", "delete"]}}}]
+        pipeline = []
+        while "loop not cancelled":
+            try:
+                async with database_model.get_motor_collection().watch(pipeline, full_document="updateLookup", resume_after=resume_token) as change_stream:
+                    async for change in change_stream:
+                        # TODO: catch parser errors!
+                        if change['operationType'] == 'delete':
+                            yield (ChangeType.REMOVE, change['documentKey']['_id'])
+                        elif change['operationType'] == "update" or change['operationType'] == "replace":
+                            yield (ChangeType.UPDATE, database_model.parse_obj(change['fullDocument']))
+                        elif change['operationType'] == "insert":
+                            yield (ChangeType.ADD, database_model.parse_obj(change['fullDocument']))
+
+                    resume_token = change_stream.resume_token
+            except pymongo.errors.PyMongoError:
+                # The ChangeStream encountered an unrecoverable error or the
+                # resume attempt failed to recreate the cursor.
+                if resume_token is None:
+                    # There is no usable resume token because there was a
+                    # failure during ChangeStream initialization.
+                    self.__logger.exception(
+                        "Cannot resume Mongo DB change stream, there is no token. Starting from scratch."
+                    )
+
+                await asyncio.sleep(timeout)
+
+
+class HostContext(Context):
+    """
+    The sensor host configuration database context manager. It monitors changes
+    to the database and publishes them via the event bus.
+    """
+    def __init__(self, event_bus):
+        super().__init__(event_bus)
+        self.__logger = logging.getLogger(__name__)
+
+    async def __aenter__(self):
+        try:
+            # Get all hosts
+            async for host in SensorHost.find_all():    # A pylint bug. pylint: disable=not-an-iterable
+                try:
+                    host = host_factory.get(**host.dict(), parent=self)
+                except ValueError:
+                    # Ignore unknown drivers
+                    logging.getLogger(__name__).info("Unsupported driver '%s' requested. Cannot start host.", host.dict()['driver'])
+                else:
+                    self._event_bus.publish("/hosts", host)
+        except ValidationError:
+            # TODO: Update the database in case there are old entries
+            # TODO: Use SensorHost.inspect_collection to check the Schema
+            self.__logger.error("Invalid host schema found. Cannot load database.")
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        pass
+
+    async def monitor_changes(self, timeout):
+        """
+        Monitor all changes to the sensor host config table.
+
+        Parameters
+        ----------
+        timeout: int
+            The timeout in seconds to wait after a connection error.
+
+        Returns
+        -------
+        AsyncIterator[tuple[ChangeType, dict]]
+            An iterator that yields configuration dictionaries and the
+            type of change
+        """
+        async for change_type, change in self._monitor_database(SensorHost, timeout):
+            if change_type is ChangeType.UPDATE:
+                self._event_bus.publish(f"/hosts/by_uuid/{change['uid']}/update", change)
+            elif change_type is ChangeType.ADD:
+                host = host_factory.get(**change, parent=self)
+                self._event_bus.publish("/hosts", host)
+            elif change_type is ChangeType.REMOVE:
+                self._event_bus.publish(f"/hosts/by_uuid/{change['uid']}/disconnect", None)
+
+
+class TinkerforgeContext(Context):
+    """
+    The Tinkerforge configuration database context manager. It monitors changes
+    to the database and publishes them onto the event bus. It also provides an
+    endpoint to query for sensor configs via the event bus.
+    """
+    def __init__(self, event_bus):
+        super().__init__(event_bus)
+        self.__sensors = {}
+
+    async def __aenter__(self):
+        self._event_bus.register("/database/tinkerforge", self.__get_sensor_config)
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        self._event_bus.unregister("/database/tinkerforge")
+
+    async def __get_sensor_config(self, uid):
+        """
+        Get all host configs from the database.
+
+        Parameters
+        ----------
+        uid: int
+            The unique id of the Tinkerforge sensor
+
+        Returns
+        -------
+        dict
+            A dictionary, that contains the configuration of the sensor.
+        """
+        config = await TinkerforgeSensor.find_one(TinkerforgeSensor.uid == uid)
+        if config is not None:
+            # Keep a copy of the uuid -> uid, so that we can later remove the config,
+            # because the DB will only send the uuid on removal.
+            self.__sensors[config.id] = config.uid
+            return config.dict()
+        return None
+
+    async def monitor_changes(self, timeout):
+        """
+        Adds the driver string to the output of the iterator.
+        """
+        async for change_type, change in self._monitor_database(TinkerforgeSensor, timeout):
+            if change_type == ChangeType.ADD:
+                self.__sensors[change.id] = change.uid
+                self._event_bus.publish(f"/sensors/tinkerforge/by_uid/{change.uid}/update", change.dict())
+            elif change_type == ChangeType.UPDATE:
+                sensor_uid = self.__sensors.pop(change.id, None)
+                if sensor_uid != change.uid:
+                    # The uid was changed, so we need to unregister the old sensor
+                    self._event_bus.publish(f"/sensors/tinkerforge/by_uid/{sensor_uid}/update", {})
+                self.__sensors[change.id] = change.uid
+                self._event_bus.publish(f"/sensors/tinkerforge/by_uid/{change.uid}/update", change.dict())
+            elif change_type == ChangeType.REMOVE:
+                # When removing the DB only returns the uuid
+                sensor_uid = self.__sensors.pop(change, None)
+                if sensor_uid:
+                    self._event_bus.publish(f"/sensors/tinkerforge/by_uid/{sensor_uid}/update", {})
+
+
+class PrologixGpibContext(Context):
+    """
+    The Prologix GPIB configuration database context manager. It monitors changes
+    to the database and publishes them onto the event bus. It also provides an
+    endpoint to query for sensor configs via the event bus.
+    """
+    def __init__(self, event_bus):
+        super().__init__(event_bus)
+        self.__sensors = {}
+
+    async def __aenter__(self):
+        self._event_bus.register("/database/gpib/get_sensors", self.__get_sensors)
+        self._event_bus.register("/database/gpib/get_sensor_config", self.__get_sensor_config)
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        self._event_bus.unregister("/database/gpib/get_sensors")
+        self._event_bus.unregister("/database/gpib/get_sensor_config")
+
+    async def __get_sensors(self, host_uuid):
+        """
+        Get all host configs from the database.
+
+        Parameters
+        ----------
+        host_uuid: int
+            The unique id of the Tinkerforge sensor
+
+        Returns
+        -------
+        dict
+            A dictionary, that contains the configuration of the sensor.
+        """
+        async for config in GpibSensor.find(GpibSensor.host == host_uuid):  # A pylint bug. pylint: disable=not-an-iterable
+            if config is not None:
+                self.__sensors[config.id] = config.uid
+                yield config.dict()
+
+    async def __get_sensor_config(self, uid):
+        """
+        Get all host configs from the database.
+
+        Parameters
+        ----------
+        uid: int
+            The unique id of the Tinkerforge sensor
+
+        Returns
+        -------
+        dict
+            A dictionary, that contains the configuration of the sensor.
+        """
+        return (await GpibSensor.find_one(GpibSensor.uid == uid)).dict()
+
+    async def monitor_changes(self, timeout):
+        """
+        Adds the driver string to the output of the iterator.
+        """
+        async for change_type, change in self._monitor_database(GpibSensor, timeout):
+            if change_type == ChangeType.ADD:
+                self.__sensors[change.id] = change.uid
+                self._event_bus.publish(f"/hosts/by_uuid/{change.host}/add_sensor", AddChangeEvent(change.dict()))
+            elif change_type == ChangeType.UPDATE:
+                sensor_uid = self.__sensors.pop(change.id, None)
+                self.__sensors[change.id] = change.uid
+                if sensor_uid == change.uid:
+                    # Only the sensor config has changed, not its id, so we publish an update
+                    self._event_bus.publish(f"/sensors/gpib/by_uid/{change.uid}/update", UpdateChangeEvent(change.dict()))
+                else:
+                    # The uid was changed, so we need to unregister the old sensor
+                    self._event_bus.publish(f"/sensors/gpib/by_uid/{sensor_uid}/disconnect", RemoveChangeEvent())
+                    # And add a new one
+                    self._event_bus.publish(f"/hosts/by_uuid/{change.host}/add_sensor", AddChangeEvent(change.dict()))
+            elif change_type == ChangeType.REMOVE:
+                # When removing the DB only returns the uuid
+                sensor_uid = self.__sensors.pop(change, None)
+                if sensor_uid:
+                    try:
+                        self._event_bus.publish(f"/sensors/gpib/by_uid/{sensor_uid}/disconnect", RemoveChangeEvent())
+                    except NameError:
+                        # There is no sensor registered with that uid
+                        pass
+
+
+CONTEXTS = {
+    HostContext,
+    TinkerforgeContext,
+    PrologixGpibContext,
+}

@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
-This file contains a factory to select the correct driver for all supported
-sensor hosts.
-"""
-from .tinkerforge_host import TinkerforgeSensorHost
-from .gpib_host import PrologixGpibSensorHost
+
+from hp3478a_async import HP_3478A
 
 
-class SensorHostFactory:
+class GpibDeviceFactory:
     """
     A senor host factory to select the correct driver for given database
     config.
@@ -15,7 +11,7 @@ class SensorHostFactory:
     def __init__(self):
         self.__available_hosts = {}
 
-    def register(self, driver, host):
+    def register(self, driver, device):
         """
         Register a driver with the factory. Should only be called in this file.
 
@@ -26,9 +22,9 @@ class SensorHostFactory:
         host: SensorHost
             The host driver to register.
         """
-        self.__available_hosts[driver] = host
+        self.__available_hosts[driver] = device
 
-    def get(self, driver, id, hostname, port, *_args, **_kwargs):  # pylint: disable=redefined-builtin,invalid-name
+    def get(self, driver, connection):
         """
         Look up the driver for a given database entry. Raises a `ValueError` if
         the driver is not registered.
@@ -53,12 +49,11 @@ class SensorHostFactory:
         ----------
         ValueError
         """
-        host = self.__available_hosts.get(driver)
-        if host is None:
+        device = self.__available_hosts.get(driver)(connection)
+        if device is None:
             raise ValueError(f"No driver available for {driver}")
-        return host(uuid=id, hostname=hostname, port=port)
+        return device
 
 
-host_factory = SensorHostFactory()
-host_factory.register(driver="tinkerforge", host=TinkerforgeSensorHost)
-host_factory.register(driver="prologix_gpib", host=PrologixGpibSensorHost)
+gpib_device_factory = GpibDeviceFactory()
+gpib_device_factory.register(driver="hp3478a", device=HP_3478A)

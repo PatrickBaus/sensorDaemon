@@ -12,9 +12,9 @@ from tinkerforge_async.ip_connection import NotConnectedError
 
 
 # Event bus topics
-EVENT_BUS_BASE = "/sensors/tinkerforge/"
-EVENT_BUS_CONFIG_UPDATE_BY_UID = EVENT_BUS_BASE + "by_uid{uid}/update"
-EVENT_BUS_DISCONNECT_BY_UID = EVENT_BUS_BASE + "by_uid/{uid}/disconnect"
+EVENT_BUS_BASE = "/sensors/tinkerforge"
+EVENT_BUS_CONFIG_UPDATE_BY_UID = EVENT_BUS_BASE + "/by_uid/{uid}/update"
+EVENT_BUS_DISCONNECT_BY_UID = EVENT_BUS_BASE + "/by_uid/{uid}/disconnect"
 EVENT_BUS_STATUS = EVENT_BUS_BASE
 
 
@@ -69,6 +69,7 @@ class TinkerforgeSensor():
     async def __configure(self, config):
         self.__uuid = config.get('id')
         self.__callback_config = {}
+        configured_sids = set()
         if self.__uuid is not None:
             on_connect = config.get("on_connect")
             if on_connect is not None:
@@ -85,10 +86,11 @@ class TinkerforgeSensor():
                             await result
                     except Exception:   # pylint: disable=broad-except
                         # Catch all exceptions and log them, because this is an external input
-                        self.__logger.exception("Error running config for sensor %s on host '%s'", self.__sensor.uid, self.__parent.hostname)
+                        self.__logger.exception("Error processing config for sensor %s on host '%s'", self.__sensor.uid, self.__parent.hostname)
                         continue
             # configure the callbacks
             for sid, sid_config in config['config'].items():
+                sid = int(sid)
                 last_update = time.time() - sid_config['interval'] / 1000
                 callback_config = GetCallbackConfiguration(
                     period=sid_config['interval'],
@@ -98,14 +100,17 @@ class TinkerforgeSensor():
                     maximum=0
                 )
                 try:
-                    await self.__sensor.set_callback_configuration(int(sid), *callback_config)
+                    await self.__sensor.set_callback_configuration(sid, *callback_config)
                 except AssertionError:
-                    self.__logger.error("Invalid configuration for %s: sid=%i, config=%s", self.__sensor, int(sid), callback_config)
+                    self.__logger.error("Invalid configuration for %s: sid=%i, config=%s", self.__sensor, sid, callback_config)
                 else:
-                    self.__callback_config[int(sid)] = (
+                    self.__callback_config[sid] = (
                         last_update,
                         callback_config,
                     )
+                if callback_config.period > 0:
+                    configured_sids.add(sid)
+        return configured_sids
 
     async def __test_callback(self, sid):
         remote_config = await self.__sensor.get_callback_configuration(sid)
@@ -120,14 +125,12 @@ class TinkerforgeSensor():
             output_queue.put_nowait(data)
 
     async def __disconnect_watcher(self, event_bus):
-        async for _ in event_bus.register(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uid)):
+        async for _ in event_bus.subscribe(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uid)):
             break
 
     async def __config_update_producer(self, event_bus, output_queue):
-        async for data in event_bus.register(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)):
-            # Check if the sensor is enabled
-            sids = {int(sid) for sid, sid_config in data.get('config', {}).items() if sid_config['interval']}
-            output_queue.put_nowait((sids, data))
+        async for data in event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)):
+            output_queue.put_nowait(data)
 
     async def __read_data(self, event_bus, output_queue):
         pending = set()
@@ -145,8 +148,15 @@ class TinkerforgeSensor():
         config_update_task = asyncio.create_task(config_queue.get())
         pending.add(config_update_task)
 
-        data_producer_task = None
-        pending.add(config_update_producer_task)
+        # Initial config
+        config = await event_bus.call("/database/tinkerforge", self.uid)
+        if config is not None:
+            sids = await self.__configure(config)
+            if sids:
+                data_producer_task = asyncio.create_task(self.__data_producer(sids, output_queue), name=f"TF sensor {self.__sensor.uid} data producer.")
+                pending.add(data_producer_task)
+        else:
+            data_producer_task = None
 
         try:
             while pending:
@@ -154,17 +164,17 @@ class TinkerforgeSensor():
                 for task in done:
                     if task == config_update_task:
                         try:
-                            sids, config = task.result()
+                            config = task.result()
                             pending.discard(data_producer_task)
                             if data_producer_task is not None:
                                 data_producer_task.cancel()     # No need to await that task
-                            await self.__configure(config)
+                            sids = await self.__configure(config)
                             config_update_task = asyncio.create_task(config_queue.get())
                             pending.add(config_update_task)
+                            if sids:
+                                data_producer_task = asyncio.create_task(self.__data_producer(sids, output_queue), name=f"TF sensor {self.__sensor.uid} data producer.")
                         finally:
                             config_queue.task_done()
-                        if sids:
-                            data_producer_task = asyncio.create_task(self.__data_producer(sids, output_queue), name=f"TF sensor {self.__sensor.uid} data producer.")
                     elif task in critical_tasks:
                         task.result()
                         return
@@ -207,7 +217,7 @@ class TinkerforgeSensor():
         check_callback_jobs = {}    # {uid : task}
 
         # Finally publish, that we are ready
-        event_bus.emit(EVENT_BUS_STATUS, self.uid)
+        event_bus.publish(EVENT_BUS_STATUS, self.uid)
         try:
             while pending:
                 done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)

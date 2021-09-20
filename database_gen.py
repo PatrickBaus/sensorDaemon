@@ -24,18 +24,23 @@ class Sensor():
 
 async def main():
     # Beanie uses Motor under the hood
-    #client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://root:example@server.lan:27017")
-    client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://root:example@hal43.apq:27017")
+    client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://root:example@server.lan:27017")
+    #client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://root:example@hal43.apq:27017")
     print(client)
 
     await init_beanie(database=client.sensor_config, document_models=[SensorHost, SensorUnit, TinkerforgeSensor, GpibSensor])
 
-    hosts = (("10.0.0.5", "Server Monitor"), ("192.168.1.152", "Tinkerforge Test"))
-    for hostname, label in hosts:
+    hosts = (
+        ("10.0.0.5", 4223, "tinkerforge", "Server Monitor"),
+        ("192.168.1.152", 4223, "tinkerforge", "Tinkerforge Test"),
+        ("192.168.1.104", 1234, "prologix_gpib", "GPIB Test"),
+        ("127.0.0.1", 1234, "prologix_gpib", "GPIB Test"),
+    )
+    for hostname, port, driver, label in hosts:
         host = SensorHost(
             hostname=hostname,
-            port=4223,
-            driver='tinkerforge',
+            port=port,
+            driver=driver,
             label=label
         )
         try:
@@ -52,12 +57,14 @@ async def main():
 
     sensor_config1 = TinkforgeSensorConfig(
         interval=2000,
+        trigger_only_on_change=False,
         label="Server Temperature",
         unit=unit_kelvin.id,
     )
 
     sensor_config2 = TinkforgeSensorConfig(
         interval=1000,
+        trigger_only_on_change=False,
         label="Server Humidity",
         unit=unit_kelvin.id,
     )
@@ -79,6 +86,7 @@ async def main():
 
     sensor_config1 = TinkforgeSensorConfig(
         interval=1000,
+        trigger_only_on_change=False,
         label="Test Voltage",
         unit=unit_kelvin.id,
     )
@@ -96,15 +104,30 @@ async def main():
     except pymongo.errors.OperationFailure:
         pass
 
-#    sensor2 = GpibSensor(
-#        pad=22,
-#        #sad=0,
-#        label="Bar2",
-#        unit=unit_kelvin.id,
-#        interval=1000,
-#        host=host.id,
-#        before_read=[]
-#    )
+    gpib_host = await SensorHost.find_one(SensorHost.hostname == "127.0.0.1", SensorHost.port == 1234)
+    sensor = GpibSensor(
+        uid="HP3478A_2520A20614",
+        pad=27,
+        driver='hp3478a',
+        label="HP 3478A Test",
+        unit=unit_kelvin.id,
+        interval=1000,
+        host=gpib_host.id,
+        on_connect=[
+            FunctionCall(function="set_function", args=[9, ]),
+            FunctionCall(function="set_range", args=[4, ]),
+            FunctionCall(function="set_trigger", args=[1, ]),
+            FunctionCall(function="set_autozero", args=[True, ]),
+            FunctionCall(function="set_number_of_digits", args=[6, ]),
+            FunctionCall(function="set_ntc_parameters", kwargs={'a': 3.3540154E-03, 'b': 2.5627725E-04, 'c': 2.0829210E-06, 'd': 7.3003206E-08, 'rt25': 10000}),
+        ],
+        before_read=[],
+        after_read=[]
+    )
+    try:
+        await sensor.save()
+    except pymongo.errors.OperationFailure:
+        pass
 
 #    sensor4 = TinkerforgeSensor(
 #        uid=169087,

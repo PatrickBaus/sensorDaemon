@@ -94,7 +94,7 @@ class TinkforgeSensorConfig(BaseModel):
     The configuration of a sensor made by Tinkerforge GmbH.
     """
     # pylint: disable=too-few-public-methods
-    interval: int
+    interval: conint(ge=0, le=2**32-1)
     trigger_only_on_change: Optional[bool] = True
     description: Optional[str] = ""
     label: str
@@ -107,7 +107,7 @@ class TinkerforgeSensor(Sensor):
     """
     # pylint: disable=too-few-public-methods
     uid: Indexed(int, unique=True)
-    config: Dict[str, TinkforgeSensorConfig]
+    config: Dict[str, TinkforgeSensorConfig]    # bson does not allow int keys
     on_connect: Union[List[FunctionCall], List[None]] = []
 
 
@@ -116,7 +116,12 @@ class GpibSensor(Sensor):
     The configuration of a GPIB connector.
     """
     # pylint: disable=too-few-public-methods
+    uid: Indexed(str, unique=True)
     pad: conint(ge=0, le=30)
     sad: Optional[Union[conint(ge=0x60, le=0x7E), conint(ge=0, le=0)]] = 0
+    driver: str
+    interval: conint(ge=0)
+    on_connect: Union[List[FunctionCall], List[None]]
     before_read: Union[List[FunctionCall], List[None]]
-    host: Indexed(PydanticObjectId)
+    after_read: Union[List[FunctionCall], List[None]]
+    host: Indexed(UUID)

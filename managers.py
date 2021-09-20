@@ -8,19 +8,20 @@ import asyncio
 from contextlib import AsyncExitStack
 import logging
 
-from asyncio_mqtt import Client
+import asyncio_mqtt
 import simplejson as json
 
 from async_event_bus import AsyncEventBus
-from databases import MongoDb, ChangeType
+from databases import MongoDb, CONTEXTS as DATABASE_CONTEXTS
+from errors import DisconnectedDuringConnectError
 from helper_functions import cancel_all_tasks
-from sensors.host_factory import host_factory
-from sensors.tinkerforge import EVENT_BUS_CONFIG_UPDATE_BY_UID as EVENT_BUS_SENSOR_CONFIG_UPDATE, EVENT_BUS_STATUS as EVENT_BUS_SENSOR_STATUS
-from sensors.tinkerforge_host import DisconnectedDuringConnectError, EVENT_BUS_CONFIG_UPDATE as EVENT_BUS_HOST_CONFIG_UPDATE, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT, EVENT_BUS_BASE as EVENT_BUS_HOST_BASE
+from sensors.sensor_host import EVENT_BUS_BASE as EVENT_BUS_HOST_BASE, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
 
 
-EVENT_BUS_DATA = "/sensor_data/tinkerforge"
-MQTT_DATA_TOPIC = "sensors/tinkerforge/{uid}/{sid}"
+EVENT_BUS_SENSOR_STATUS = "/sensors/{driver}"
+EVENT_BUS_SENSOR_CONFIG_UPDATE = "/sensors/{driver}/by_uid/{uid}/update"
+EVENT_BUS_DATA = "/sensor_data/all"
+MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 
 
 class HostManager():
@@ -47,7 +48,7 @@ class HostManager():
         event_bus: AsyncEventBus
             The event bus to register to.
         """
-        async for _ in event_bus.register(EVENT_BUS_HOST_DISCONNECT.format(uuid=host.uuid)):
+        async for _ in event_bus.subscribe(EVENT_BUS_HOST_DISCONNECT.format(uuid=host.uuid)):
             host.disconnect(event_bus)
             break
 
@@ -58,7 +59,7 @@ class HostManager():
 
         Parameters
         ----------
-        host: TinkerforgeSensorHost
+        host: SensorHost
             The host to read data from.
         event_bus: AsyncEventBus
             The event bus to push data to.
@@ -75,10 +76,17 @@ class HostManager():
                     # Connect to the host using a context manager
                     async with host as host:
                         async for data in host.read_data(event_bus):
-                            event_bus.emit(EVENT_BUS_DATA, data)
+                            data['driver'] = host.driver
+                            event_bus.publish(EVENT_BUS_DATA, data)
                         return
                 except DisconnectedDuringConnectError:
                     break
+                except ConnectionError:
+                    # The host ist supposed to take care of its connection
+                    # errors, because here, we do not even how what type of
+                    # connection it is using. So we will silently drop it here.
+                    await asyncio.sleep(reconnect_interval)
+                    continue
                 except Exception:   # pylint: disable=broad-except
                     # Catch all exceptions, log them, then try to restart the host.
                     self.__logger.exception("Error while reading data from host '%s:%i'. Reconnecting.", host.hostname, host.port)
@@ -104,84 +112,6 @@ class HostManager():
         except Exception:   # pylint: disable=broad-except
             self.__logger.exception("Error during shutdown of the host manager")
 
-    async def database_host_config_publisher(self, database, event_bus):
-        """
-        Generates all changes to the hosts. It signals a new host
-        to the host manager and config updates/removals to the host.
-
-        Parameters
-        ----------
-        database: MongoDb
-            The database to monitor.
-        event_bus: AsyncEventBus
-            The event bus to push data to.
-        """
-        async for host_config in database.get_hosts():
-            host = host_factory.get(**host_config)
-            event_bus.emit(EVENT_BUS_HOST_BASE, host)
-
-        async for change_type, change in database.monitor_host_changes(timeout=5):      # TODO: Make configurable
-            if change_type is ChangeType.UPDATE:
-                event_bus.emit(EVENT_BUS_HOST_CONFIG_UPDATE.format(uuid=change['uid']), change)
-            elif change_type is ChangeType.ADD:
-                host = host_factory.get(**change, parent=self)
-                event_bus.emit(EVENT_BUS_HOST_BASE, host)
-            if change_type is ChangeType.REMOVE:
-                event_bus.emit(EVENT_BUS_HOST_DISCONNECT.format(uuid=change), None)
-
-    async def database_sensor_config_worker(self, database, event_bus, sensors):
-        """
-        Monitors the event bus for new sensors and then sends out a
-        config update to the topic registered by the sensor.
-
-        Parameters
-        ----------
-        database: MongoDb
-            The database to monitor.
-        event_bus: AsyncEventBus
-            The event bus to push data to.
-        sensors: dict[int, int]
-            A dict, that stores the relationship of the config uuids and their
-            corresponding sensor uid.
-        """
-        async for uid in event_bus.register(EVENT_BUS_SENSOR_STATUS):
-            config = await database.get_sensor_config(uid)
-            if config is not None:
-                sensors[(config['id'])] = config['uid']
-                event_bus.emit(EVENT_BUS_SENSOR_CONFIG_UPDATE.format(uid=uid), config)
-
-    async def database_sensor_config_publisher(self, database, event_bus, sensors):
-        """
-        Monitors the database for sensors config changes and then sends out a
-        config update to the topic registered by the sensor.
-
-        Parameters
-        ----------
-        database: MongoDb
-            The database to monitor.
-        event_bus: AsyncEventBus
-            The event bus to push data to.
-        sensors: dict[int, int]
-            A dict, that stores the relationship of the config uuids and their
-            corresponding sensor uid.
-        """
-        changes = database.monitor_sensor_changes(timeout=5)
-        async for change_type, change in changes:
-            if change_type in (ChangeType.ADD, ChangeType.UPDATE):
-                sensor = sensors.get(change['id'])
-                if sensor is not None:
-                    if sensor != change['uid']:
-                        # The sensor uid was changed for the current config -> remove the old sensor config
-                        event_bus.emit(EVENT_BUS_SENSOR_CONFIG_UPDATE.format(uid=sensor), {})
-                sensors[(change['id'])] = change['uid']
-                event_bus.emit(EVENT_BUS_SENSOR_CONFIG_UPDATE.format(uid=change['uid']), change)
-            elif change_type is ChangeType.REMOVE:
-                # change is the config uuid
-                sensor = sensors.get(change)
-                if sensor is not None:
-                    event_bus.emit(EVENT_BUS_SENSOR_CONFIG_UPDATE.format(uid=sensor), {})
-                    del sensors[change]
-
     async def mqtt_producer(self, event_bus, output_queue):
         """
         Grabs the output data from the event bus and pushes it to a worker queue,
@@ -194,14 +124,19 @@ class HostManager():
         output_queue: asyncio.Queue
             The output queue, to aggregate the data to.
         """
-        async for event in event_bus.register(EVENT_BUS_DATA):
-            payload = {
-                'timestamp': event['timestamp'],
-                'uid': event['sender'].uid,
-                'sid': event['sid'],
-                'value': event['payload'],
-            }
-            output_queue.put_nowait(payload)
+        async for event in event_bus.subscribe(EVENT_BUS_DATA):
+            try:
+                payload = {
+                    'timestamp': event['timestamp'],
+                    'uid': event['sender'].uid,
+                    'sid': event['sid'],
+                    'value': event['payload'],
+                    'driver': event['driver'],
+                }
+            except Exception:   # pylint: disable=broad-except
+                self.__logger.exception("Malformed data received. Dropping data: %s", event)
+            else:
+                output_queue.put_nowait(payload)
 
     async def mqtt_consumer(self, input_queue, reconnect_interval=5):
         """
@@ -215,22 +150,25 @@ class HostManager():
         reconnect_interval: int, default=5
             The time in seconds to wait between connection attempts.
         """
+        has_error = False
+        self.__logger.info("Connecting worker to MQTT broker at '%s:%i", self.__mqtt_host, self.__mqtt_port)
         while "loop not cancelled":
-            self.__logger.info("Connecting worker to MQTT broker at '%s:%i", self.__mqtt_host, self.__mqtt_port)
             event = None
             try:
-                async with Client(hostname=self.__mqtt_host, port=self.__mqtt_port) as mqtt_client:
+                async with asyncio_mqtt.Client(hostname=self.__mqtt_host, port=self.__mqtt_port) as mqtt_client:
                     while "loop not cancelled":
                         if event is None:
                             # only get new data if we have pused all to the broker
                             event = await input_queue.get()
                         try:
+                            if event['driver'] == 'prologix_gpib':  # TODO: Remove
+                                print("mqtt_consumer", event)
                             # convert payload to JSON
                             # Typically sensors return data as decimals or ints to preserve the precision
                             payload = json.dumps(event, use_decimal=True)
-                            print("mqtt_consumer", payload)
                             await mqtt_client.publish(
                                 MQTT_DATA_TOPIC.format(
+                                    driver=event['driver'],
                                     uid=event['uid'],
                                     sid=event['sid']
                                 ),
@@ -238,8 +176,15 @@ class HostManager():
                                 qos=1
                             )
                             event = None    # Get a new event to publish
+                            has_error = False
                         finally:
                             input_queue.task_done()
+            except asyncio_mqtt.error.MqttError as exc:
+                # Only print an error once
+                if not has_error:
+                    self.__logger.error("MQTT error: %s. Retrying.", exc)
+                await asyncio.sleep(reconnect_interval)
+                has_error = True
             except Exception:   # pylint: disable=broad-except
                 # Catch all exceptions, log them, then try to restart the worker.
                 self.__logger.exception("Error while publishing data to MQTT broker. Reconnecting.")
@@ -257,7 +202,7 @@ class HostManager():
         output_queue: asyncio.Queue
             The output queue, to aggregate the data to.
         """
-        async for value in event_bus.register(EVENT_BUS_HOST_BASE):
+        async for value in event_bus.subscribe(EVENT_BUS_HOST_BASE):
             output_queue.put_nowait(value)
 
     async def host_config_consumer(self, event_queue, event_bus):
@@ -365,16 +310,11 @@ class HostManager():
                     stack.push_async_callback(self.cancel_tasks, tasks)
 
                     database_driver = MongoDb(self.__database_url)
-                    database = await stack.enter_async_context(database_driver)
-                    sensors = {}
-                    task = asyncio.create_task(self.database_sensor_config_worker(database, event_bus, sensors))
-                    tasks.add(task)
-
-                    task = asyncio.create_task(self.database_sensor_config_publisher(database, event_bus, sensors))
-                    tasks.add(task)
-
-                    task = asyncio.create_task(self.database_host_config_publisher(database, event_bus))
-                    tasks.add(task)
+                    await stack.enter_async_context(database_driver)
+                    context_managers = await asyncio.gather(*[stack.enter_async_context(context(event_bus)) for context in DATABASE_CONTEXTS])
+                    for context_manager in context_managers:
+                        task = asyncio.create_task(context_manager.monitor_changes(timeout=5))
+                        tasks.add(task)
 
                     await asyncio.gather(*tasks)
             except Exception:   # pylint: disable=broad-except
