@@ -5,7 +5,6 @@ asyncio-mqtt==0.10.0
 asyncpg==0.21.0
 beanie==1.4.0
 click==7.1.2
-hp3478a-async==1.1.0
 isort==5.9.2
 lazy-object-proxy==1.6.0
 marshmallow==3.13.0
