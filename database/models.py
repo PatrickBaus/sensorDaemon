@@ -74,12 +74,7 @@ class SensorHost(TimeStampedDocument, HostBaseModel):
 
 
 class Sensor(TimeStampedDocument):
-    """
-    The base class for all sensor configurations.
-    """
-    # pylint: disable=too-few-public-methods
     id: UUID = Field(default_factory=uuid4)
-
 
 class SensorUnit(Document):
     """
@@ -97,7 +92,7 @@ class TinkforgeSensorConfig(BaseModel):
     interval: conint(ge=0, le=2**32-1)
     trigger_only_on_change: Optional[bool] = True
     description: Optional[str] = ""
-    label: str
+    topic: str
     unit: PydanticObjectId
 
 
@@ -116,7 +111,7 @@ class GpibSensor(Sensor):
     The configuration of a GPIB connector.
     """
     # pylint: disable=too-few-public-methods
-    uid: Indexed(str, unique=True)
+    label: str
     pad: conint(ge=0, le=30)
     sad: Optional[Union[conint(ge=0x60, le=0x7E), conint(ge=0, le=0)]] = 0
     driver: str
@@ -124,4 +119,17 @@ class GpibSensor(Sensor):
     on_connect: Union[List[FunctionCall], List[None]]
     before_read: Union[List[FunctionCall], List[None]]
     after_read: Union[List[FunctionCall], List[None]]
+    topic: str
+    unit: PydanticObjectId
     host: Indexed(UUID)
+
+    class Collection:
+        """
+        The index, that makes sure, that a (host, port) tuple is unique.
+        """
+        indexes = [
+            pymongo.IndexModel(
+                [('pad', pymongo.ASCENDING), ('sad', pymongo.ASCENDING), ('host', pymongo.ASCENDING)],
+                unique=True,
+            )
+        ]

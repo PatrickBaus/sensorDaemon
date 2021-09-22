@@ -9,6 +9,8 @@ import pymongo
 import motor
 import warnings
 
+from decouple import config
+
 from database.models import TinkerforgeSensor, GpibSensor, FunctionCall, SensorHost, SensorUnit, TinkforgeSensorConfig
 
 
@@ -23,9 +25,8 @@ class Sensor():
 
 
 async def main():
-    # Beanie uses Motor under the hood
-    client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://root:example@server.lan:27017")
-    #client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://root:example@hal43.apq:27017")
+    database_url = config('SENSORS_DATABASE_HOST', default="mongodb://root:example@localhost:27017")
+    client = motor.motor_asyncio.AsyncIOMotorClient(database_url)
     print(client)
 
     await init_beanie(database=client.sensor_config, document_models=[SensorHost, SensorUnit, TinkerforgeSensor, GpibSensor])
@@ -59,6 +60,7 @@ async def main():
         interval=2000,
         trigger_only_on_change=False,
         label="Server Temperature",
+        topic="sensors/server/temperature",
         unit=unit_kelvin.id,
     )
 
@@ -66,6 +68,7 @@ async def main():
         interval=1000,
         trigger_only_on_change=False,
         label="Server Humidity",
+        topic="sensors/server/humidity",
         unit=unit_kelvin.id,
     )
 
@@ -88,12 +91,21 @@ async def main():
         interval=1000,
         trigger_only_on_change=False,
         label="Test Voltage",
+        topic="sensors/room_123/test_voltage",
+        unit=unit_kelvin.id,
+    )
+    sensor_config2 = TinkforgeSensorConfig(
+        interval=1000,
+        trigger_only_on_change=False,
+        label="Test Voltage 2",
+        topic="sensors/room_123/test_voltage2",
         unit=unit_kelvin.id,
     )
     sensor = TinkerforgeSensor(
         uid=169087,
         config={
             0: sensor_config1,
+            1: sensor_config2,
         },
         on_connect=[
             FunctionCall(function="set_status_led_config", kwargs={"config": 2}),
@@ -106,10 +118,9 @@ async def main():
 
     gpib_host = await SensorHost.find_one(SensorHost.hostname == "127.0.0.1", SensorHost.port == 1234)
     sensor = GpibSensor(
-        uid="HP3478A_2520A20614",
         pad=27,
         driver='hp3478a',
-        label="HP 3478A Test",
+        label="HP3478A_2520A20614",
         unit=unit_kelvin.id,
         interval=1000,
         host=gpib_host.id,
@@ -122,7 +133,8 @@ async def main():
             FunctionCall(function="set_ntc_parameters", kwargs={'a': 3.3540154E-03, 'b': 2.5627725E-04, 'c': 2.0829210E-06, 'd': 7.3003206E-08, 'rt25': 10000}),
         ],
         before_read=[],
-        after_read=[]
+        after_read=[],
+        topic="sensors/room_123/test_10k",
     )
     try:
         await sensor.save()

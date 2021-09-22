@@ -126,17 +126,18 @@ class HostManager():
         """
         async for event in event_bus.subscribe(EVENT_BUS_DATA):
             try:
+                topic = event['topic']
                 payload = {
                     'timestamp': event['timestamp'],
-                    'uid': event['sender'].uid,
+                    'uuid': str(event['sender'].uuid),
+                    'driver': event['driver'],
                     'sid': event['sid'],
                     'value': event['payload'],
-                    'driver': event['driver'],
                 }
             except Exception:   # pylint: disable=broad-except
                 self.__logger.exception("Malformed data received. Dropping data: %s", event)
             else:
-                output_queue.put_nowait(payload)
+                output_queue.put_nowait((topic, payload))
 
     async def mqtt_consumer(self, input_queue, reconnect_interval=5):
         """
@@ -157,30 +158,21 @@ class HostManager():
             try:
                 async with asyncio_mqtt.Client(hostname=self.__mqtt_host, port=self.__mqtt_port) as mqtt_client:
                     while "loop not cancelled":
-                        if event is None:
+                        if event is None:   # TODO: Add a delay in the exception handler
                             # only get new data if we have pused all to the broker
                             event = await input_queue.get()
                         try:
-                            if event['driver'] == 'prologix_gpib':  # TODO: Remove
-                                print("mqtt_consumer", event)
+                            topic, payload = event
                             # convert payload to JSON
                             # Typically sensors return data as decimals or ints to preserve the precision
-                            payload = json.dumps(event, use_decimal=True)
-                            await mqtt_client.publish(
-                                MQTT_DATA_TOPIC.format(
-                                    driver=event['driver'],
-                                    uid=event['uid'],
-                                    sid=event['sid']
-                                ),
-                                payload=payload,
-                                qos=1
-                            )
+                            payload = json.dumps(payload, use_decimal=True)
+                            await mqtt_client.publish(topic, payload=payload, qos=1)
                             event = None    # Get a new event to publish
                             has_error = False
                         finally:
                             input_queue.task_done()
             except asyncio_mqtt.error.MqttError as exc:
-                # Only print an error once
+                # Only log an error once
                 if not has_error:
                     self.__logger.error("MQTT error: %s. Retrying.", exc)
                 await asyncio.sleep(reconnect_interval)
@@ -320,7 +312,7 @@ class HostManager():
             except Exception:   # pylint: disable=broad-except
                 # Catch all exceptions, log them, then try to restart the worker.
                 self.__logger.exception("Error while processing database.")
-                asyncio.sleep(reconnect_interval)
+                await asyncio.sleep(reconnect_interval)
 
     async def run(self):
         """

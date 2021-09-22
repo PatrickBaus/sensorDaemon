@@ -8,6 +8,7 @@ import time
 
 from aiostream import stream, pipe
 from prologix_gpib_async import AsyncPrologixGpibEthernetController
+
 from data_types import UpdateChangeEvent, RemoveChangeEvent
 from .sensor_factory import gpib_device_factory
 
@@ -26,23 +27,23 @@ class PrologixGpibSensor():
     with the underlying hardware.
     """
     @property
-    def uid(self):
+    def uuid(self):
         """
         Returns
         -------
         int
             The sensor hardware uid.
         """
-        return self.__uid
+        return self.__uuid
 
-    def __init__(self, hostname, port, pad, sad, uid, reconnect_interval):
+    def __init__(self, hostname, port, pad, sad, uuid, reconnect_interval):
         self.__conn = AsyncPrologixGpibEthernetController(
             hostname=hostname,
             port=port,
             pad=pad,
             sad=sad
         )
-        self.__uid = uid
+        self.__uuid = uuid
         self.__gpib_device = None
         self.__logger = logging.getLogger(__name__)
         self.__reconnect_interval = reconnect_interval
@@ -51,7 +52,7 @@ class PrologixGpibSensor():
         return str(self.__conn)
 
     def __repr__(self):
-        return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.__conn.hostname}, port={self.__conn.port}, pad={self.__conn.pad}, sad={self.__conn.sad}) uid={self.uid}"
+        return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.__conn.hostname}, port={self.__conn.port}, pad={self.__conn.pad}, sad={self.__conn.sad}) uid={self.uuid}"
 
     async def __aenter__(self):
         failed_connection_attemps = 0
@@ -91,23 +92,29 @@ class PrologixGpibSensor():
                     await result
             except Exception:   # pylint: disable=broad-except
                 # Catch all exceptions and log them, because this is an external input
-                self.__logger.exception("Error processing config for sensor %s on host '%s'", self.uid, self.__conn.hostname)
+                self.__logger.exception("Error processing config for sensor %s on host '%s'", self.uuid, self.__conn.hostname)
                 continue
         return config['interval']/1000
+
+    @staticmethod
+    def is_no_event(event_type):
+        def filter_event(item):
+            return not isinstance(item, event_type)
+
+        return filter_event
 
     async def __configure_and_read(self, event_bus, config, old_config=None):
         interval = await self.__configure(config)
         if interval > 0:
-            data_streams = [
-                stream.iterate(self.__gpib_device.read_all()) | pipe.spaceout(interval),
-                stream.iterate(event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)))
-            ]
-            async with stream.merge(*data_streams).stream() as streamer:
+            merged_stream = (
+                stream.merge(
+                    stream.iterate(self.__gpib_device.read_all()) | pipe.spaceout(interval),  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+                    stream.iterate(event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uuid)))
+                )
+                | pipe.takewhile(self.is_no_event(UpdateChangeEvent))  # Terminate if the config was updated https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+            )
+            async with merged_stream.stream() as streamer:
                 async for item in streamer:
-                    if isinstance(item, UpdateChangeEvent):
-                        # We need to reconfigure the device and restart reading,
-                        # so we terminate here
-                        break
                     yield item
 
     async def read_events(self, event_bus, ping_interval):
@@ -120,29 +127,37 @@ class PrologixGpibSensor():
             The sensor data.
         """
         assert ping_interval > 0
-        config = await event_bus.call("/database/gpib/get_sensor_config", self.uid)
+        config = await event_bus.call("/database/gpib/get_sensor_config", self.uuid)
         new_streams_queue = asyncio.Queue()
         new_streams_queue.put_nowait(self.__configure_and_read(event_bus, config))
-        new_streams_queue.put_nowait(event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)))
-        new_streams_queue.put_nowait(event_bus.subscribe(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uid)))
+        new_streams_queue.put_nowait(event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uuid)))
+        new_streams_queue.put_nowait(event_bus.subscribe(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uuid)))
 
-        merged_stream = stream.call(new_streams_queue.get) | pipe.cycle() | pipe.flatten()   # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+        def filter_updates(item):
+            if isinstance(item, UpdateChangeEvent):
+                # Reconfigure the device, then start reading from it.
+                # The __configure_and_read method, will automatically shut
+                # down.
+                nonlocal config, new_streams_queue
+                old_config = config
+                config = item.change
+                new_streams_queue.put_nowait(self.__configure_and_read(event_bus, config, old_config))
+                return False
+            return True
+
+        merged_stream = (
+            stream.call(new_streams_queue.get)
+            | pipe.cycle()  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+            | pipe.flatten()  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+            | pipe.takewhile(self.is_no_event(RemoveChangeEvent))  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+            | pipe.filter(filter_updates)  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+        )
         async with merged_stream.stream() as streamer:
             async for item in streamer:
-                if isinstance(item, UpdateChangeEvent):
-                    # Reconfigure the device, then start reading from it.
-                    # The __configure_and_read method, will automatically shut
-                    # down.
-                    old_config = config
-                    config = item.change
-                    new_streams_queue.put_nowait(self.__configure_and_read(event_bus, config, old_config))
-                elif isinstance(item, RemoveChangeEvent):
-                    # Terminate the reader
-                    break
-                else:
-                    yield {
-                        'timestamp': time.time(),
-                        'sender': self,
-                        'sid': 0,
-                        'payload': item
-                    }
+                yield {
+                    'timestamp': time.time(),
+                    'sender': self,
+                    'sid': config['sad'],
+                    'payload': item,
+                    'topic': config['topic']
+                }

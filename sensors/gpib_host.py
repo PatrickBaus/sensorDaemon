@@ -60,18 +60,18 @@ class PrologixGpibSensorHost(SensorHost):
         """
         for sensor in self.__sensors.values():
             event_bus.emit(
-                EVENT_BUS_SENSOR_DISCONNECT_BY_UID.format(uid=sensor.uid),
+                EVENT_BUS_SENSOR_DISCONNECT_BY_UID.format(uid=sensor.uuid),
                 None)
         self.__sensors = {}
 
     async def __sensor_data_producer(self, sensor, event_bus, ping_interval):
-        self.__sensors[sensor.uid] = sensor
+        self.__sensors[sensor.uuid] = sensor
         try:
             async with sensor as gpib_device:
                 async for event in gpib_device.read_events(event_bus, ping_interval=ping_interval):
                     yield event
         finally:
-            self.__sensors.pop(sensor.uid, None)
+            self.__sensors.pop(sensor.uuid, None)
 
     async def __update_listener(self, event_bus):
         async for _ in event_bus.register(EVENT_BUS_CONFIG_UPDATE.format(uuid=self.uuid)):
@@ -85,7 +85,7 @@ class PrologixGpibSensorHost(SensorHost):
                 port=self.port,
                 pad=sensor_config['pad'],
                 sad=sensor_config['sad'],
-                uid=sensor_config['uid'],
+                uuid=sensor_config['id'],
                 reconnect_interval=self.__reconnect_interval,
             )
             yield sensor
@@ -96,7 +96,7 @@ class PrologixGpibSensorHost(SensorHost):
                 port=self.port,
                 pad=sensor_config['pad'],
                 sad=sensor_config['sad'],
-                uid=sensor_config['uid'],
+                uuid=sensor_config['id'],
                 reconnect_interval=self.__reconnect_interval,
             )
             yield sensor
