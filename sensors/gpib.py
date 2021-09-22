@@ -7,7 +7,7 @@ import logging
 import time
 
 from aiostream import stream, pipe
-from prologix_gpib_async import AsyncPrologixGpibEthernetController
+from prologix_gpib_async import AsyncPrologixGpibEthernetController, EosMode
 
 from data_types import UpdateChangeEvent, RemoveChangeEvent
 from .sensor_factory import gpib_device_factory
@@ -41,7 +41,8 @@ class PrologixGpibSensor():
             hostname=hostname,
             port=port,
             pad=pad,
-            sad=sad
+            sad=sad,
+            eos_mode=EosMode.APPEND_NONE,
         )
         self.__uuid = uuid
         self.__gpib_device = None
