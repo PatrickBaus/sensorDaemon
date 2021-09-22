@@ -167,6 +167,6 @@ class TinkerforgeSensorHost(SensorHost):
         async with merged_stream.stream() as streamer:
             async for item in streamer:
                 if isinstance(item, TinkerforgeSensor):
-                    new_sensors_queue.put_nowait(self.__sensor_data_producer(item, event_bus, ping_interval=5))
+                    new_sensors_queue.put_nowait(self.__sensor_data_producer(item, event_bus, ping_interval=30))
                 else:
                     yield item
