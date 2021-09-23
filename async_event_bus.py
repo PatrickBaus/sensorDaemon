@@ -86,7 +86,7 @@ class AsyncEventBus():
         """
         self.__registered_calls.pop(event_name, None)
 
-    async def call(self, event_name, *args, **kwargs):
+    async def call(self, event_name, *args, ignore_unregistered=False, **kwargs):
         """
         Call a registered function.
 
@@ -94,6 +94,8 @@ class AsyncEventBus():
         ----------
         event_name: Any
             The type of event.
+        ignore_unregistered: bool
+            Do not raise an error if True and the call is not registered
         args: List
             The arguments to be passed to the function called.
         kwargs: Dict
@@ -105,4 +107,5 @@ class AsyncEventBus():
                 return gen_or_func
             return await gen_or_func
         except KeyError:
-            raise NameError(f"Event {event_name} is not registered.") from None
+            if not ignore_unregistered:
+                raise NameError(f"Event {event_name} is not registered.") from None
