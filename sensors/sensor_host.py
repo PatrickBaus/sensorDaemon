@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 
 EVENT_BUS_BASE = "/hosts"
+EVENT_BUS_ADD_HOST = EVENT_BUS_BASE + "/add_host"
 EVENT_BUS_CONFIG_UPDATE = EVENT_BUS_BASE + "/by_uuid/{uuid}/update"
 EVENT_BUS_DISCONNECT = EVENT_BUS_BASE + "/by_uuid/{uuid}/disconnect"
 EVENT_BUS_ADD_SENSOR = EVENT_BUS_BASE + "/by_uuid/{uuid}/add_sensor"

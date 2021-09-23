@@ -15,7 +15,7 @@ from async_event_bus import AsyncEventBus
 from databases import MongoDb, CONTEXTS as DATABASE_CONTEXTS
 from errors import DisconnectedDuringConnectError
 from helper_functions import cancel_all_tasks
-from sensors.sensor_host import EVENT_BUS_BASE as EVENT_BUS_HOST_BASE, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
+from sensors.sensor_host import EVENT_BUS_ADD_HOST as EVENT_BUS_HOST_ADD_HOST, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
 
 
 EVENT_BUS_SENSOR_STATUS = "/sensors/{driver}"
@@ -194,8 +194,8 @@ class HostManager():
         output_queue: asyncio.Queue
             The output queue, to aggregate the data to.
         """
-        async for value in event_bus.subscribe(EVENT_BUS_HOST_BASE):
-            output_queue.put_nowait(value)
+        async for event in event_bus.subscribe(EVENT_BUS_HOST_ADD_HOST):
+            output_queue.put_nowait(event.change)
 
     async def host_config_consumer(self, event_queue, event_bus):
         """

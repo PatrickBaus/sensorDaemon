@@ -172,12 +172,12 @@ class HostContext(Context):
         """
         async for change_type, change in self._monitor_database(SensorHost, timeout):
             if change_type is ChangeType.UPDATE:
-                self._event_bus.publish(f"/hosts/by_uuid/{change['uid']}/update", change)
+                self._event_bus.publish(f"/hosts/by_uuid/{change.uid}/update", UpdateChangeEvent(change.dict()))
             elif change_type is ChangeType.ADD:
-                host = host_factory.get(**change, parent=self)
-                self._event_bus.publish("/hosts", host)
+                host = host_factory.get(**change.dict(), parent=self)
+                self._event_bus.publish("/hosts/add_host", AddChangeEvent(host))
             elif change_type is ChangeType.REMOVE:
-                self._event_bus.publish(f"/hosts/by_uuid/{change['uid']}/disconnect", None)
+                self._event_bus.publish(f"/hosts/by_uuid/{change.uid}/disconnect", RemoveChangeEvent())
 
 
 class TinkerforgeContext(Context):
