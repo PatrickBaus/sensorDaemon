@@ -140,7 +140,7 @@ class HostContext(Context):
             # Get all hosts
             async for host in SensorHost.find_all():    # A pylint bug. pylint: disable=not-an-iterable
                 try:
-                    host = host_factory.get(**host.dict(), parent=self)
+                    host = host_factory.get(event_bus=self._event_bus, **host.dict())
                 except ValueError:
                     # Ignore unknown drivers
                     logging.getLogger(__name__).info("Unsupported driver '%s' requested. Cannot start host.", host.dict()['driver'])
@@ -172,13 +172,14 @@ class HostContext(Context):
         """
         async for change_type, change in self._monitor_database(SensorHost, timeout):
             if change_type is ChangeType.UPDATE:
-                host = host_factory.get(**change.dict())
+                host = host_factory.get(event_bus=self._event_bus, **change.dict())
                 self._event_bus.publish(f"/hosts/by_uuid/{change.id}/update", UpdateChangeEvent(host))
             elif change_type is ChangeType.ADD:
-                host = host_factory.get(**change.dict())
+                host = host_factory.get(event_bus=self._event_bus, **change.dict())
                 self._event_bus.publish("/hosts/add_host", AddChangeEvent(host))
             elif change_type is ChangeType.REMOVE:
                 self._event_bus.publish(f"/hosts/by_uuid/{change}/disconnect", RemoveChangeEvent())
+                await self._event_bus.call(f"/hosts/by_uuid/{change}/disconnect", ignore_unregistered=True)
 
 
 class TinkerforgeContext(Context):

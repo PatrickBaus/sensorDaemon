@@ -33,23 +33,6 @@ class HostManager():
         self.__mqtt_host = mqtt_host
         self.__mqtt_port = mqtt_port
 
-    @staticmethod
-    async def host_disconnect_listener(host, event_bus):
-        """
-        Waits for the event signalling a disconnect of the host. It will return
-        if it recieved the data on the EVENT_BUS_HOST_DISCONNECT topic.
-
-        Parameters
-        ----------
-        host: TinkerforgeSensorHost
-            The host to watch.
-        event_bus: AsyncEventBus
-            The event bus to register to.
-        """
-        async for _ in event_bus.subscribe(EVENT_BUS_HOST_DISCONNECT.format(uuid=host.uuid)):
-            host.disconnect(event_bus)
-            break
-
     async def host_reader(self, host, event_bus, reconnect_interval=3):
         """
         Connect to the host and read its data. Then push the data onto the event
@@ -64,37 +47,26 @@ class HostManager():
         reconnect_interval: int, default=3
             The time in seconds to wait between connection attempts.
         """
-        disconnect_task = asyncio.create_task(
-            self.host_disconnect_listener(host, event_bus),
-            name=f"TF host {host.hostname}:{host.port} disconnector"
-        )
-        try:
-            while "host not connected":
-                try:
-                    # Connect to the host using a context manager
-                    async with host as host:
-                        async for data in host.read_data(event_bus):
-                            data['driver'] = host.driver
-                            event_bus.publish(EVENT_BUS_DATA, data)
-                        return
-                except DisconnectedDuringConnectError:
-                    break
-                except ConnectionError:
-                    # The host ist supposed to take care of its connection
-                    # errors, because here, we do not even how what type of
-                    # connection it is using. So we will silently drop it here.
-                    await asyncio.sleep(reconnect_interval)
-                    continue
-                except Exception:   # pylint: disable=broad-except
-                    # Catch all exceptions, log them, then try to restart the host.
-                    self.__logger.exception("Error while reading data from host '%s:%i'. Reconnecting.", host.hostname, host.port)
-                    await asyncio.sleep(reconnect_interval)
-        finally:
-            disconnect_task.cancel()
+        while "host not connected":
             try:
-                await disconnect_task
-            except asyncio.CancelledError:
-                pass
+                # Connect to the host using a context manager
+                async with host as host:
+                    async for data in host.read_data():
+                        data['driver'] = host.driver
+                        event_bus.publish(EVENT_BUS_DATA, data)
+                    return
+            except DisconnectedDuringConnectError:
+                break
+            except ConnectionError:
+                # The host ist supposed to take care of its connection
+                # errors, because here, we do not even how what type of
+                # connection it is using. So we will silently drop it here.
+                await asyncio.sleep(reconnect_interval)
+                continue
+            except Exception:   # pylint: disable=broad-except
+                # Catch all exceptions, log them, then try to restart the host.
+                self.__logger.exception("Error while reading data from host '%s:%i'. Reconnecting.", host.hostname, host.port)
+                await asyncio.sleep(reconnect_interval)
 
     async def cancel_tasks(self, tasks):
         """
