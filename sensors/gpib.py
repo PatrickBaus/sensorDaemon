@@ -27,6 +27,26 @@ class PrologixGpibSensor():
     with the underlying hardware.
     """
     @property
+    def hostname(self):
+        return self.__conn.hostname
+
+    @property
+    def port(self):
+        return self.__conn.port
+
+    @property
+    def pad(self):
+        return self.__conn.pad
+
+    @property
+    def sad(self):
+        return self.__conn.sad
+
+    @property
+    def reconnect_interval(self):
+        return self.__reconnect_interval
+
+    @property
     def uuid(self):
         """
         Returns
@@ -53,7 +73,7 @@ class PrologixGpibSensor():
         return str(self.__conn)
 
     def __repr__(self):
-        return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.__conn.hostname}, port={self.__conn.port}, pad={self.__conn.pad}, sad={self.__conn.sad}) uid={self.uuid}"
+        return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.hostname}, port={self.port}, pad={self.pad}, sad={self.sad}) uid={self.uuid}"
 
     async def __aenter__(self):
         failed_connection_attemps = 0
@@ -69,9 +89,9 @@ class PrologixGpibSensor():
                         failure_count = " (%d times)" % failed_connection_attemps
                     else:
                         failure_count = ""
-                    self.__logger.warning("Failed to connect to host '%s:%i'%s. Error: %s.", self.__conn.hostname, self.__conn.port, failure_count, exc)
+                    self.__logger.warning("Failed to connect to host '%s:%i'%s. Error: %s.", self.hostname, self.port, failure_count, exc)
                 if failed_connection_attemps == MAXIMUM_FAILED_CONNECTIONS:
-                    self.__logger.warning("Failed to connect to host '%s:%i' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.__conn.hostname, self.__conn.port, failed_connection_attemps, "s"[failed_connection_attemps == 1:], exc)
+                    self.__logger.warning("Failed to connect to host '%s:%i' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.hostname, self.port, failed_connection_attemps, "s"[failed_connection_attemps == 1:], exc)
                 await asyncio.sleep(self.__reconnect_interval)
 
     async def __aexit__(self, exc_type, exc, traceback):
@@ -93,7 +113,7 @@ class PrologixGpibSensor():
                     await result
             except Exception:   # pylint: disable=broad-except
                 # Catch all exceptions and log them, because this is an external input
-                self.__logger.exception("Error processing config for sensor %s on host '%s'", self.uuid, self.__conn.hostname)
+                self.__logger.exception("Error processing config for sensor %s on host '%s:%i'", self.uuid, self.hostname, self.port)
                 continue
         return config['interval']/1000
 
@@ -143,7 +163,7 @@ class PrologixGpibSensor():
                 old_config = config
                 config = item.change
                 new_streams_queue.put_nowait(self.__configure_and_read(event_bus, config, old_config))
-                return False
+                return False    # Do not pass on the update, because we have already processed it
             return True
 
         merged_stream = (

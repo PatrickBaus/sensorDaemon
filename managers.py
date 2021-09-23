@@ -18,8 +18,6 @@ from helper_functions import cancel_all_tasks
 from sensors.sensor_host import EVENT_BUS_ADD_HOST as EVENT_BUS_HOST_ADD_HOST, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
 
 
-EVENT_BUS_SENSOR_STATUS = "/sensors/{driver}"
-EVENT_BUS_SENSOR_CONFIG_UPDATE = "/sensors/{driver}/by_uid/{uid}/update"
 EVENT_BUS_DATA = "/sensor_data/all"
 MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 
