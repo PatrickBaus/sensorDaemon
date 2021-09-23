@@ -112,10 +112,13 @@ class TinkerforgeSensor():
         """
         return self.__parent
 
-    def __init__(self, device_id, uid, ipcon, parent):
+    def __init__(self, device_id, uid, ipcon, event_bus, parent):
         self.__sensor = device_factory.get(device_id, uid, ipcon)
         self.__uuid = None
+        self.__event_bus = event_bus
         self.__parent = parent
+        self.__shutdown_event = asyncio.Event()
+        self.__shutdown_event.set()   # Force the use of __aenter__()
         self.__logger = logging.getLogger(__name__)
 
     def __str__(self):
@@ -123,6 +126,18 @@ class TinkerforgeSensor():
 
     def __repr__(self):
         return f"{self.__class__.__module__}.{self.__class__.__qualname__}(device_id={self.__sensor.DEVICE_IDENTIFIER!r}, uid={self.__sensor.uid}, ipcon={self.__sensor.ipcon!r})"
+
+    async def __aenter__(self):
+        self.__shutdown_event.clear()
+        self.__event_bus.register(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uid), self.__disconnect)
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        self.__event_bus.unregister(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uid))
+        self.__shutdown_event.set()
+
+    async def __disconnect(self):
+        self.__shutdown_event.set()
 
     async def __configure(self, config):
         self.__uuid = config.get('id')
@@ -231,7 +246,7 @@ class TinkerforgeSensor():
 
         return filter_event
 
-    async def __configure_and_read(self, event_bus, config, ping_interval, old_config=None):
+    async def __configure_and_read(self, config, ping_interval, old_config=None):
         sids, configured_callbacks = await self.__configure(config)
         test_job_queue = asyncio.Queue()
 
@@ -240,7 +255,7 @@ class TinkerforgeSensor():
                 stream.merge(
                     stream.iterate(self.__sensor.read_events(sids=sids)),
                     stream.call(self.callback_test_worker, configured_callbacks, ping_interval, test_job_queue),
-                    stream.iterate(event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)))
+                    stream.iterate(self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)))
                 )
                 | pipe.takewhile(self.is_no_event(UpdateChangeEvent))  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
             )
@@ -262,7 +277,7 @@ class TinkerforgeSensor():
                         'topic': config['config'][str(item['sid'])]['topic']
                     }
 
-    async def read_events(self, event_bus, ping_interval):
+    async def read_events(self, ping_interval):
         """
         Read the sensor data, and ping the sensor.
 
@@ -272,12 +287,12 @@ class TinkerforgeSensor():
             The sensor data.
         """
         assert ping_interval > 0
-        config = await event_bus.call("/database/tinkerforge/get_sensor_config", self.uid)
+        config = await self.__event_bus.call("/database/tinkerforge/get_sensor_config", self.uid)
 
         new_streams_queue = asyncio.Queue()
-        new_streams_queue.put_nowait(self.__configure_and_read(event_bus, config, ping_interval))
-        new_streams_queue.put_nowait(event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)))
-        new_streams_queue.put_nowait(event_bus.subscribe(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uid)))
+        new_streams_queue.put_nowait(self.__configure_and_read(config, ping_interval))
+        new_streams_queue.put_nowait(self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uid)))
+        new_streams_queue.put_nowait(stream.just(self.__shutdown_event.wait()))
 
         def filter_updates(item):
             if isinstance(item, UpdateChangeEvent):
@@ -287,7 +302,7 @@ class TinkerforgeSensor():
                 nonlocal config, new_streams_queue
                 old_config = config
                 config = item.change
-                new_streams_queue.put_nowait(self.__configure_and_read(event_bus, config, ping_interval, old_config))
+                new_streams_queue.put_nowait(self.__configure_and_read(config, ping_interval, old_config))
                 return False
             return True
 
@@ -295,9 +310,10 @@ class TinkerforgeSensor():
             stream.call(new_streams_queue.get)
             | pipe.cycle()  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
             | pipe.flatten()  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
-            | pipe.takewhile(self.is_no_event(RemoveChangeEvent))  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
             | pipe.filter(filter_updates)  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
         )
         async with merged_stream.stream() as streamer:
             async for item in streamer:
+                if self.__shutdown_event.is_set():
+                    break
                 yield item

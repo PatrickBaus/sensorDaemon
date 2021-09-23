@@ -62,7 +62,7 @@ class PrologixGpibSensorHost(SensorHost):
         self.__sensors.add(sensor)
         try:
             async with sensor as gpib_device:
-                async for event in gpib_device.read_events(self.__event_bus, ping_interval=ping_interval):
+                async for event in gpib_device.read_events(ping_interval=ping_interval):
                     yield event
         finally:
             self.__sensors.remove(sensor)
@@ -88,6 +88,7 @@ class PrologixGpibSensorHost(SensorHost):
                 pad=sensor_config['pad'],
                 sad=sensor_config['sad'],
                 uuid=sensor_config['id'],
+                event_bus=self.__event_bus,
                 reconnect_interval=self.__reconnect_interval,
             )
             yield AddChangeEvent(sensor)
@@ -100,16 +101,10 @@ class PrologixGpibSensorHost(SensorHost):
                 pad=sensor_config['pad'],
                 sad=sensor_config['sad'],
                 uuid=sensor_config['id'],
+                event_bus=self.__event_bus,
                 reconnect_interval=self.__reconnect_interval,
             )
             yield AddChangeEvent(sensor)
-
-    @staticmethod
-    def is_no_event(event_type):
-        def filter_event(item):
-            return not isinstance(item, event_type)
-
-        return filter_event
 
     async def read_data(self):
         """
@@ -125,19 +120,19 @@ class PrologixGpibSensorHost(SensorHost):
         Iterartor[dict]
             The sensor data.
         """
-        new_sensors_queue = asyncio.Queue()  # Add generators here to add them to the output
-        new_sensors_queue.put_nowait(self.__sensor_producer())
-        new_sensors_queue.put_nowait(stream.just(self.__update_listener()))
-        new_sensors_queue.put_nowait(stream.just(self.__shutdown_event.wait()))
+        new_streams_queue = asyncio.Queue()  # Add generators here to add them to the output
+        new_streams_queue.put_nowait(self.__sensor_producer())
+        new_streams_queue.put_nowait(stream.just(self.__update_listener()))
+        new_streams_queue.put_nowait(stream.just(self.__shutdown_event.wait()))
 
         # For details on using aiostream, check here:
         # https://aiostream.readthedocs.io/en/stable/core.html#stream-base-class
-        merged_stream = stream.call(new_sensors_queue.get) | pipe.cycle() | pipe.flatten()   # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+        merged_stream = stream.call(new_streams_queue.get) | pipe.cycle() | pipe.flatten()   # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
         async with merged_stream.stream() as streamer:
             async for item in streamer:
                 if self.__shutdown_event.is_set():
                     break
                 if isinstance(item, AddChangeEvent):
-                    new_sensors_queue.put_nowait(self.__sensor_data_producer(item.change, ping_interval=5))
+                    new_streams_queue.put_nowait(self.__sensor_data_producer(item.change, ping_interval=5))
                 else:
                     yield item

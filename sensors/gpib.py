@@ -9,7 +9,8 @@ import time
 from aiostream import stream, pipe
 from prologix_gpib_async import AsyncPrologixGpibEthernetController, EosMode
 
-from data_types import UpdateChangeEvent, RemoveChangeEvent
+from data_types import UpdateChangeEvent
+from errors import DisconnectedDuringConnectError
 from .sensor_factory import gpib_device_factory
 
 # Event bus topics
@@ -56,7 +57,7 @@ class PrologixGpibSensor():
         """
         return self.__uuid
 
-    def __init__(self, hostname, port, pad, sad, uuid, reconnect_interval):
+    def __init__(self, hostname, port, pad, sad, uuid, event_bus, reconnect_interval):
         self.__conn = AsyncPrologixGpibEthernetController(
             hostname=hostname,
             port=port,
@@ -67,7 +68,10 @@ class PrologixGpibSensor():
         self.__uuid = uuid
         self.__gpib_device = None
         self.__logger = logging.getLogger(__name__)
+        self.__event_bus = event_bus
         self.__reconnect_interval = reconnect_interval
+        self.__shutdown_event = asyncio.Event()
+        self.__shutdown_event.set()   # Force the use of __aenter__()
 
     def __str__(self):
         return str(self.__conn)
@@ -77,10 +81,24 @@ class PrologixGpibSensor():
 
     async def __aenter__(self):
         failed_connection_attemps = 0
+        self.__shutdown_event.clear()
+        self.__event_bus.register(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uuid), self.__disconnect)
         while "not connected":
             try:
-                await self.__conn.connect()
-                return self
+                pending = set()
+                is_disconnected_task = asyncio.create_task(self.__shutdown_event.wait())
+                pending.add(is_disconnected_task)
+                connect_task = asyncio.create_task(self.__conn.connect())
+                pending.add(connect_task)
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    if task == is_disconnected_task:    # pylint: disable=no-else-raise
+                        await self.__conn.disconnect()
+                        raise DisconnectedDuringConnectError()
+                    else:
+                        is_disconnected_task.cancel()
+                        task.result()   # If there is an error, blow up now
+                        return self
             except ConnectionError as exc:
                 failed_connection_attemps += 1
                 # Suppress the warning after MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
@@ -95,7 +113,12 @@ class PrologixGpibSensor():
                 await asyncio.sleep(self.__reconnect_interval)
 
     async def __aexit__(self, exc_type, exc, traceback):
+        self.__event_bus.unregister(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uuid))
+        self.__shutdown_event.set()
         await self.__conn.disconnect()
+
+    async def __disconnect(self):
+        self.__shutdown_event.set()
 
     async def __configure(self, config):
         if config['interval'] == 0:
@@ -124,13 +147,13 @@ class PrologixGpibSensor():
 
         return filter_event
 
-    async def __configure_and_read(self, event_bus, config, old_config=None):
+    async def __configure_and_read(self, config, old_config=None):
         interval = await self.__configure(config)
         if interval > 0:
             merged_stream = (
                 stream.merge(
                     stream.iterate(self.__gpib_device.read_all()) | pipe.spaceout(interval),  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
-                    stream.iterate(event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uuid)))
+                    stream.iterate(self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uuid)))
                 )
                 | pipe.takewhile(self.is_no_event(UpdateChangeEvent))  # Terminate if the config was updated https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
             )
@@ -138,7 +161,7 @@ class PrologixGpibSensor():
                 async for item in streamer:
                     yield item
 
-    async def read_events(self, event_bus, ping_interval):
+    async def read_events(self, ping_interval):
         """
         Read the sensor data, and ping the sensor.
 
@@ -148,11 +171,11 @@ class PrologixGpibSensor():
             The sensor data.
         """
         assert ping_interval > 0
-        config = await event_bus.call("/database/gpib/get_sensor_config", self.uuid)
+        config = await self.__event_bus.call("/database/gpib/get_sensor_config", self.uuid)
         new_streams_queue = asyncio.Queue()
-        new_streams_queue.put_nowait(self.__configure_and_read(event_bus, config))
-        new_streams_queue.put_nowait(event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uuid)))
-        new_streams_queue.put_nowait(event_bus.subscribe(EVENT_BUS_DISCONNECT_BY_UID.format(uid=self.uuid)))
+        new_streams_queue.put_nowait(self.__configure_and_read(config))
+        new_streams_queue.put_nowait(self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uuid)))
+        new_streams_queue.put_nowait(stream.just(self.__shutdown_event.wait()))
 
         def filter_updates(item):
             if isinstance(item, UpdateChangeEvent):
@@ -162,7 +185,7 @@ class PrologixGpibSensor():
                 nonlocal config, new_streams_queue
                 old_config = config
                 config = item.change
-                new_streams_queue.put_nowait(self.__configure_and_read(event_bus, config, old_config))
+                new_streams_queue.put_nowait(self.__configure_and_read(config, old_config))
                 return False    # Do not pass on the update, because we have already processed it
             return True
 
@@ -170,11 +193,12 @@ class PrologixGpibSensor():
             stream.call(new_streams_queue.get)
             | pipe.cycle()  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
             | pipe.flatten()  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
-            | pipe.takewhile(self.is_no_event(RemoveChangeEvent))  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
             | pipe.filter(filter_updates)  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
         )
         async with merged_stream.stream() as streamer:
             async for item in streamer:
+                if self.__shutdown_event.is_set():
+                    break
                 yield {
                     'timestamp': time.time(),
                     'sender': self,

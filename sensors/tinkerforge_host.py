@@ -107,7 +107,7 @@ class TinkerforgeSensorHost(SensorHost):
         async for packet in ipconnection.read_enumeration():
             if packet['enumeration_type'] in (EnumerationType.CONNECTED, EnumerationType.AVAILABLE):
                 try:
-                    device = TinkerforgeSensor(packet['device_id'], packet['uid'], ipconnection, self)
+                    device = TinkerforgeSensor(packet['device_id'], packet['uid'], ipconnection, self.__event_bus, self)
                     yield (ChangeType.ADD, device)
                 except ValueError:
                     # raised by the TinkerforgeSensor constructor (using the sensor factory) if a device_id cannot be found (i.e. there is no driver)
@@ -118,8 +118,9 @@ class TinkerforgeSensorHost(SensorHost):
     async def __sensor_data_producer(self, sensor, ping_interval):
         self.__sensors[sensor.uid] = sensor
         try:
-            async for event in sensor.read_events(self.__event_bus, ping_interval=ping_interval):
-                yield event
+            async with sensor as tinkerforge_sensor:
+                async for event in tinkerforge_sensor.read_events(ping_interval=ping_interval):
+                    yield event
         finally:
             self.__sensors.pop(sensor.uid, None)
 
@@ -133,7 +134,7 @@ class TinkerforgeSensorHost(SensorHost):
             if change_type == ChangeType.ADD and sensor.uid not in self.__sensors:
                 yield sensor
             elif change_type == ChangeType.REMOVE:
-                self.__event_bus.publish(EVENT_BUS_SENSOR_DISCONNECT_BY_UID.format(uid=sensor))
+                await self.__event_bus.call(EVENT_BUS_SENSOR_DISCONNECT_BY_UID.format(uid=sensor), ignore_unregistered=True)
 
     async def read_data(self):
         """
@@ -145,18 +146,18 @@ class TinkerforgeSensorHost(SensorHost):
             The sensor data.
         """
         # TODO: Add host updates via __update_listener()
-        new_sensors_queue = asyncio.Queue()  # Add generators here to add them to the output
-        new_sensors_queue.put_nowait(self.__sensor_producer(self.__ipcon))
-        new_sensors_queue.put_nowait(stream.just(self.__shutdown_event.wait()))
+        new_streams_queue = asyncio.Queue()  # Add generators here to add them to the output
+        new_streams_queue.put_nowait(self.__sensor_producer(self.__ipcon))
+        new_streams_queue.put_nowait(stream.just(self.__shutdown_event.wait()))
 
         # For details on using aiostream, check here:
         # https://aiostream.readthedocs.io/en/stable/core.html#stream-base-class
-        merged_stream = stream.call(new_sensors_queue.get) | pipe.cycle() | pipe.flatten()  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+        merged_stream = stream.call(new_streams_queue.get) | pipe.cycle() | pipe.flatten()  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
         async with merged_stream.stream() as streamer:
             async for item in streamer:
                 if self.__shutdown_event.is_set():
                     break
                 if isinstance(item, TinkerforgeSensor):
-                    new_sensors_queue.put_nowait(self.__sensor_data_producer(item, ping_interval=30))
+                    new_streams_queue.put_nowait(self.__sensor_data_producer(item, ping_interval=30))
                 else:
                     yield item

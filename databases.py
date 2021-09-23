@@ -12,7 +12,7 @@ import motor.motor_asyncio
 import pymongo  # to access the error classes
 from pydantic.error_wrappers import ValidationError     # pylint: disable=no-name-in-module
 
-from data_types import ChangeType, UpdateChangeEvent, RemoveChangeEvent, AddChangeEvent
+from data_types import ChangeType, UpdateChangeEvent, AddChangeEvent
 from database.models import TinkerforgeSensor, GpibSensor, SensorHost
 from sensors.host_factory import host_factory
 
@@ -178,7 +178,6 @@ class HostContext(Context):
                 host = host_factory.get(event_bus=self._event_bus, **change.dict())
                 self._event_bus.publish("/hosts/add_host", AddChangeEvent(host))
             elif change_type is ChangeType.REMOVE:
-                self._event_bus.publish(f"/hosts/by_uuid/{change}/disconnect", RemoveChangeEvent())
                 await self._event_bus.call(f"/hosts/by_uuid/{change}/disconnect", ignore_unregistered=True)
 
 
@@ -223,7 +222,9 @@ class TinkerforgeContext(Context):
 
     async def monitor_changes(self, timeout):
         """
-        Adds the driver string to the output of the iterator.
+        Adds the driver string to the output of the iterator. We do not remove
+        any sensors, if the config is removed, because only the tinkerforge host
+        is allowed to remove sensors. We unconfigure them instead.
         """
         async for change_type, change in self._monitor_database(TinkerforgeSensor, timeout):
             if change_type == ChangeType.ADD:
@@ -302,7 +303,7 @@ class PrologixGpibContext(Context):
             elif change_type == ChangeType.UPDATE:
                 self._event_bus.publish(f"/sensors/gpib/by_uid/{change.id}/update", UpdateChangeEvent(change.dict()))
             elif change_type == ChangeType.REMOVE:
-                self._event_bus.publish(f"/sensors/gpib/by_uid/{change}/disconnect", RemoveChangeEvent())
+                await self._event_bus.call(f"/sensors/gpib/by_uid/{change}/disconnect", ignore_unregistered=True)
 
 
 CONTEXTS = {
