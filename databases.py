@@ -145,7 +145,7 @@ class HostContext(Context):
                     # Ignore unknown drivers
                     logging.getLogger(__name__).info("Unsupported driver '%s' requested. Cannot start host.", host.dict()['driver'])
                 else:
-                    self._event_bus.publish("/hosts", host)
+                    self._event_bus.publish("/hosts/add_host", AddChangeEvent(host))
         except ValidationError:
             # TODO: Update the database in case there are old entries
             # TODO: Use SensorHost.inspect_collection to check the Schema
