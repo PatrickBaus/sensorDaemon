@@ -191,7 +191,7 @@ class TinkerforgeSensor():
 
             remote_config = await self.__sensor.get_callback_configuration(job.sid)
             if remote_config != local_config:
-                self.__logger.warning("Remote callback configuration was changed by a third party. Remote config: {%s}, Local config: {%s}", remote_config, local_config)
+                self.__logger.warning("Remote callback configuration %s (sid %i) was changed by a third party. Remote config: %s, Local config: %s", self.__sensor, job.sid, remote_config, local_config)
                 await self.__sensor.set_callback_configuration(job.sid, *local_config)
             job.is_done = True
             return job
