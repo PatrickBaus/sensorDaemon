@@ -33,12 +33,9 @@ class GpibDeviceFactory:
         ----------
         driver: str
             A string identifying the driver.
-        id: uuid.UUID
-            The uuid of the host configuration.
-        hostname: str
-            The ethernet hostname
-        port: int
-            The port of the host
+
+        connection: Any
+            The IP connection
 
         Returns
         -------
