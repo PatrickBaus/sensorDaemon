@@ -169,20 +169,22 @@ class TinkerforgeSensor():
                     period=sid_config['interval'],
                     value_has_to_change=sid_config['trigger_only_on_change'],
                     option=ThresholdOption.OFF,
-                    minimum=0,
-                    maximum=0
+                    minimum=None,
+                    maximum=None
                 )
                 try:
                     await self.__sensor.set_callback_configuration(sid, *callback_config)
                 except AssertionError:
                     self.__logger.error("Invalid configuration for %s: sid=%i, config=%s", self.__sensor, sid, callback_config)
                 else:
+                    # Read back the callback config, because the sensor might have substituted values
+                    callback_config = await self.__sensor.get_callback_configuration(sid)
                     configured_callbacks[sid] = [
                         last_update,
                         callback_config,
                     ]
-                if callback_config.period > 0:
-                    enabled_sids.add(sid)
+                    if callback_config.period > 0:
+                        enabled_sids.add(sid)
         return enabled_sids, configured_callbacks
 
     def __test_callback(self, callback_configs):
