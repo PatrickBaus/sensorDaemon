@@ -226,19 +226,20 @@ class PrologixGpibSensor():
 
     async def __read_device(self, on_read, on_before_read, on_after_read):
         func, args, kwargs = on_read
-        if isasyncgen(func):
+        gen_or_func = func(*args, **kwargs)
+        if isasyncgen(gen_or_func):
             await self.__call_functions_on_device(on_before_read)
-            async for result in func(*args, **kwargs):
+            async for result in gen_or_func:
                 yield result
                 await self.__call_functions_on_device(on_after_read)
         else:
             while "loop not cancelled":
                 await self.__call_functions_on_device(on_before_read)
                 try:
-                    if iscoroutine(func):
-                        yield await func(*args, **kwargs)
+                    if iscoroutine(gen_or_func):
+                        yield await gen_or_func
                     else:
-                        yield func(*args, **kwargs)
+                        yield gen_or_func
                 except Exception:
                     self.__logger.exception("Error while reading results from sensor %s", self.__gpib_device)
                     raise
