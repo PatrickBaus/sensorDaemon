@@ -155,8 +155,8 @@ class PrologixGpibSensor():
 
     async def __configure(self, config):
         on_before_read, on_after_read = [], []
-        function = getattr(self.__gpib_device, config["on_read"])
-        on_read = (function, config.get("args", []), config.get("kwargs", {}))
+        function = getattr(self.__gpib_device, config["on_read"]["function"])
+        on_read = (function, config["on_read"].get("args", []), config["on_read"].get("kwargs", {}))
         if config['interval'] == 0:
             return (0, on_read, on_before_read, on_after_read)
 
