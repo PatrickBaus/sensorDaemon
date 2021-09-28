@@ -3,6 +3,7 @@
 This file contains the wrapper for the Tinkerforge sensor class
 """
 import asyncio
+from inspect import isasyncgen, iscoroutine
 import logging
 import time
 
@@ -29,22 +30,54 @@ class PrologixGpibSensor():
     """
     @property
     def hostname(self):
+        """
+        Returns
+        -------
+        str
+            The host name of the ip connection.
+        """
         return self.__conn.hostname
 
     @property
     def port(self):
+        """
+        Returns
+        -------
+        int
+            The port of the ip connection.
+        """
         return self.__conn.port
 
     @property
     def pad(self):
+        """
+        Returns
+        -------
+        int
+            The primary address of the device.
+        """
         return self.__conn.pad
 
     @property
     def sad(self):
+        """
+        Returns
+        -------
+        int
+            The secondary address of the device.
+        """
         return self.__conn.sad
 
     @property
     def reconnect_interval(self):
+        """
+        The reconnect is only attempted during initial connection.
+
+        Returns
+        -------
+        int
+            The reconnect interval in seconds.
+        """
         return self.__reconnect_interval
 
     @property
@@ -121,8 +154,13 @@ class PrologixGpibSensor():
         self.__shutdown_event.set()
 
     async def __configure(self, config):
+        on_before_read, on_after_read = [], []
+        function = getattr(self.__gpib_device, config["on_read"])
+        on_read = (function, config.get("args", []), config.get("kwargs", {}))
         if config['interval'] == 0:
-            return 0
+            return (0, on_read, on_before_read, on_after_read)
+
+        # Initialize the device
         self.__gpib_device = gpib_device_factory.get(config['driver'], self.__conn)
         for cmd in config['on_connect']:
             try:
@@ -138,7 +176,24 @@ class PrologixGpibSensor():
                 # Catch all exceptions and log them, because this is an external input
                 self.__logger.exception("Error processing config for sensor %s at host '%s:%i'", self.uuid, self.hostname, self.port)
                 continue
-        return config['interval']/1000
+
+        for cmd in config['on_before_read']:
+            try:
+                function = getattr(self.__gpib_device, cmd["function"])
+            except AttributeError:
+                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__gpib_device)
+            else:
+                on_before_read.append((function, cmd.get("args", []), cmd.get("kwargs", {})))
+
+        for cmd in config['on_after_read']:
+            try:
+                function = getattr(self.__gpib_device, cmd["function"])
+            except AttributeError:
+                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__gpib_device)
+            else:
+                on_after_read.append((function, cmd.get("args", []), cmd.get("kwargs", {})))
+
+        return config['interval']/1000, on_read, on_before_read, on_after_read
 
     @staticmethod
     def is_no_event(event_type):
@@ -147,12 +202,51 @@ class PrologixGpibSensor():
 
         return filter_event
 
+    async def __call_functions_on_device(self, func_calls):
+        coros = []
+        for func_call in func_calls:
+            func, args, kwargs = func_call
+            try:
+                if iscoroutine(func):
+                    coros.append(func(*args, **kwargs))
+                else:
+                    func(*args, **kwargs)
+            except Exception:
+                self.__logger.exception("Invalid configuration parameter '%s' for sensor %s", func, self.__gpib_device)
+                raise
+        if coros:
+            results = await asyncio.gather(*coros, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception):
+                    self.__logger.error("Error while reading results from sensor %s", self.__gpib_device, exc_info=result)
+                    raise result
+
+    async def __read_device(self, on_read, on_before_read, on_after_read):
+        func, args, kwargs = on_read
+        if isasyncgen(func):
+            await self.__call_functions_on_device(on_before_read)
+            async for result in func(*args, **kwargs):
+                yield result
+                await self.__call_functions_on_device(on_after_read)
+        else:
+            while "loop not cancelled":
+                await self.__call_functions_on_device(on_before_read)
+                try:
+                    if iscoroutine(func):
+                        yield await func(*args, **kwargs)
+                    else:
+                        yield func(*args, **kwargs)
+                except Exception:
+                    self.__logger.exception("Error while reading results from sensor %s", self.__gpib_device)
+                    raise
+                await self.__call_functions_on_device(on_after_read)
+
     async def __configure_and_read(self, config, old_config=None):
-        interval = await self.__configure(config)
+        interval, on_read, on_before_read, on_after_read = await self.__configure(config)
         if interval > 0:
             merged_stream = (
                 stream.merge(
-                    stream.iterate(self.__gpib_device.read_all()) | pipe.spaceout(interval),  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+                    stream.iterate(self.__read_device(on_read, on_before_read, on_after_read)) | pipe.spaceout(interval),  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
                     stream.iterate(self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uuid)))
                 )
                 | pipe.takewhile(self.is_no_event(UpdateChangeEvent))  # Terminate if the config was updated https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member

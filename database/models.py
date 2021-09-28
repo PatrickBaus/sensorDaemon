@@ -116,6 +116,7 @@ class GpibSensor(Sensor):
     sad: Optional[Union[conint(ge=0x60, le=0x7E), conint(ge=0, le=0)]] = 0
     driver: str
     interval: conint(ge=0)
+    on_read: FunctionCall
     on_connect: Union[List[FunctionCall], List[None]]
     before_read: Union[List[FunctionCall], List[None]]
     after_read: Union[List[FunctionCall], List[None]]

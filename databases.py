@@ -59,7 +59,7 @@ class MongoDb():
             database = self.__client.sensor_config
             try:
                 await init_beanie(database=database, document_models=[SensorHost, TinkerforgeSensor, GpibSensor])
-                self.__logger.info("Connected to  MongoDB at %s.", hostname_string)
+                self.__logger.info("MongoDB (%s) connected.", hostname_string)
             except pymongo.errors.ServerSelectionTimeoutError as exc:
                 if connection_attempt == 1:
                     # Only log the error once
