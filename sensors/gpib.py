@@ -155,13 +155,16 @@ class PrologixGpibSensor():
 
     async def __configure(self, config):
         on_before_read, on_after_read = [], []
+        self.__gpib_device = gpib_device_factory.get(config['driver'], self.__conn)
+
         function = getattr(self.__gpib_device, config["on_read"]["function"])
         on_read = (function, config["on_read"].get("args", []), config["on_read"].get("kwargs", {}))
+
         if config['interval'] == 0:
+            # Return here, if the device is disabled
             return (0, on_read, on_before_read, on_after_read)
 
         # Initialize the device
-        self.__gpib_device = gpib_device_factory.get(config['driver'], self.__conn)
         for cmd in config['on_connect']:
             try:
                 function = getattr(self.__gpib_device, cmd["function"])
