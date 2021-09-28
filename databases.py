@@ -43,7 +43,7 @@ class MongoDb():
         while "database not connected":
             hostname_string = self.__hostname if self.__port is None else f"{self.__hostname}:{self.__port}"
             if connection_attempt == 1:
-                self.__logger.info("Connecting to MongoDB on %s.", hostname_string)
+                self.__logger.info("Connecting to MongoDB (%s).", hostname_string)
             if self.__port is not None:
                 self.__client = motor.motor_asyncio.AsyncIOMotorClient(
                     self.__hostname,
@@ -59,11 +59,11 @@ class MongoDb():
             database = self.__client.sensor_config
             try:
                 await init_beanie(database=database, document_models=[SensorHost, TinkerforgeSensor, GpibSensor])
-                self.__logger.info("Connected to  MongoDB on %s.", hostname_string)
+                self.__logger.info("Connected to  MongoDB at %s.", hostname_string)
             except pymongo.errors.ServerSelectionTimeoutError as exc:
                 if connection_attempt == 1:
                     # Only log the error once
-                    self.__logger.error("Cannot connect to database on %s. Error: %s. Retrying.", hostname_string, exc)
+                    self.__logger.error("Cannot connect to database at %s. Error: %s. Retrying.", hostname_string, exc)
                 await asyncio.sleep(timeout)
                 continue
             finally:

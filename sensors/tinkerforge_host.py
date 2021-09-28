@@ -51,7 +51,7 @@ class TinkerforgeSensorHost(SensorHost):
         return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.hostname}, port={self.port})"
 
     async def __aenter__(self):
-        self.__logger.info("Connecting to Tinkerforge host '%s:%i'.", self.hostname, self.port)
+        self.__logger.info("Connecting to Tinkerforge host (%s:%i).", self.hostname, self.port)
         self.__event_bus.register(EVENT_BUS_HOST_DISCONNECT.format(uuid=self.uuid), self.__disconnect)
         if self.__ipcon is None:
             self.__ipcon = IPConnection(host=self.hostname, port=self.port)

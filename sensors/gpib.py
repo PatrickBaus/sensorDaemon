@@ -136,7 +136,7 @@ class PrologixGpibSensor():
                     await result
             except Exception:   # pylint: disable=broad-except
                 # Catch all exceptions and log them, because this is an external input
-                self.__logger.exception("Error processing config for sensor %s on host '%s:%i'", self.uuid, self.hostname, self.port)
+                self.__logger.exception("Error processing config for sensor %s at host '%s:%i'", self.uuid, self.hostname, self.port)
                 continue
         return config['interval']/1000
 

@@ -122,7 +122,7 @@ class HostManager():
             The time in seconds to wait between connection attempts.
         """
         has_error = False
-        self.__logger.info("Connecting worker to MQTT broker at '%s:%i", self.__mqtt_host, self.__mqtt_port)
+        self.__logger.info("Connecting worker to MQTT broker (%s:%i).", self.__mqtt_host, self.__mqtt_port)
         while "loop not cancelled":
             event = None
             try:

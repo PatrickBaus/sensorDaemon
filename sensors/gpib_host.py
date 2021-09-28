@@ -46,6 +46,7 @@ class PrologixGpibSensorHost(SensorHost):
         return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.hostname}, port={self.port})"
 
     async def __aenter__(self):
+        self.__logger.info("Connecting to Pologix adapter (%s:%i).", self.hostname, self.port)
         self.__event_bus.register(EVENT_BUS_HOST_DISCONNECT.format(uuid=self.uuid), self.__disconnect)
         self.__shutdown_event.clear()
         return self
