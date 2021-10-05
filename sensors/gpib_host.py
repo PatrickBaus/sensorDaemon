@@ -15,8 +15,7 @@ from .sensor_host import SensorHost, EVENT_BUS_CONFIG_UPDATE, EVENT_BUS_ADD_SENS
 
 class PrologixGpibSensorHost(SensorHost):
     """
-    Class that wraps a Tinkerforge brick daemon host. This can be either a
-    PC running brickd, or a master brick with an ethernet/wifi extension.
+    Class that wraps a Prologix GPIB adapter.
     """
     @property
     def driver(self):
@@ -62,8 +61,8 @@ class PrologixGpibSensorHost(SensorHost):
         # TODO: Add message here
         self.__sensors.add(sensor)
         try:
-            async with sensor as gpib_device:
-                async for event in gpib_device.read_events(ping_interval=ping_interval):
+            async with sensor as device:
+                async for event in device.read_events(ping_interval=ping_interval):
                     yield event
         finally:
             self.__sensors.remove(sensor)

@@ -144,23 +144,21 @@ class TinkerforgeSensor():
         configured_callbacks = {}
         enabled_sids = set()
         if self.__uuid is not None:
-            on_connect = config.get("on_connect")
-            if on_connect is not None:
-                for cmd in on_connect:
-                    try:
-                        function = getattr(self.__sensor, cmd["function"])
-                    except AttributeError:
-                        self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__sensor)
-                        continue
+            for cmd in config.get("on_connect", []):
+                try:
+                    function = getattr(self.__sensor, cmd["function"])
+                except AttributeError:
+                    self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__sensor)
+                    continue
 
-                    try:
-                        result = function(*cmd.get("args", []), **cmd.get("kwargs", {}))
-                        if asyncio.iscoroutine(result):
-                            await result
-                    except Exception:   # pylint: disable=broad-except
-                        # Catch all exceptions and log them, because this is an external input
-                        self.__logger.exception("Error processing config for sensor %s on host '%s'", self.__sensor.uid, self.__parent.hostname)
-                        continue
+                try:
+                    result = function(*cmd.get("args", []), **cmd.get("kwargs", {}))
+                    if asyncio.iscoroutine(result):
+                        await result
+                except Exception:   # pylint: disable=broad-except
+                    # Catch all exceptions and log them, because this is an external input
+                    self.__logger.exception("Error processing config for sensor %s on host '%s'", self.__sensor.uid, self.__parent.hostname)
+                    continue
             # configure the callbacks
             for sid, sid_config in config['config'].items():
                 sid = int(sid)

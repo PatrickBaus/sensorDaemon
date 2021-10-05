@@ -110,7 +110,7 @@ class PrologixGpibSensor():
         return str(self.__conn)
 
     def __repr__(self):
-        return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.hostname}, port={self.port}, pad={self.pad}, sad={self.sad}) uid={self.uuid}"
+        return f"{self.__class__.__module__}.{self.__class__.__qualname__}(hostname={self.hostname}, port={self.port}, pad={self.pad}, sad={self.sad}, uuid={self.uuid})"
 
     async def __aenter__(self):
         failed_connection_attemps = 0
@@ -157,22 +157,22 @@ class PrologixGpibSensor():
         on_before_read, on_after_read = [], []
         self.__gpib_device = gpib_device_factory.get(config['driver'], self.__conn)
 
-        function = getattr(self.__gpib_device, config["on_read"]["function"])
-        on_read = (function, config["on_read"].get("args", []), config["on_read"].get("kwargs", {}))
+        function = getattr(self.__gpib_device, config['on_read']['function'])
+        on_read = (function, config['on_read'].get('args', []), config['on_read'].get('kwargs', {}))
 
         if config['interval'] == 0:
             # Return here, if the device is disabled
             return (0, on_read, on_before_read, on_after_read)
 
         # Initialize the device
-        for cmd in config['on_connect']:
+        for cmd in config.get('on_connect', []):
             try:
-                function = getattr(self.__gpib_device, cmd["function"])
+                function = getattr(self.__gpib_device, cmd['function'])
             except AttributeError:
-                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__gpib_device)
+                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd['function'], self.__gpib_device)
                 continue
             try:
-                result = function(*cmd.get("args", []), **cmd.get("kwargs", {}))
+                result = function(*cmd.get('args', []), **cmd.get('kwargs', {}))
                 if asyncio.iscoroutine(result):
                     await result
             except Exception:   # pylint: disable=broad-except
@@ -180,21 +180,21 @@ class PrologixGpibSensor():
                 self.__logger.exception("Error processing config for sensor %s at host '%s:%i'", self.uuid, self.hostname, self.port)
                 continue
 
-        for cmd in config['on_before_read']:
+        for cmd in config.get('on_before_read', []):
             try:
-                function = getattr(self.__gpib_device, cmd["function"])
+                function = getattr(self.__gpib_device, cmd['function'])
             except AttributeError:
-                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__gpib_device)
+                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd['function'], self.__gpib_device)
             else:
-                on_before_read.append((function, cmd.get("args", []), cmd.get("kwargs", {})))
+                on_before_read.append((function, cmd.get('args', []), cmd.get('kwargs', {})))
 
-        for cmd in config['on_after_read']:
+        for cmd in config.get('on_after_read', []):
             try:
-                function = getattr(self.__gpib_device, cmd["function"])
+                function = getattr(self.__gpib_device, cmd['function'])
             except AttributeError:
-                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__gpib_device)
+                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd['function'], self.__gpib_device)
             else:
-                on_after_read.append((function, cmd.get("args", []), cmd.get("kwargs", {})))
+                on_after_read.append((function, cmd.get('args', []), cmd.get('kwargs', {})))
 
         return config['interval']/1000, on_read, on_before_read, on_after_read
 
