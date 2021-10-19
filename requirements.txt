@@ -20,6 +20,7 @@ PyYAML==5.4.1
 simplejson==3.17.3
 -e git+https://github.com/PatrickBaus/pyAsyncHP3478A#egg=hp3478a_async
 -e git+https://github.com/PatrickBaus/TinkerforgeAsync@generators#egg=tinkerforge_async
+-e git+https://github.com/PatrickBaus/LabNode#egg=labnode_async
 toml==0.10.2
 typing-extensions==3.10.0.0
 umongo==3.0.0
