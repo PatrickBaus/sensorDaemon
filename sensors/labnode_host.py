@@ -11,7 +11,6 @@ from aiostream import stream, pipe
 
 from data_types import ChangeEvent, AddChangeEvent, UpdateChangeEvent
 from errors import DisconnectedDuringConnectError
-from .labnode import LabnodeSensor, EVENT_BUS_DISCONNECT_BY_UID as EVENT_BUS_SENSOR_DISCONNECT_BY_UID
 from .sensor_host import SensorHost, EVENT_BUS_CONFIG_UPDATE, EVENT_BUS_ADD_SENSOR, EVENT_BUS_ADD_HOST as EVENT_BUS_HOST_ADD_HOST, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
 from labnode_async import IPConnection
 
