@@ -113,7 +113,7 @@ class TinkerforgeSensor():
         return self.__parent
 
     def __init__(self, device_id, uid, ipcon, event_bus, parent):
-        self.__sensor = device_factory.get(device_id, uid, ipcon)
+        self.__sensor = device_factory.get(ipcon, device_id, uid)
         self.__uuid = None
         self.__event_bus = event_bus
         self.__parent = parent
@@ -144,15 +144,15 @@ class TinkerforgeSensor():
         configured_callbacks = {}
         enabled_sids = set()
         if self.__uuid is not None:
-            for cmd in config.get("on_connect", []):
+            for cmd in config.get('on_connect', []):
                 try:
-                    function = getattr(self.__sensor, cmd["function"])
+                    function = getattr(self.__sensor, cmd['function'])
                 except AttributeError:
-                    self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd["function"], self.__sensor)
+                    self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd['function'], self.__sensor)
                     continue
 
                 try:
-                    result = function(*cmd.get("args", []), **cmd.get("kwargs", {}))
+                    result = function(*cmd.get('args', []), **cmd.get('kwargs', {}))
                     if asyncio.iscoroutine(result):
                         await result
                 except Exception:   # pylint: disable=broad-except

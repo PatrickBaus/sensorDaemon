@@ -4,7 +4,6 @@ A lightweight event bus for the AsyncIO framework, that relies on asynchronous
 generators to deliver messages.
 """
 import asyncio
-
 from inspect import isasyncgen
 
 

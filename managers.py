@@ -48,19 +48,22 @@ class HostManager():
             The time in seconds to wait between connection attempts.
         """
         while "host not connected":
+            number_of_retries = 0
             try:
+                number_of_retries += 1
                 # Connect to the host using a context manager
-                async with host as host:
-                    async for data in host.read_data():
+                if number_of_retries <= 3:
+                    self.__logger.info("Connecting to %s host (%s:%i).", host.driver, host.hostname, host.port)
+                async with host as reader:
+                    number_of_retries = 0
+                    async for data in reader.read_data():
                         data['driver'] = host.driver
                         event_bus.publish(EVENT_BUS_DATA, data)
                     return
             except DisconnectedDuringConnectError:
                 break
-            except ConnectionError:
-                # The host ist supposed to take care of its connection
-                # errors, because here, we do not even how what type of
-                # connection it is using. So we will silently drop it here.
+            except ConnectionError as exc:
+                self.__logger.error("Connecting to %s host (%s:%i) lost. Reconnecting. Error: %s", host.driver, host.hostname, host.port, exc)
                 await asyncio.sleep(reconnect_interval)
                 continue
             except Exception:   # pylint: disable=broad-except
@@ -136,7 +139,7 @@ class HostManager():
                             # convert payload to JSON
                             # Typically sensors return data as decimals or ints to preserve the precision
                             payload = json.dumps(payload, use_decimal=True)
-                            await mqtt_client.publish(topic, payload=payload, qos=1)
+                            await mqtt_client.publish(topic, payload=payload, qos=2)
                             event = None    # Get a new event to publish
                             has_error = False
                         finally:

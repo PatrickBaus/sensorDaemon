@@ -13,7 +13,7 @@ import pymongo  # to access the error classes
 from pydantic.error_wrappers import ValidationError     # pylint: disable=no-name-in-module
 
 from data_types import ChangeType, UpdateChangeEvent, AddChangeEvent
-from database.models import TinkerforgeSensor, GpibSensor, SensorHost
+from database.models import TinkerforgeSensor, GpibSensor, SensorHost, LabnodeSensor
 from sensors.host_factory import host_factory
 
 
@@ -58,7 +58,7 @@ class MongoDb():
 
             database = self.__client.sensor_config
             try:
-                await init_beanie(database=database, document_models=[SensorHost, TinkerforgeSensor, GpibSensor])
+                await init_beanie(database=database, document_models=[SensorHost, TinkerforgeSensor, GpibSensor, LabnodeSensor])
                 self.__logger.info("MongoDB (%s) connected.", hostname_string)
             except pymongo.errors.ServerSelectionTimeoutError as exc:
                 if connection_attempt == 1:
@@ -232,13 +232,13 @@ class TinkerforgeContext(Context):
                 self._event_bus.publish(f"/sensors/tinkerforge/by_uid/{change.uid}/update", UpdateChangeEvent(change.dict()))
             elif change_type == ChangeType.UPDATE:
                 sensor_uid = self.__sensors.pop(change.id, None)
-                if sensor_uid != change.uid:
+                if sensor_uid is not None and sensor_uid != change.uid:
                     # The uid was changed, so we need to unregister the old sensor
                     self._event_bus.publish(f"/sensors/tinkerforge/by_uid/{sensor_uid}/update", UpdateChangeEvent({}))
                 self.__sensors[change.id] = change.uid
                 self._event_bus.publish(f"/sensors/tinkerforge/by_uid/{change.uid}/update", UpdateChangeEvent(change.dict()))
             elif change_type == ChangeType.REMOVE:
-                # When removing the DB only returns the uuid
+                # When removing sensors, the DB only returns the uuid
                 sensor_uid = self.__sensors.pop(change, None)
                 if sensor_uid:
                     self._event_bus.publish(f"/sensors/tinkerforge/by_uid/{sensor_uid}/update", UpdateChangeEvent({}))
@@ -306,8 +306,66 @@ class PrologixGpibContext(Context):
                 await self._event_bus.call(f"/sensors/gpib/by_uid/{change}/disconnect", ignore_unregistered=True)
 
 
+class LabnodeContext(Context):
+    """
+    The Labnode configuration database context manager. It monitors changes
+    to the database and publishes them onto the event bus. It also provides an
+    endpoint to query for sensor configs via the event bus.
+    """
+    async def __aenter__(self):
+        self._event_bus.register("/database/labnode/get_sensor_config", self.__get_sensor_config)
+        self.__sensors = {}
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        self._event_bus.unregister("/database/labnode/get_sensor_config")
+
+    async def __get_sensor_config(self, uid):
+        """
+        Get all host configs from the database.
+
+        Parameters
+        ----------
+        uid: int
+            The serial number of the labnode sensor
+
+        Returns
+        -------
+        dict
+            A dictionary, that contains the configuration of the sensor.
+        """
+        config = await LabnodeSensor.find_one(LabnodeSensor.uid == uid)
+        if config is not None:
+            self.__sensors[config.id] = config.uid
+            return config.dict()
+        else:
+            return {}
+
+    async def monitor_changes(self, timeout):
+        """
+        Adds the driver string to the output of the iterator.
+        """
+        async for change_type, change in self._monitor_database(LabnodeSensor, timeout):
+            if change_type == ChangeType.ADD:
+                self.__sensors[change.id] = change.uid
+                self._event_bus.publish(f"/sensors/labnode/by_uid/{change.uid}/update", UpdateChangeEvent(change.dict()))
+            elif change_type == ChangeType.UPDATE:
+                sensor_uid = self.__sensors.pop(change.id, None)
+                if sensor_uid is not None and sensor_uid != change.uid:
+                    # The uid was changed, so we need to unregister the old sensor
+                    self._event_bus.publish(f"/sensors/labnode/by_uid/{sensor_uid}/update", UpdateChangeEvent({}))
+                self.__sensors[change.id] = change.uid
+                self._event_bus.publish(f"/sensors/labnode/by_uid/{change.uid}/update", UpdateChangeEvent(change.dict()))
+            elif change_type == ChangeType.REMOVE:
+                # When removing sensors, the DB only returns the uuid
+                sensor_uid = self.__sensors.pop(change, None)
+                if sensor_uid is not None:
+                    self._event_bus.publish(f"/sensors/labnode/by_uid/{sensor_uid}/update", UpdateChangeEvent({}))
+
+
 CONTEXTS = {
     HostContext,
     TinkerforgeContext,
     PrologixGpibContext,
+    LabnodeContext,
 }

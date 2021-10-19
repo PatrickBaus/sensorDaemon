@@ -17,6 +17,7 @@ class PrologixGpibSensorHost(SensorHost):
     """
     Class that wraps a Prologix GPIB adapter.
     """
+    @classmethod
     @property
     def driver(self):
         return 'prologix_gpib'
@@ -121,8 +122,8 @@ class PrologixGpibSensorHost(SensorHost):
             The sensor data.
         """
         new_streams_queue = asyncio.Queue()  # Add generators here to add them to the output
-        new_streams_queue.put_nowait(self.__sensor_producer())
-        new_streams_queue.put_nowait(stream.just(self.__update_listener()))
+        new_streams_queue.put_nowait(self.__sensor_producer())  # Generates new sensors for the initial config and if the config changes
+        new_streams_queue.put_nowait(stream.just(self.__update_listener()))  # Sets the shutdown event if the driver, hostname or port of this config is changed
         new_streams_queue.put_nowait(stream.just(self.__shutdown_event.wait()))
 
         # For details on using aiostream, check here:

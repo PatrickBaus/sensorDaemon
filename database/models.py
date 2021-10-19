@@ -134,3 +134,24 @@ class GpibSensor(Sensor):
                 unique=True,
             )
         ]
+
+
+class LabnodeSensorConfig(BaseModel):
+    """
+    The configuration of a sensor made by Tinkerforge GmbH.
+    """
+    # pylint: disable=too-few-public-methods
+    interval: conint(ge=0, le=2**32-1)
+    description: Optional[str] = ""
+    topic: str
+    unit: PydanticObjectId
+
+
+class LabnodeSensor(Sensor):
+    """
+    The configuration of a sensor node, which is called a stack by Tinkerforge.
+    """
+    # pylint: disable=too-few-public-methods
+    uid: Indexed(int, unique=True)
+    config: Dict[str, LabnodeSensorConfig]    # bson does not allow int keys
+    on_connect: Union[List[FunctionCall], List[None]] = []

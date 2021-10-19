@@ -22,6 +22,7 @@ class TinkerforgeSensorHost(SensorHost):
     Class that wraps a Tinkerforge brick daemon host. This can be either a
     PC running brickd, or a master brick with an ethernet/wifi extension.
     """
+    @classmethod
     @property
     def driver(self):
         return 'tinkerforge'
@@ -88,7 +89,6 @@ class TinkerforgeSensorHost(SensorHost):
                 if failed_connection_attemps == MAXIMUM_FAILED_CONNECTIONS:
                     self.__logger.warning("Failed to connect to host '%s:%i' (%d time%s). Error: %s. Suppressing warnings from hereon.", self.hostname, self.port, failed_connection_attemps, "s"[failed_connection_attemps == 1:], exc)
                 await asyncio.sleep(self.__reconnect_interval)
-        return self
 
     async def __aexit__(self, exc_type, exc, traceback):
         self.__event_bus.unregister(EVENT_BUS_HOST_DISCONNECT.format(uuid=self.uuid))

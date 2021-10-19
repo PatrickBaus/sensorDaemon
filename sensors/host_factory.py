@@ -5,6 +5,7 @@ sensor hosts.
 """
 from .tinkerforge_host import TinkerforgeSensorHost
 from .gpib_host import PrologixGpibSensorHost
+from .labnode_host import LabnodeSensorHost
 
 
 class SensorHostFactory:
@@ -15,7 +16,7 @@ class SensorHostFactory:
     def __init__(self):
         self.__available_hosts = {}
 
-    def register(self, driver, host):
+    def register(self, host):
         """
         Register a driver with the factory. Should only be called in this file.
 
@@ -26,7 +27,7 @@ class SensorHostFactory:
         host: SensorHost
             The host driver to register.
         """
-        self.__available_hosts[driver] = host
+        self.__available_hosts[host.driver] = host
 
     def get(self, driver, id, hostname, port, event_bus, *_args, **_kwargs):  # pylint: disable=redefined-builtin,invalid-name
         """
@@ -60,5 +61,6 @@ class SensorHostFactory:
 
 
 host_factory = SensorHostFactory()
-host_factory.register(driver="tinkerforge", host=TinkerforgeSensorHost)
-host_factory.register(driver="prologix_gpib", host=PrologixGpibSensorHost)
+host_factory.register(TinkerforgeSensorHost)
+host_factory.register(PrologixGpibSensorHost)
+host_factory.register(LabnodeSensorHost)
