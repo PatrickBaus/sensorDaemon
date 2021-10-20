@@ -18,7 +18,7 @@ class FunctionCall(BaseModel):
     """
     # pylint: disable=too-few-public-methods
     function: str
-    args: Optional[List[int]] = []
+    args: Optional[list] = []
     kwargs: Optional[dict] = {}
 
     def execute(self, sensor) -> None:
