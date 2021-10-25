@@ -63,7 +63,7 @@ class MongoDb():
             except pymongo.errors.ServerSelectionTimeoutError as exc:
                 if connection_attempt == 1:
                     # Only log the error once
-                    self.__logger.error("Cannot connect to database at %s. Error: %s. Retrying.", hostname_string, exc)
+                    self.__logger.error("Cannot connect to config database at %s. Error: %s. Retrying in %f s.", hostname_string, exc, timeout)
                 await asyncio.sleep(timeout)
                 continue
             finally:
@@ -114,7 +114,7 @@ class Context():    # pylint: disable=too-few-public-methods
 
                     resume_token = change_stream.resume_token
             except pymongo.errors.ServerSelectionTimeoutError as exc:
-                self.__logger.error("Cannot connect to database: %s. Reconnecting in %f s.", exc, timeout)
+                self.__logger.error("Connection error while monitoring config database. Error: %s. Reconnecting in %f s.", exc, timeout)
                 await asyncio.sleep(timeout)
             except pymongo.errors.PyMongoError:
                 # The ChangeStream encountered an unrecoverable error or the
