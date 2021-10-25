@@ -137,11 +137,11 @@ async def main():
 
 
 # Report all mistakes managing asynchronous resources.
-warnings.simplefilter('always', ResourceWarning)
+# warnings.simplefilter('always', ResourceWarning)
 logging.basicConfig(
     format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
     level=logging.INFO,    # Enable logs from the ip connection. Set to debug for even more info
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-asyncio.run(main(), debug=True)
+asyncio.run(main(), debug=False)

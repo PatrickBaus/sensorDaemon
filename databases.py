@@ -113,6 +113,9 @@ class Context():    # pylint: disable=too-few-public-methods
                             yield (ChangeType.ADD, database_model.parse_obj(change['fullDocument']))
 
                     resume_token = change_stream.resume_token
+            except pymongo.errors.ServerSelectionTimeoutError as exc:
+                self.__logger.error("Cannot connect to database: %s. Reconnecting in %f s.", exc, timeout)
+                await asyncio.sleep(timeout)
             except pymongo.errors.PyMongoError:
                 # The ChangeStream encountered an unrecoverable error or the
                 # resume attempt failed to recreate the cursor.
