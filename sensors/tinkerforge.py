@@ -10,7 +10,7 @@ from aiostream import pipe, stream
 from tinkerforge_async.devices import GetCallbackConfiguration, ThresholdOption
 from tinkerforge_async.device_factory import device_factory
 
-from data_types import UpdateChangeEvent, RemoveChangeEvent
+from data_types import UpdateChangeEvent
 
 # Event bus topics
 EVENT_BUS_BASE = "/sensors/tinkerforge"

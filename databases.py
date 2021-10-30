@@ -262,7 +262,8 @@ class PrologixGpibContext(Context):
         self._event_bus.unregister("/database/gpib/get_sensors")
         self._event_bus.unregister("/database/gpib/get_sensor_config")
 
-    async def __get_sensors(self, host_uuid):
+    @staticmethod
+    async def __get_sensors(host_uuid):
         """
         Get all host configs from the database.
 
@@ -280,7 +281,8 @@ class PrologixGpibContext(Context):
             if config is not None:
                 yield config.dict()
 
-    async def __get_sensor_config(self, uuid):
+    @staticmethod
+    async def __get_sensor_config(uuid):
         """
         Get all host configs from the database.
 
@@ -315,6 +317,10 @@ class LabnodeContext(Context):
     to the database and publishes them onto the event bus. It also provides an
     endpoint to query for sensor configs via the event bus.
     """
+    def __init__(self, event_bus):
+        super().__init__(event_bus)
+        self.__sensors = {}
+
     async def __aenter__(self):
         self._event_bus.register("/database/labnode/get_sensor_config", self.__get_sensor_config)
         self.__sensors = {}
@@ -341,8 +347,7 @@ class LabnodeContext(Context):
         if config is not None:
             self.__sensors[config.id] = config.uid
             return config.dict()
-        else:
-            return {}
+        return {}
 
     async def monitor_changes(self, timeout):
         """

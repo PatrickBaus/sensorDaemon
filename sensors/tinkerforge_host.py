@@ -84,7 +84,7 @@ class TinkerforgeSensorHost(SensorHost):
                 # Suppress the warning after MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
                 if failed_connection_attemps < MAXIMUM_FAILED_CONNECTIONS:
                     if failed_connection_attemps > 1:
-                        failure_count = " (%d times)" % failed_connection_attemps
+                        failure_count = f" ({failed_connection_attemps} times)"
                     else:
                         failure_count = ""
                     self.__logger.warning("Failed to connect to host '%s:%i'%s. Error: %s.", self.hostname, self.port, failure_count, exc)

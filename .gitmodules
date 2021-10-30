@@ -1,3 +1,0 @@
-[submodule "TinkerforgeAsync"]
-	path = sensors/tinkerforgeAsync
-	url = git@github.com:PatrickBaus/TinkerforgeAsync.git

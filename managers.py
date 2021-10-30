@@ -15,7 +15,7 @@ from async_event_bus import AsyncEventBus
 from databases import MongoDb, CONTEXTS as DATABASE_CONTEXTS
 from errors import DisconnectedDuringConnectError
 from helper_functions import cancel_all_tasks
-from sensors.sensor_host import EVENT_BUS_ADD_HOST as EVENT_BUS_HOST_ADD_HOST, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
+from sensors.sensor_host import EVENT_BUS_ADD_HOST as EVENT_BUS_HOST_ADD_HOST
 
 
 EVENT_BUS_DATA = "/sensor_data/all"
@@ -155,7 +155,8 @@ class HostManager():
                 self.__logger.exception("Error while publishing data to MQTT broker. Reconnecting.")
                 await asyncio.sleep(reconnect_interval)
 
-    async def host_config_producer(self, event_bus, output_queue):
+    @staticmethod
+    async def host_config_producer(event_bus, output_queue):
         """
         Retrieve all added and removed hosts from the bus and put them into a
         queue.

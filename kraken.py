@@ -28,7 +28,6 @@ import os
 import logging
 import signal
 import sys
-import warnings
 
 from decouple import config
 
@@ -137,6 +136,7 @@ async def main():
 
 
 # Report all mistakes managing asynchronous resources.
+# import warnings
 # warnings.simplefilter('always', ResourceWarning)
 logging.basicConfig(
     format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',

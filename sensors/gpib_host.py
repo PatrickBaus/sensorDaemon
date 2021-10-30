@@ -9,7 +9,7 @@ import logging
 from aiostream import stream, pipe
 
 from data_types import AddChangeEvent
-from .gpib import PrologixGpibSensor, EVENT_BUS_DISCONNECT_BY_UID as EVENT_BUS_SENSOR_DISCONNECT_BY_UID
+from .gpib import PrologixGpibSensor
 from .sensor_host import SensorHost, EVENT_BUS_CONFIG_UPDATE, EVENT_BUS_ADD_SENSOR, EVENT_BUS_ADD_HOST as EVENT_BUS_HOST_ADD_HOST, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
 
 
@@ -19,7 +19,7 @@ class PrologixGpibSensorHost(SensorHost):
     """
     @classmethod
     @property
-    def driver(self):
+    def driver(cls):
         return 'prologix_gpib'
 
     def __init__(self, uuid, hostname, port, event_bus, reconnect_interval=3):
@@ -53,7 +53,6 @@ class PrologixGpibSensorHost(SensorHost):
 
     async def __aexit__(self, exc_type, exc, traceback):
         self.__shutdown_event.set()
-        pass
 
     async def __disconnect(self):
         self.__shutdown_event.set()

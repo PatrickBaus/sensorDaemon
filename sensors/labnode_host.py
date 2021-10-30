@@ -9,10 +9,11 @@ import time
 
 from aiostream import stream, pipe
 
+from labnode_async import IPConnection
+
 from data_types import ChangeEvent, AddChangeEvent, UpdateChangeEvent
 from errors import DisconnectedDuringConnectError
-from .sensor_host import SensorHost, EVENT_BUS_CONFIG_UPDATE, EVENT_BUS_ADD_SENSOR, EVENT_BUS_ADD_HOST as EVENT_BUS_HOST_ADD_HOST, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
-from labnode_async import IPConnection
+from .sensor_host import SensorHost, EVENT_BUS_CONFIG_UPDATE, EVENT_BUS_ADD_HOST as EVENT_BUS_HOST_ADD_HOST, EVENT_BUS_DISCONNECT as EVENT_BUS_HOST_DISCONNECT
 
 # Event bus topics
 EVENT_BUS_BASE = "/sensors/labnode"
@@ -51,7 +52,7 @@ class LabnodeSensorHost(SensorHost):
         self.__logger = logging.getLogger(__name__)
         self.__shutdown_event = asyncio.Event()
         self.__shutdown_event.set()   # Force the use of __aenter__()
-        self.__sensors = set()
+        self.__sensor = None    # Will be set during __aenter__()
         self.__event_bus = event_bus
         self.__reconnect_interval = reconnect_interval
 
@@ -89,7 +90,7 @@ class LabnodeSensorHost(SensorHost):
                 # Suppress the warning after MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
                 if failed_connection_attemps < MAXIMUM_FAILED_CONNECTIONS:
                     if failed_connection_attemps > 1:
-                        failure_count = " (%d times)" % failed_connection_attemps
+                        failure_count = f" ({failed_connection_attemps} times)"
                     else:
                         failure_count = ""
                     self.__logger.warning("Failed to connect to host '%s:%i'%s. Error: %s.", self.hostname, self.port, failure_count, exc)
@@ -101,7 +102,8 @@ class LabnodeSensorHost(SensorHost):
         self.__event_bus.unregister(EVENT_BUS_HOST_DISCONNECT.format(uuid=self.uuid))
         self.__shutdown_event.set()
 
-    async def __connect(self, ipcon):
+    @staticmethod
+    async def __connect(ipcon):
         await ipcon.connect()
         return await ipcon._get_device()
 
@@ -136,12 +138,13 @@ class LabnodeSensorHost(SensorHost):
                     await result
             except Exception:   # pylint: disable=broad-except
                 # Catch all exceptions and log them, because this is an external input
-                self.__logger.exception("Error processing config for device on '%s'", self.__parent.hostname)
+                self.__logger.exception("Error processing config for device on '%s'", self)
                 continue
 
         return {(int(sid), sid_config['interval']/1000, sid_config['topic']) for sid, sid_config in config.get('config', {}).items()}
 
-    async def __read(self, sensor, sid, interval, topic):
+    @staticmethod
+    async def __read(sensor, sid, interval, topic):
         while "sensor is connected":
             start = asyncio.get_running_loop().time()
             result = await sensor.get_by_function_id(sid)
@@ -177,7 +180,8 @@ class LabnodeSensorHost(SensorHost):
         async for event in self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=sensor_uid)):
             yield event
 
-    async def ping_host(self, device):
+    @staticmethod
+    async def ping_host(device):
         while "device connected":
             await asyncio.sleep(0.1)    # TODO: Implement ping
 
