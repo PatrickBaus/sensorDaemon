@@ -2,9 +2,8 @@ aiostream==0.4.3
 astroid==2.7.3
 async-timeout==3.0.1
 asyncio-mqtt==0.10.0
-beanie==1.7.0
+beanie==1.5.0
 click==7.1.2
-idna==3.3
 isort==5.9.2
 lazy-object-proxy==1.6.0
 marshmallow==3.13.0
