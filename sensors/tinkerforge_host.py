@@ -24,7 +24,7 @@ class TinkerforgeSensorHost(SensorHost):
     """
     @classmethod
     @property
-    def driver(self):
+    def driver(cls):
         return 'tinkerforge'
 
     def __init__(self, uuid, hostname, port, event_bus, reconnect_interval=3):
@@ -37,7 +37,10 @@ class TinkerforgeSensorHost(SensorHost):
             IP or hostname of the machine hosting the sensor daemon
         port: int
             port on the host
-        reconnect_interval
+        event_bus: AsyncEventBus
+            the event bus used to send events later
+        reconnect_interval: int, default=3
+            the ip connection reconnect interval in seconds
         """
         super().__init__(uuid, hostname, port)
         self.__logger = logging.getLogger(__name__)
@@ -97,20 +100,20 @@ class TinkerforgeSensorHost(SensorHost):
     async def __disconnect(self):
         self.__shutdown_event.set()
 
-    async def __process_enumerations(self, ipconnection):
+    async def __process_enumerations(self, ipcon):
         """
         This infinite loop pulls events from the internal enumeration queue
         of the ip connection and waits for an enumeration event to create the devices.
         The devices are then passed on to __monitor_sensors() via a job_queue.
         """
-        async for packet in ipconnection.read_enumeration():
+        async for packet in ipcon.read_enumeration():
             if packet['enumeration_type'] in (EnumerationType.CONNECTED, EnumerationType.AVAILABLE):
                 try:
-                    device = TinkerforgeSensor(packet['device_id'], packet['uid'], ipconnection, self.__event_bus, self)
+                    device = TinkerforgeSensor(packet['device_id'], packet['uid'], ipcon, self.__event_bus, self)
                     yield (ChangeType.ADD, device)
                 except ValueError:
                     # raised by the TinkerforgeSensor constructor (using the sensor factory) if a device_id cannot be found (i.e. there is no driver)
-                    self.__logger.warning("Unsupported device id '%s' with uid '%s' found on host '%s'", packet["uid"], packet["device_id"], ipconnection.hostname)
+                    self.__logger.warning("Unsupported device id '%s' with uid '%s' found on host '%s'", packet["uid"], packet["device_id"], ipcon.hostname)
             elif packet['enumeration_type'] is EnumerationType.DISCONNECTED:
                 yield (ChangeType.REMOVE, packet['uid'])
 
@@ -127,9 +130,9 @@ class TinkerforgeSensorHost(SensorHost):
         async for _ in self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE.format(uuid=self.uuid)):
             self.__logger.error("Implement host config changes")
 
-    async def __sensor_producer(self, ipconnection):
+    async def __sensor_producer(self, ipcon):
         await self.__ipcon.enumerate()
-        async for change_type, sensor in self.__process_enumerations(ipconnection):
+        async for change_type, sensor in self.__process_enumerations(ipcon):
             if change_type == ChangeType.ADD and sensor.uid not in self.__sensors:
                 yield sensor
             elif change_type == ChangeType.REMOVE:

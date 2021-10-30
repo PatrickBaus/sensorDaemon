@@ -32,7 +32,7 @@ class LabnodeSensorHost(SensorHost):
     """
     @classmethod
     @property
-    def driver(self):
+    def driver(cls):
         return 'labnode'
 
     def __init__(self, uuid, hostname, port, event_bus, reconnect_interval=3):
