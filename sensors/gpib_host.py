@@ -22,7 +22,7 @@ class PrologixGpibSensorHost(SensorHost):
     def driver(cls):
         return 'prologix_gpib'
 
-    def __init__(self, uuid, hostname, port, event_bus, reconnect_interval=3):
+    def __init__(self, uuid, hostname, port, event_bus, reconnect_interval=3):  # pylint: disable=too-many-arguments
         """
         Create new sensorHost Object.
 

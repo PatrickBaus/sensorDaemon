@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-
+"""
+This file contains the GPIB device factory, that produces sensor devices using
+available special GPIB device drivers.
+"""
 from hp3478a_async import HP_3478A
 
 

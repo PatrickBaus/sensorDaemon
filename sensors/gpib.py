@@ -90,7 +90,7 @@ class PrologixGpibSensor():
         """
         return self.__uuid
 
-    def __init__(self, hostname, port, pad, sad, uuid, event_bus, reconnect_interval):
+    def __init__(self, hostname, port, pad, sad, uuid, event_bus, reconnect_interval):  # pylint: disable=too-many-arguments
         self.__conn = AsyncPrologixGpibEthernetController(
             hostname=hostname,
             port=port,
@@ -200,6 +200,9 @@ class PrologixGpibSensor():
 
     @staticmethod
     def is_no_event(event_type):
+        """
+        Create a filter, that filters out events of type `event_type`.
+        """
         def filter_event(item):
             return not isinstance(item, event_type)
 

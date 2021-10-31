@@ -29,7 +29,7 @@ class SensorHostFactory:
         """
         self.__available_hosts[host.driver] = host
 
-    def get(self, driver, id, hostname, port, event_bus, *_args, **_kwargs):  # pylint: disable=redefined-builtin,invalid-name
+    def get(self, driver, uid, hostname, port, event_bus, *_args, **_kwargs):  # pylint: disable=too-many-arguments
         """
         Look up the driver for a given database entry. Raises a `ValueError` if
         the driver is not registered.
@@ -38,7 +38,7 @@ class SensorHostFactory:
         ----------
         driver: str
             A string identifying the driver.
-        id: uuid.UUID
+        uid: uuid.UUID
             The uuid of the host configuration.
         hostname: str
             The ethernet hostname
@@ -57,7 +57,7 @@ class SensorHostFactory:
         host = self.__available_hosts.get(driver)
         if host is None:
             raise ValueError(f"No driver available for {driver}")
-        return host(uuid=id, hostname=hostname, port=port, event_bus=event_bus)
+        return host(uuid=uid, hostname=hostname, port=port, event_bus=event_bus)
 
 
 host_factory = SensorHostFactory()

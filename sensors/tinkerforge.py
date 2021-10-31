@@ -112,7 +112,7 @@ class TinkerforgeSensor():
         """
         return self.__parent
 
-    def __init__(self, device_id, uid, ipcon, event_bus, parent):
+    def __init__(self, device_id, uid, ipcon, event_bus, parent):  # pylint: disable=too-many-arguments
         self.__sensor = device_factory.get(ipcon, device_id, uid)
         self.__uuid = None
         self.__event_bus = event_bus

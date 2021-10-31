@@ -23,10 +23,6 @@ EVENT_BUS_DISCONNECT_BY_UID = EVENT_BUS_BASE + "/by_uid/{uid}/disconnect"
 MAXIMUM_FAILED_CONNECTIONS = 3
 
 
-class ConfigChangedExeption(Exception):
-    pass
-
-
 class LabnodeSensorHost(SensorHost):
     """
     Class that wraps a Labnode host.
@@ -36,7 +32,7 @@ class LabnodeSensorHost(SensorHost):
     def driver(cls):
         return 'labnode'
 
-    def __init__(self, uuid, hostname, port, event_bus, reconnect_interval=3):
+    def __init__(self, uuid, hostname, port, event_bus, reconnect_interval=3):  # pylint: disable=too-many-arguments
         """
         Create new sensorHost Object.
 
@@ -182,6 +178,9 @@ class LabnodeSensorHost(SensorHost):
 
     @staticmethod
     async def ping_host(device):
+        """
+        Regularly ping the host to make sure, the connection is still up and running.
+        """
         while "device connected":
             await asyncio.sleep(0.1)    # TODO: Implement ping
 

@@ -65,7 +65,7 @@ class TimeStampedDocument(Document):
 
 class SensorHost(TimeStampedDocument, HostBaseModel):
     """
-    An ethernet connected sensor host.
+    An ethernet connected sensor host (inherited from the HostBaseModel).
     """
     # pylint: disable=too-few-public-methods
     id: UUID = Field(default_factory=uuid4)
@@ -74,7 +74,12 @@ class SensorHost(TimeStampedDocument, HostBaseModel):
 
 
 class Sensor(TimeStampedDocument):
+    """
+    The basic model used by all sensors with some basic
+    auditing.
+    """
     id: UUID = Field(default_factory=uuid4)
+
 
 class SensorUnit(Document):
     """
