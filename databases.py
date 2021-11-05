@@ -143,7 +143,7 @@ class HostContext(Context):
             # Get all hosts
             async for host in SensorHost.find_all():    # A pylint bug. pylint: disable=not-an-iterable
                 try:
-                    host = host_factory.get(event_bus=self._event_bus, uid=host['id'], **host.dict())
+                    host = host_factory.get(event_bus=self._event_bus, uid=host.id, **host.dict())
                 except ValueError:
                     # Ignore unknown drivers
                     logging.getLogger(__name__).info("Unsupported driver '%s' requested. Cannot start host.", host.dict()['driver'])
