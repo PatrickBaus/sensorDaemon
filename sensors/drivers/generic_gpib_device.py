@@ -127,7 +127,8 @@ class GenericGpibDevice:
 
     async def query(self, command, length=None):
         await self.write(command)
-        return await self.__conn.read(length=length)
+        result = await self.__conn.read(length=length)
+        return result.decode('ascii')
 
     async def write(self, msg):
         """
@@ -139,6 +140,7 @@ class GenericGpibDevice:
         msg: str or bytes
             The string to be sent to the device.
         """
+        msg = msg.encode('ascii')
         await self.__conn.write(msg)
 
     async def serial_poll(self):
