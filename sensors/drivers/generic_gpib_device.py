@@ -27,6 +27,7 @@ from enum import Enum, Flag
 from math import log
 import re   # Used to test for numerical return values
 
+
 class GenericGpibDevice:
     """
     The driver for the HP 3478A 5.5 digit multimeter. It support both linux-gpib and the Prologix
@@ -44,6 +45,9 @@ class GenericGpibDevice:
 
     def __init__(self, connection):
         self.__conn = connection
+
+    def __str__(self):
+        return f"Generic GPIB device({str(self.__conn)})"
 
     async def __aenter__(self):
         await self.connect()
