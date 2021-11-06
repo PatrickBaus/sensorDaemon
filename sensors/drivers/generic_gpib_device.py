@@ -47,7 +47,7 @@ class GenericGpibDevice:
         self.__conn = connection
 
     def __str__(self):
-        return f"Generic GPIB device({str(self.__conn)})"
+        return f"Generic GPIB device at {str(self.__conn)}"
 
     async def __aenter__(self):
         await self.connect()
