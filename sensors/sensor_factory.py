@@ -4,6 +4,7 @@ This file contains the GPIB device factory, that produces sensor devices using
 available special GPIB device drivers.
 """
 from hp3478a_async import HP_3478A
+from .drivers.generic_gpib_device import GenericGpibDevice
 
 
 class GpibDeviceFactory:
@@ -57,3 +58,4 @@ class GpibDeviceFactory:
 
 gpib_device_factory = GpibDeviceFactory()
 gpib_device_factory.register(driver="hp3478a", device=HP_3478A)
+gpib_device_factory.register(driver="generic", device=GenericGpibDevice)
