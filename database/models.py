@@ -123,7 +123,6 @@ class GpibSensor(Sensor):
     interval: conint(ge=0)
     on_read: FunctionCall
     on_connect: Union[List[FunctionCall], List[None]]
-    on_before_read: Union[List[FunctionCall], List[None]]
     on_after_read: Union[List[FunctionCall], List[None]]
     topic: str
     unit: PydanticObjectId

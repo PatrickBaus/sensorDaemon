@@ -154,7 +154,7 @@ class PrologixGpibSensor():
         self.__shutdown_event.set()
 
     async def __configure(self, config):
-        on_before_read, on_after_read = [], []
+        on_after_read = []
         self.__gpib_device = gpib_device_factory.get(config['driver'], self.__conn)
 
         function = getattr(self.__gpib_device, config['on_read']['function'])
@@ -162,7 +162,7 @@ class PrologixGpibSensor():
 
         if config['interval'] == 0:
             # Return here, if the device is disabled
-            return (0, on_read, on_before_read, on_after_read)
+            return (0, on_read, on_after_read)
 
         # Initialize the device
         for cmd in config.get('on_connect', []):
@@ -180,14 +180,6 @@ class PrologixGpibSensor():
                 self.__logger.exception("Error processing config for sensor %s at host '%s:%i'", self.uuid, self.hostname, self.port)
                 continue
 
-        for cmd in config.get('on_before_read', []):
-            try:
-                function = getattr(self.__gpib_device, cmd['function'])
-            except AttributeError:
-                self.__logger.error("Invalid configuration parameter '%s' for sensor %s", cmd['function'], self.__gpib_device)
-            else:
-                on_before_read.append((function, cmd.get('args', []), cmd.get('kwargs', {})))
-
         for cmd in config.get('on_after_read', []):
             try:
                 function = getattr(self.__gpib_device, cmd['function'])
@@ -196,7 +188,7 @@ class PrologixGpibSensor():
             else:
                 on_after_read.append((function, cmd.get('args', []), cmd.get('kwargs', {})))
 
-        return config['interval']/1000, on_read, on_before_read, on_after_read
+        return config['interval']/1000, on_read, on_after_read
 
     @staticmethod
     def is_no_event(event_type):
@@ -227,17 +219,15 @@ class PrologixGpibSensor():
                     self.__logger.error("Error while reading results from sensor %s", self.__gpib_device, exc_info=result)
                     raise result
 
-    async def __read_device(self, on_read, on_before_read, on_after_read):
+    async def __read_device(self, on_read, on_after_read):
         func, args, kwargs = on_read
         gen_or_func = func(*args, **kwargs)
         if isasyncgen(gen_or_func):
-            await self.__call_functions_on_device(on_before_read)
             async for result in gen_or_func:
                 yield result
                 await self.__call_functions_on_device(on_after_read)
         else:
             while "loop not cancelled":
-                await self.__call_functions_on_device(on_before_read)
                 try:
                     if iscoroutine(gen_or_func):
                         yield await gen_or_func
@@ -247,13 +237,14 @@ class PrologixGpibSensor():
                     self.__logger.exception("Error while reading results from sensor %s", self.__gpib_device)
                     raise
                 await self.__call_functions_on_device(on_after_read)
+                gen_or_func = func(*args, **kwargs) # Call the function again
 
     async def __configure_and_read(self, config, old_config=None):
-        interval, on_read, on_before_read, on_after_read = await self.__configure(config)
+        interval, on_read, on_after_read = await self.__configure(config)
         if interval > 0:
             merged_stream = (
                 stream.merge(
-                    stream.iterate(self.__read_device(on_read, on_before_read, on_after_read)) | pipe.spaceout(interval),  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
+                    stream.iterate(self.__read_device(on_read, on_after_read)) | pipe.spaceout(interval),  # https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
                     stream.iterate(self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE_BY_UID.format(uid=self.uuid)))
                 )
                 | pipe.takewhile(self.is_no_event(UpdateChangeEvent))  # Terminate if the config was updated https://github.com/PyCQA/pylint/issues/3744 pylint: disable=no-member
