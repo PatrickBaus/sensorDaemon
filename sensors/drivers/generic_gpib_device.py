@@ -100,7 +100,7 @@ class GenericGpibDevice:
             Either a value or a number of bytes as defined by `length`.
         """
         if length is None:
-            result = (await self.__conn.read())[:-2]    # strip the EOT characters (\r\n)
+            result = (await self.__conn.read()).rstrip(b'\r\n')    # strip the EOT characters (\r\n)
         else:
             result = await self.__conn.read(length=length)
 
@@ -131,7 +131,7 @@ class GenericGpibDevice:
 
     async def query(self, command, length=None):
         await self.write(command)
-        result = await self.__conn.read(length=length)
+        result = await self.read(length=length)
         return result.decode('ascii')
 
     async def write(self, msg):
