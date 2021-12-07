@@ -175,10 +175,10 @@ class HostContext(Context):
         """
         async for change_type, change in self._monitor_database(SensorHost, timeout):
             if change_type is ChangeType.UPDATE:
-                host = host_factory.get(event_bus=self._event_bus, **change.dict())
+                host = host_factory.get(event_bus=self._event_bus, uuid=change.id, **change.dict())
                 self._event_bus.publish(f"/hosts/by_uuid/{change.id}/update", UpdateChangeEvent(host))
             elif change_type is ChangeType.ADD:
-                host = host_factory.get(event_bus=self._event_bus, **change.dict())
+                host = host_factory.get(event_bus=self._event_bus, uuid=change.id, **change.dict())
                 self._event_bus.publish("/hosts/add_host", AddChangeEvent(host))
             elif change_type is ChangeType.REMOVE:
                 await self._event_bus.call(f"/hosts/by_uuid/{change}/disconnect", ignore_unregistered=True)
