@@ -81,7 +81,7 @@ class LabnodeSensorHost(SensorHost):
                         is_disconnected_task.cancel()
                         self.__sensor = task.result()   # If there is an error, blow up now
                         return self
-            except ConnectionError as exc:
+            except (ConnectionError, OSError) as exc:
                 failed_connection_attemps += 1
                 # Suppress the warning after MAXIMUM_FAILED_CONNECTIONS to stop spamming log files
                 if failed_connection_attemps < MAXIMUM_FAILED_CONNECTIONS:
