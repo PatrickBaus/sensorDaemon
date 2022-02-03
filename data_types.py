@@ -39,7 +39,7 @@ class AddChangeEvent(ChangeEvent):  # pylint: disable=too-few-public-methods
 
 class RemoveChangeEvent(ChangeEvent):   # pylint: disable=too-few-public-methods
     """
-    Configutatin to be removed.
+    Configuration to be removed.
     """
     def __init__(self):
         super().__init__(None)

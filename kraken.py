@@ -59,7 +59,7 @@ POSTGRES_STMS = {
 }
 
 
-class SensorDaemon():
+class SensorDaemon:
     """
     Main daemon, that runs in the background and monitors all sensors. It will
     configure them according to options set in the database and then place the
@@ -77,7 +77,7 @@ class SensorDaemon():
         loop. Execute shutdown() to kill it.
         """
         self.__logger.warning("#################################################")
-        self.__logger.warning("Starting Daemon...")
+        self.__logger.warning(f"Starting Kraken v{__version__}...")
         self.__logger.warning("#################################################")
 
         # Catch signals and shutdown
@@ -104,14 +104,14 @@ class SensorDaemon():
         Stops the daemon and gracefully disconnect from all clients.
         """
         self.__logger.warning("#################################################")
-        self.__logger.warning("Stopping Daemon...")
+        self.__logger.warning("Stopping Kraken...")
         self.__logger.warning("#################################################")
 
         # Get all running tasks
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
         # and stop them
         [task.cancel() for task in tasks]   # pylint: disable=expression-not-assigned
-        # finally wait for them to terminate
+        # finally, wait for them to terminate
         try:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
@@ -139,7 +139,7 @@ async def main():
 # import warnings
 # warnings.simplefilter('always', ResourceWarning)
 logging.basicConfig(
-    format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+    format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
     level=logging.INFO,    # Enable logs from the ip connection. Set to debug for even more info
     datefmt='%Y-%m-%d %H:%M:%S'
 )

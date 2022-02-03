@@ -64,7 +64,6 @@ class LabnodeSensorHost(SensorHost):
             port=self.port,
             timeout=None
         )
-        ipcon.timeout = None
         while "not connected":
             try:
                 pending = set()
