@@ -19,7 +19,7 @@ from sensors.host_factory import host_factory
 
 class MongoDb():
     """
-    The Mongo DB abstractoin for the Tinkerforge settings database.
+    The Mongo DB abstraction for the Tinkerforge settings database.
     """
     def __init__(self, hostname=None, port=None):
         self.__hostname = hostname

@@ -66,7 +66,7 @@ class LabnodeSensorHost(SensorHost):
         )
         while "not connected":
             try:
-                pending = set()
+                pending = set()     # A set of pending tasks
                 is_disconnected_task = asyncio.create_task(self.__shutdown_event.wait())
                 pending.add(is_disconnected_task)
                 connect_task = asyncio.create_task(self.__connect(ipcon))

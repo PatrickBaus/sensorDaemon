@@ -30,7 +30,7 @@ class SensorHost(ABC):
     @property
     def uuid(self):
         """
-        Returns the globally unique id of the host used to identidy the host
+        Returns the globally unique id of the host used to identify the host
         system-wide.
 
         Returns

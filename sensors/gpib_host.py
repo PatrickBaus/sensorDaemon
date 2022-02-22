@@ -52,6 +52,8 @@ class PrologixGpibSensorHost(SensorHost):
         return self
 
     async def __aexit__(self, exc_type, exc, traceback):
+        # self.__shutdown_event will normally already be set if shutting down gracefully
+        # Set it again to make sure, that it is set even in case of an exception.
         self.__shutdown_event.set()
 
     async def __disconnect(self):
@@ -69,11 +71,11 @@ class PrologixGpibSensorHost(SensorHost):
 
     async def __update_listener(self):
         """
-        If we receive an update, that chages either the driver or the remote
+        If we receive an update, that chages either the host driver or the remote
         connection, we will tear down this host and replace it with a new one.
         """
         async for event in self.__event_bus.subscribe(EVENT_BUS_CONFIG_UPDATE.format(uuid=self.uuid)):
-            if event.change.driver != self.driver or event.change.hostname != self.hostname or event.change.port != self.port:
+            if (event.change.driver != self.driver) or (event.change.hostname != self.hostname) or (event.change.port != self.port):
                 self.__event_bus.publish(EVENT_BUS_HOST_ADD_HOST, AddChangeEvent(event.change))  # Create a new host via the manager
                 self.__shutdown_event.set()   # Terminate this host
                 break
