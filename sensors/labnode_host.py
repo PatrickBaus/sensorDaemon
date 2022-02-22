@@ -10,6 +10,7 @@ import time
 from aiostream import stream, pipe
 
 from labnode_async import IPConnection
+from labnode_async.errors import InvalidCommandError
 
 from data_types import ChangeEvent, AddChangeEvent, UpdateChangeEvent
 from errors import DisconnectedDuringConnectError
@@ -138,18 +139,22 @@ class LabnodeSensorHost(SensorHost):
 
         return {(int(sid), sid_config['interval']/1000, sid_config['topic']) for sid, sid_config in config.get('config', {}).items()}
 
-    @staticmethod
-    async def __read(sensor, sid, interval, topic):
+    async def __read(self, sensor, sid, interval, topic):
         while "sensor is connected":
             start = asyncio.get_running_loop().time()
-            result = await sensor.get_by_function_id(sid)
+            try:
+                result = await sensor.get_by_function_id(sid)
+            except InvalidCommandError:
+                # We have an invalid function id
+                self.__logger.error("Tried to execute invalid command '%d' on device '%s'", sid, self)
+                return  # drop this
             yield {
                 'timestamp': time.time(),
                 'payload': result,
                 'sid': sid,
                 'topic': topic
             }
-            nap_time = interval+start-asyncio.get_running_loop().time()
+            nap_time = interval + start-asyncio.get_running_loop().time()
             if nap_time > 0:
                 await asyncio.sleep(nap_time)
 
