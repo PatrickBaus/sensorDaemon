@@ -10,7 +10,7 @@ import time
 from aiostream import stream, pipe
 
 from labnode_async import IPConnection
-from labnode_async.errors import InvalidCommandError
+from labnode_async.errors import InvalidCommandError, InvalidReplyError
 
 from data_types import ChangeEvent, AddChangeEvent, UpdateChangeEvent
 from errors import DisconnectedDuringConnectError
@@ -147,7 +147,10 @@ class LabnodeSensorHost(SensorHost):
             except InvalidCommandError:
                 # We have an invalid function id
                 self.__logger.error("Tried to execute invalid command '%d' on device '%s'", sid, self)
-                return  # drop this
+                return  # Stop request this sid
+            except InvalidReplyError:
+                self.__logger.debug("Received an invalid reply to a command. Are you using the correct function ids?")
+                return  # Stop request this sid
             yield {
                 'timestamp': time.time(),
                 'payload': result,
