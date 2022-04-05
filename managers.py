@@ -14,7 +14,7 @@ from aiostream import stream, pipe
 from autobahn.wamp import PublishOptions
 
 from async_event_bus import AsyncEventBus
-from data_types import ChangeType, AddChangeEvent, UpdateChangeEvent, RemoveChangeEvent, DataEvent
+from data_types import AddChangeEvent, UpdateChangeEvent, RemoveChangeEvent, DataEvent
 from databases import MongoDb, CONTEXTS as DATABASE_CONTEXTS, EthernetSensorContext, HostContext
 from errors import DisconnectedDuringConnectError
 from helper_functions import cancel_all_tasks
@@ -59,7 +59,6 @@ class HostManager:
                 if number_of_retries <= 3:
                     self.__logger.info("Connecting to %s host (%s:%i).", host.driver, host.hostname, host.port)
                 async with host as reader:
-                    number_of_retries = 0
                     async for data in reader.read_data():
                         data['driver'] = host.driver
                         event_bus.publish(EVENT_BUS_DATA, data)
@@ -136,7 +135,7 @@ class HostManager:
                 async with asyncio_mqtt.Client(hostname=self.__mqtt_host, port=self.__mqtt_port) as mqtt_client:
                     while "loop not cancelled":
                         if event is None:   # TODO: Add a delay in the exception handler
-                            # only get new data if we have pused all to the broker
+                            # only get new data if we have pushed everything to the broker
                             event = await input_queue.get()
                         try:
                             topic, payload = event
@@ -463,7 +462,7 @@ class DatabaseManager:
             )
             task = asyncio.create_task(host_context.monitor_changes(timeout=5), name="Host config database worker")
             tasks.add(task)
-            self.__event_bus.publish("hosts/status", True) # FIXME: use a proper event
+            self.__event_bus.publish("hosts/status", True)      # FIXME: use a proper event
 
             sensor_context = await stack.enter_async_context(
                 EthernetSensorContext(event_bus=self.__event_bus)

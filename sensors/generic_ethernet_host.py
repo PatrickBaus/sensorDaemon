@@ -9,7 +9,7 @@ import logging
 from aiostream import stream, pipe
 
 from connections import IpConnection
-from data_types import AddChangeEvent, DataEvent, UpdateChangeEvent, RemoveChangeEvent, RestartChangeEvent
+from data_types import AddChangeEvent, DataEvent, UpdateChangeEvent, RemoveChangeEvent
 from .drivers.generic_scpi_device import IncompatibleDeviceException
 from .sensor_factory import sensor_factory
 from .sensor_host import SensorHost

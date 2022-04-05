@@ -27,7 +27,7 @@ from decimal import Decimal, InvalidOperation
 
 from aiostream import stream, pipe
 
-from data_types import DataEvent, RemoveChangeEvent, AddChangeEvent, UpdateChangeEvent, RestartChangeEvent
+from data_types import DataEvent, RemoveChangeEvent, AddChangeEvent, UpdateChangeEvent
 
 
 class IncompatibleDeviceException(Exception):
@@ -231,7 +231,7 @@ class GenericDevice:
                                     self.connection)
                 break
             except InvalidOperation:
-                # Raised by Decimal, if the the result is not a number
+                # Raised by Decimal, if the result is not a number
                 self.__logger.error("Sensor %s did not return a valid number. Dropping result: %r", self, result)
             except asyncio.TimeoutError:
                 # We will ignore 3 timeouts, then it will be escalated to the host, possibly for reconnection
