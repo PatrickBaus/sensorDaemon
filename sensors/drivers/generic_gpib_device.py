@@ -30,7 +30,7 @@ import re   # Used to test for numerical return values
 
 class GenericGpibDevice:
     """
-    The driver for the HP 3478A 5.5 digit multimeter. It support both linux-gpib and the Prologix
+    The driver for the HP 3478A 5.5 digit multimeter. It supports both linux-gpib and the Prologix
     GPIB adapters.
     """
     @property
@@ -56,7 +56,8 @@ class GenericGpibDevice:
     async def __aexit__(self, exc_type, exc, traceback):
         await self.disconnect()
 
-    async def get_id(self):
+    @staticmethod
+    async def get_id():
         """
         The HP 3478A does not support an ID request, so we will report a constant for compatibility
         reasons. The method is not async, but again for compatibility reasons with other drivers,
@@ -92,7 +93,7 @@ class GenericGpibDevice:
         Parameters
         ----------
         length: int, default=None
-            The number of bytes to read. Ommit to read a line.
+            The number of bytes to read. Omit to read a line.
 
         Returns
         -------
@@ -114,7 +115,7 @@ class GenericGpibDevice:
         Parameters
         ----------
         length: int, default=None
-            The number of bytes to read. Ommit to read a line.
+            The number of bytes to read. Omit to read a line.
 
         Returns
         -------
@@ -136,7 +137,7 @@ class GenericGpibDevice:
 
     async def write(self, msg):
         """
-        Write data or commands to the instrument. Do not terminated the command with a new line or
+        Write data or commands to the instrument. Do not terminate the command with a new line or
         carriage return (\r\n).
 
         Parameters

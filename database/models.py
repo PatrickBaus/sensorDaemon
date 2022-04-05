@@ -20,6 +20,7 @@ class FunctionCall(BaseModel):
     function: str
     args: Optional[list] = []
     kwargs: Optional[dict] = {}
+    timeout: Optional[conint(ge=0)]
 
     def execute(self, sensor) -> None:
         """
@@ -79,6 +80,7 @@ class Sensor(TimeStampedDocument):
     auditing.
     """
     id: UUID = Field(default_factory=uuid4)
+    enabled: bool
 
 
 class SensorUnit(Document):
@@ -140,7 +142,7 @@ class GpibSensor(Sensor):
         ]
 
 
-class LabnodeSensorConfig(BaseModel):
+class GenericSensorConfig(BaseModel):
     """
     The configuration of a sensor made by Tinkerforge GmbH.
     """
@@ -151,11 +153,25 @@ class LabnodeSensorConfig(BaseModel):
     unit: PydanticObjectId
 
 
-class LabnodeSensor(Sensor):
+class GenericSensor(Sensor):
     """
     The configuration of a sensor node, which is called a stack by Tinkerforge.
     """
     # pylint: disable=too-few-public-methods
-    uid: Indexed(int, unique=True)
-    config: Dict[str, LabnodeSensorConfig]    # bson does not allow int keys
+    config: Dict[str, GenericSensorConfig]    # bson does not allow int keys
     on_connect: Union[List[FunctionCall], List[None]] = []
+
+
+class LabnodeSensor(GenericSensor):
+    uid: Indexed(int, unique=True)
+
+
+class EthernetSensor(Sensor):
+    host: Indexed(UUID, unique=True)
+    driver: str
+    on_connect: Union[List[FunctionCall], List[None]] = []
+    on_read: FunctionCall
+    on_after_read: Union[List[FunctionCall], List[None]]
+    interval: conint(ge=0, le=2 ** 32 - 1)
+    topic: str
+    unit: PydanticObjectId

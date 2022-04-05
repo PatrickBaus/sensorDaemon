@@ -29,6 +29,7 @@ import logging
 import signal
 import sys
 
+# noinspection PyPackageRequirements
 from decouple import config
 
 from managers import HostManager

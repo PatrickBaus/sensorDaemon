@@ -13,7 +13,7 @@ from tinkerforge_async.device_factory import device_factory
 from data_types import UpdateChangeEvent
 
 # Event bus topics
-EVENT_BUS_BASE = "/sensors/tinkerforge"
+EVENT_BUS_BASE = "sensors/tinkerforge"
 EVENT_BUS_CONFIG_UPDATE_BY_UID = EVENT_BUS_BASE + "/by_uid/{uid}/update"
 EVENT_BUS_DISCONNECT_BY_UID = EVENT_BUS_BASE + "/by_uid/{uid}/disconnect"
 EVENT_BUS_STATUS = EVENT_BUS_BASE

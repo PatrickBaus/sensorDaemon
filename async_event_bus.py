@@ -99,6 +99,11 @@ class AsyncEventBus():
             The arguments to be passed to the function called.
         kwargs: Dict
             The keyword arguments to be passed to the function called.
+
+        Raises
+        ------
+        NameError
+            Raised if the function `event_name` is not registered.
         """
         try:
             gen_or_func = self.__registered_calls[event_name](*args, **kwargs)
@@ -107,4 +112,4 @@ class AsyncEventBus():
             return await gen_or_func
         except KeyError:
             if not ignore_unregistered:
-                raise NameError(f"Event {event_name} is not registered.") from None
+                raise NameError(f"Function {event_name} is not registered.") from None

@@ -12,7 +12,7 @@ from prologix_gpib_async import AsyncPrologixGpibEthernetController, EosMode
 
 from data_types import UpdateChangeEvent
 from errors import DisconnectedDuringConnectError
-from .sensor_factory import gpib_device_factory
+from .sensor_factory import sensor_factory
 
 # Event bus topics
 EVENT_BUS_BASE = "/sensors/gpib"
@@ -155,7 +155,7 @@ class PrologixGpibSensor():
 
     async def __configure(self, config):
         on_after_read = []
-        self.__gpib_device = gpib_device_factory.get(config['driver'], self.__conn)
+        self.__gpib_device = sensor_factory.get(config['driver'], self.__conn)
 
         function = getattr(self.__gpib_device, config['on_read']['function'])
         on_read = (function, config['on_read'].get('args', []), config['on_read'].get('kwargs', {}))

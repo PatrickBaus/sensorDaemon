@@ -5,11 +5,12 @@ available special GPIB device drivers.
 """
 from hp3478a_async import HP_3478A
 from .drivers.generic_gpib_device import GenericGpibDevice
+from .drivers.generic_scpi_device import GenericDevice
 
 
-class GpibDeviceFactory:
+class SensorFactory:
     """
-    A senor host factory to select the correct driver for given database
+    A sensor factory to select the correct driver for given database
     config.
     """
     def __init__(self):
@@ -23,12 +24,12 @@ class GpibDeviceFactory:
         ----------
         driver: str
             A string identifying the driver.
-        host: SensorHost
-            The host driver to register.
+        device: GenericDevice
+            The device driver to register.
         """
         self.__available_hosts[driver] = device
 
-    def get(self, driver, connection):
+    def get(self, driver, uuid, connection, event_bus):
         """
         Look up the driver for a given database entry. Raises a `ValueError` if
         the driver is not registered.
@@ -37,25 +38,29 @@ class GpibDeviceFactory:
         ----------
         driver: str
             A string identifying the driver.
-
+        uuid: Uuid
+            The uuid of the sensor
         connection: Any
-            The IP connection
+            The host connection
+        event_bus: AsyncEventBus
+            The global event bus used to communicate between devices
 
         Returns
         -------
-        SensorHost
-            A sensor registered sensor host
+        GenericDevice
+            A sensor device, which inherits from GenericDevice
 
         Raises
         ----------
         ValueError
+            Raised if the device driver is not registered
         """
-        device = self.__available_hosts.get(driver)(connection)
+        device = self.__available_hosts.get(driver)(uuid, connection, event_bus)
         if device is None:
             raise ValueError(f"No driver available for {driver}")
         return device
 
 
-gpib_device_factory = GpibDeviceFactory()
-gpib_device_factory.register(driver="hp3478a", device=HP_3478A)
-gpib_device_factory.register(driver="generic", device=GenericGpibDevice)
+sensor_factory = SensorFactory()
+sensor_factory.register(driver="generic_scpi", device=GenericDevice)
+sensor_factory.register(driver="hp3478a", device=HP_3478A)

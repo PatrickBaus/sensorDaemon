@@ -12,8 +12,8 @@ import motor.motor_asyncio
 import pymongo  # to access the error classes
 from pydantic.error_wrappers import ValidationError     # pylint: disable=no-name-in-module
 
-from data_types import ChangeType, UpdateChangeEvent, AddChangeEvent
-from database.models import TinkerforgeSensor, GpibSensor, SensorHost, LabnodeSensor
+from data_types import ChangeType, UpdateChangeEvent, AddChangeEvent, RemoveChangeEvent
+from database.models import TinkerforgeSensor, GpibSensor, SensorHost, LabnodeSensor, EthernetSensor
 from sensors.host_factory import host_factory
 
 
@@ -58,7 +58,10 @@ class MongoDb():
 
             database = self.__client.sensor_config
             try:
-                await init_beanie(database=database, document_models=[SensorHost, TinkerforgeSensor, GpibSensor, LabnodeSensor])
+                await init_beanie(
+                    database=database,
+                    document_models=[SensorHost, TinkerforgeSensor, GpibSensor, LabnodeSensor, EthernetSensor]
+                )
                 self.__logger.info("MongoDB (%s) connected.", hostname_string)
             except pymongo.errors.ServerSelectionTimeoutError as exc:
                 if connection_attempt == 1:
@@ -71,11 +74,16 @@ class MongoDb():
             break
 
 
-class Context():    # pylint: disable=too-few-public-methods
+class Context:    # pylint: disable=too-few-public-methods
     """
     The database context used by all config databases.
     """
-    def __init__(self, event_bus):
+    @property
+    def topic(self):
+        return self.__topic
+
+    def __init__(self, event_base_topic, event_bus):
+        self.__topic = event_base_topic
         self._event_bus = event_bus
         self.__logger = logging.getLogger(__name__)
 
@@ -99,6 +107,8 @@ class Context():    # pylint: disable=too-few-public-methods
         resume_token = None
         # To watch only for certain events, use:
         # pipeline = [{'$match': {'operationType': {'$in': ["insert", "update", "delete"]}}}]
+        # In a Mongo DB the __id cannot be updated. It can only be removed and recreated. It is therefore safe to link
+        # all configs to this uuid.
         pipeline = []
         while "loop not cancelled":
             try:
@@ -134,29 +144,25 @@ class HostContext(Context):
     The sensor host configuration database context manager. It monitors changes
     to the database and publishes them via the event bus.
     """
-    def __init__(self, event_bus):
-        super().__init__(event_bus)
+    def __init__(self, event_base_topic, event_bus):
+        super().__init__(event_base_topic, event_bus)
         self.__logger = logging.getLogger(__name__)
 
     async def __aenter__(self):
-        try:
-            # Get all hosts
-            async for host in SensorHost.find_all():    # A pylint bug. pylint: disable=not-an-iterable
-                try:
-                    host = host_factory.get(event_bus=self._event_bus, uuid=host.id, **host.dict())
-                except ValueError:
-                    # Ignore unknown drivers
-                    logging.getLogger(__name__).info("Unsupported driver '%s' requested. Cannot start host.", host.dict()['driver'])
-                else:
-                    self._event_bus.publish("/hosts/add_host", AddChangeEvent(host))
-        except ValidationError:
-            # TODO: Update the database in case there are old entries
-            # TODO: Use SensorHost.inspect_collection to check the Schema
-            self.__logger.error("Invalid host schema found. Cannot load database.")
+        self._event_bus.register(self.topic + "get", self.__get_hosts)
         return self
 
     async def __aexit__(self, exc_type, exc, traceback):
         pass
+
+    async def __get_hosts(self, driver=None):
+        if driver:
+            async for host in SensorHost.find(SensorHost.driver == driver):
+                yield host
+        else:
+            async for host in SensorHost.find_all():
+                yield host
+
 
     async def monitor_changes(self, timeout):
         """
@@ -369,6 +375,58 @@ class LabnodeContext(Context):
                 sensor_uid = self.__sensors.pop(change, None)
                 if sensor_uid is not None:
                     self._event_bus.publish(f"/sensors/labnode/by_uid/{sensor_uid}/update", UpdateChangeEvent({}))
+
+
+class EthernetSensorContext(Context):
+    """
+    The Labnode configuration database context manager. It monitors changes
+    to the database and publishes them onto the event bus. It also provides an
+    endpoint to query for sensor configs via the event bus.
+    """
+    def __init__(self, event_bus):
+        super().__init__(event_base_topic="sensors/ethernet/", event_bus=event_bus)
+
+    async def __aenter__(self):
+        self._event_bus.register(self.topic + "get_sensor_config", self.__get_sensor_config)
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        self._event_bus.unregister(self.topic + "get_sensor_config")
+
+    @staticmethod
+    async def __get_sensor_config(host_uuid):
+        """
+        Get all host configs from the database.
+
+        Parameters
+        ----------
+        uid: int
+            The serial number of the labnode sensor
+
+        Returns
+        -------
+        dict
+            A dictionary, that contains the configuration of the sensor.
+        """
+        async for config in EthernetSensor.find(
+                EthernetSensor.host == host_uuid):  # A pylint bug. pylint: disable=not-an-iterable
+            if config is not None:
+                return config.dict()
+            return {}
+
+    async def monitor_changes(self, timeout):
+        """
+        Adds the driver string to the output of the iterator.
+        """
+        async for change_type, change in self._monitor_database(EthernetSensor, timeout):
+            if change_type == ChangeType.ADD:
+                #print(change.dict())
+                self._event_bus.publish(f"devices/by_uid/{change.host}/update", AddChangeEvent(change.dict()))
+            elif change_type == ChangeType.UPDATE:
+                self._event_bus.publish(f"devices/by_uid/{change.id}/update", UpdateChangeEvent(change.dict()))
+            elif change_type == ChangeType.REMOVE:
+                # When removing sensors, the DB only returns the uuid
+                self._event_bus.publish(f"{self.topic}by_uid/{change}/update", RemoveChangeEvent())
 
 
 CONTEXTS = {
