@@ -95,7 +95,6 @@ class IpConnection:
         self.__port = port if port is not None else self.__port
         self.__timeout = timeout if timeout is not None else self.__timeout
 
-
         # wait_for() blocks until the request is done if timeout is None
         self.__reader, self.__writer = await asyncio.wait_for(
             asyncio.open_connection(self.__hostname, self.__port),
@@ -116,7 +115,7 @@ class IpConnection:
             pass
         except OSError as exc:
             if exc.errno == errno.ENOTCONN:
-                pass # Socket is no longer connected, so we can't send the EOF.
+                pass    # Socket is no longer connected, so we can't send the EOF.
             else:
                 raise
         finally:

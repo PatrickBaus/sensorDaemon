@@ -33,6 +33,7 @@ from data_types import DataEvent, RemoveChangeEvent, AddChangeEvent, UpdateChang
 class IncompatibleDeviceException(Exception):
     pass
 
+
 class GenericDevice:
     SEPARATOR = "\n"  # The default message separator (will be encoded to bytes later)
 

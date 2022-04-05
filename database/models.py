@@ -57,7 +57,7 @@ class HostBaseModel(BaseModel):
 class TimeStampedDocument(Document):
     """
     A base class that implements a minimal audit trail by recording the
-    creation date and the the date of the last cahnge.
+    creation date and the date of the last change.
     """
     # pylint: disable=too-few-public-methods
     date_created: datetime = datetime.utcnow()

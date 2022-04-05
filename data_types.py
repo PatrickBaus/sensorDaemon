@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This file contains all custom data types used accross the application
+This file contains all custom data types used across the application
 """
 from datetime import timezone, datetime
 from enum import Enum, auto
@@ -36,6 +36,7 @@ class AddChangeEvent(ChangeEvent):  # pylint: disable=too-few-public-methods
     A new item to add to the configuration.
     """
 
+
 class RemoveChangeEvent(ChangeEvent):   # pylint: disable=too-few-public-methods
     """
     Configuration to be removed.
@@ -64,7 +65,7 @@ class DataEvent:  # pylint: disable=too-few-public-methods
         """
         Returns
         -------
-        uuid
+        GenericDevice
             The sender of the data.
         """
         return self.__sender
@@ -78,7 +79,6 @@ class DataEvent:  # pylint: disable=too-few-public-methods
             The secondary id of the sender.
         """
         return self.__sid
-
 
     @property
     def topic(self):
