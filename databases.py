@@ -178,7 +178,10 @@ class HostContext(Context):
                 host = host_factory.get(event_bus=self._event_bus, uuid=change.id, **change.dict())
                 self._event_bus.publish(f"/hosts/by_uuid/{change.id}/update", UpdateChangeEvent(host))
             elif change_type is ChangeType.ADD:
-                host = host_factory.get(event_bus=self._event_bus, uuid=change.id, **change.dict())
+                try:
+                    host = host_factory.get(event_bus=self._event_bus, uuid=change.id, **change.dict())
+                except ValueError:
+                    logging.getLogger(__name__).warning("Unsupported driver '%s' requested. Cannot start host.", change.driver)
                 self._event_bus.publish("/hosts/add_host", AddChangeEvent(host))
             elif change_type is ChangeType.REMOVE:
                 await self._event_bus.call(f"/hosts/by_uuid/{change}/disconnect", ignore_unregistered=True)
