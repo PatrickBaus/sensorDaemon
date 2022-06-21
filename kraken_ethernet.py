@@ -78,7 +78,7 @@ class Kraken:
 
         if node_id == UUID('{00000000-0000-0000-0000-000000000000}'):
             self.__logger.warning(
-                "No node is set. How about '%s'? I will use %s for now.",
+                "No node is set. How about setting NODE_ID=%s ? I will use %s for now.",
                 uuid.uuid4(),
                 node_id
             )

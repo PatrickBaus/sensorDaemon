@@ -255,7 +255,7 @@ class GenericSensorContext(Context):
             exc: BaseException | None,
             traceback: TracebackType | None
     ) -> None:
-        event_bus.unregister(self.topic + "/get")
+        event_bus.unregister(self.topic + "/get_config")
 
     async def __get_sensor_config(self, uuid: UUID) -> dict[str, Any] | None:
         """
@@ -332,6 +332,7 @@ class HostContext(Context):
             traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get")
+        event_bus.unregister(self.topic + "/get_config")
 
     async def __get_sensors(self) -> AsyncGenerator[UUID, None]:
         """
@@ -397,6 +398,7 @@ class HostContext(Context):
                     change_dict = change.dict()
                     change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
                     event_bus.publish(f"{self.topic}/add_host", change_dict['uuid'])
+
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
                 event_bus.publish(f"nodes/by_uuid/{change}/update", None)
@@ -423,7 +425,7 @@ class TinkerforgeContext(Context):
             exc: BaseException | None,
             traceback: TracebackType | None
     ) -> None:
-        event_bus.unregister(self.topic + "/get")
+        event_bus.unregister(self.topic + "/get_config")
 
     async def __get_sensor_config(self, uid: int) -> dict[str, Any] | None:
         """
