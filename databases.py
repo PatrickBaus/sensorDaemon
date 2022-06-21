@@ -382,18 +382,23 @@ class HostContext(Context):
         """
         Adds the driver string to the output of the iterator.
         """
+        change: SensorHost
         async for change_type, change in self._monitor_database(SensorHost, timeout):
             # Remember: Do not await in the iterator, as this stop the stream of
             if change_type == ChangeType.UPDATE:
-                change = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
-                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"nodes/by_uuid/{change['uuid']}/update", change)
+                if change.node_id != self._node_id:
+                    event_bus.publish(f"nodes/by_uuid/{change.id}/update", None)
+                else:
+                    change_dict = change.dict()
+                    change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
+                    event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
-                change = change.dict()
-                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"{self.topic}/add_host", change['uuid'])
+                if change.node_id == self._node_id:
+                    change_dict = change.dict()
+                    change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
+                    event_bus.publish(f"{self.topic}/add_host", change_dict['uuid'])
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
                 event_bus.publish(f"nodes/by_uuid/{change}/update", None)
