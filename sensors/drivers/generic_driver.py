@@ -50,7 +50,7 @@ class GenericDriver:
             return (
                     stream.repeat(config['on_read'], interval=config['interval'])
                     | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-                    | pipe.concat()
+                    | pipe.concat(task_limit=1)
             )
 
     def _configure_and_stream(self, config):
