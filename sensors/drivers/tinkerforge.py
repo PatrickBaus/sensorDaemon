@@ -120,7 +120,7 @@ class TinkerforgeSensor:
             stream.iterate(self._device.read_events(sids=(sid,)))
             | pipe.map(
                 lambda item: DataEvent(
-                    sender=source_uuid, topic=topic, value=item['payload'], sid=item['sid'], unit=unit
+                    sender=source_uuid, topic=topic, value=item['payload'], sid=item['sid'], unit=str(unit)
                 )
             )
         )
@@ -162,8 +162,8 @@ class TinkerforgeSensor:
             config_stream = (
                 stream.chain(
                     stream.iterate(config['on_connect'])
-                    | pipe.concatmap(stream.call)
-                    | pipe.concatmap(stream.just)
+                    | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
+                    | pipe.concat()
                     | pipe.filter(lambda result: False),
                     stream.iterate(config['config'].items())
                     | pipe.starmap(self._parse_callback_configuration)
