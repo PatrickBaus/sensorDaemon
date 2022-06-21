@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
 """
 Kraken version information.
 """
-__version__ = "3.1.1"
+__version__ = "4.0.0"

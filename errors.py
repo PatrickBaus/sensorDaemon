@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 This file contains all custom errors thrown by Kraken.
 """
+class UnknownDriverError(ValueError):
+    pass
 
 
-class DisconnectedDuringConnectError(Exception):
-    """
-    Thrown if a connection is canceled during connect
-    """
+class ConfigurationError(Exception):
+    pass

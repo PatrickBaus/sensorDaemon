@@ -1,9 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 This file contains all custom data types used across the application
 """
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from datetime import timezone, datetime
 from enum import Enum, auto
+from typing import Any
+from uuid import UUID
 
 
 class ChangeEvent:  # pylint: disable=too-few-public-methods
@@ -12,16 +16,16 @@ class ChangeEvent:  # pylint: disable=too-few-public-methods
     change is determined by inheritance.
     """
     @property
-    def change(self):
+    def change(self) -> dict[str, Any] | UUID | None:
         """
         Returns
         -------
-        Any
+        dict or UUID or None
             The changed data.
         """
         return self.__change
 
-    def __init__(self, change):
+    def __init__(self, change:  dict[str, Any] | UUID | None) -> None:
         self.__change = change
 
 
@@ -29,97 +33,36 @@ class UpdateChangeEvent(ChangeEvent):   # pylint: disable=too-few-public-methods
     """
     An update to a configuration.
     """
+    @property
+    def change(self) -> dict[str, Any]:
+        """
+        Returns
+        -------
+        dict
+            A dict with the changed configuration
+        """
+        return super().change
 
 
-class AddChangeEvent(ChangeEvent):  # pylint: disable=too-few-public-methods
-    """
-    A new item to add to the configuration.
-    """
-
-
-class RemoveChangeEvent(ChangeEvent):   # pylint: disable=too-few-public-methods
-    """
-    Configuration to be removed.
-    """
-    def __init__(self):
-        super().__init__(None)
-
-
-class DataEvent:  # pylint: disable=too-few-public-methods
+@dataclass(frozen=True)
+class DataEvent:
     """
     The base class to encapsulate any data event.
     """
+    timestamp: float = field(init=False)
+    sender: UUID
+    sid: int
+    topic: str
+    value: Any
+    unit: str
 
-    @property
-    def timestamp(self):
-        """
-        Returns
-        -------
-        float
-            A POSIX timestamp counting seconds since the epoch in UTC.
-        """
-        return self.__timestamp
-
-    @property
-    def sender(self):
-        """
-        Returns
-        -------
-        GenericDevice
-            The sender of the data.
-        """
-        return self.__sender
-
-    @property
-    def sid(self):
-        """
-        Returns
-        -------
-        int
-            The secondary id of the sender.
-        """
-        return self.__sid
-
-    @property
-    def topic(self):
-        """
-        Returns
-        -------
-        str
-            The PubSub topic, where the data is to be published.
-        """
-        return self.__topic
-
-    @property
-    def value(self):
-        """
-        Returns
-        -------
-        Any
-            The data.
-        """
-        return self.__value
-
-    @property
-    def driver(self):
-        """
-        Returns
-        -------
-        str
-            The name of the driver used to produce the data
-        """
-        return self.__driver
-
-    def __init__(self, sender, sid, driver, topic, value):
-        self.__timestamp = datetime.now(timezone.utc).timestamp()
-        self.__sender = sender
-        self.__sid = sid
-        self.__topic = topic
-        self.__value = value
-        self.__driver = driver
+    def __post_init__(self):
+        # A slightly clumsy approach to setting the timestamp property, because this is frozen. Taken from:
+        # https://docs.python.org/3/library/dataclasses.html#frozen-instances
+        object.__setattr__(self, 'timestamp', datetime.now(timezone.utc).timestamp())
 
     def __str__(self):
-        return f"Data event from {self.__sender}: {self.__value}"
+        return f"Data event from {self.sender}: {self.value} {self.unit}"
 
 
 class ChangeType(Enum):

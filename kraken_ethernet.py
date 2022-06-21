@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 # Copyright (C) 2022  Patrick Baus
@@ -28,13 +27,14 @@ import logging
 import signal
 
 # noinspection PyPackageRequirements
+import uuid
+from uuid import UUID
+
 from decouple import config
 
 from _version import __version__
-from async_event_bus import AsyncEventBus
 
-from managers import WampManager, DatabaseManager, EthernetSensorManager, MqttManager
-from wamp_wrapper import WampWrapper
+from managers import HostManager, DatabaseManager, MqttManager
 
 
 class Kraken:
@@ -68,38 +68,42 @@ class Kraken:
 
         # Read either environment variable, settings.ini or .env file
         database_url = config('SENSORS_DATABASE_HOST')
-        wamp_host = config('WAMP_HOST')
-        wamp_port = config('WAMP_PORT', cast=int, default=18080)
-        wamp_url = f"ws://{wamp_host}:{wamp_port}/ws"
-        realm = "com.leapsight.test"
+        #wamp_host = config('WAMP_HOST')
+        #wamp_port = config('WAMP_PORT', cast=int, default=18080)
+        #wamp_url = f"ws://{wamp_host}:{wamp_port}/ws"
+        #realm = "com.leapsight.test"
         mqtt_host = config('MQTT_HOST', default="localhost")
         mqtt_port = config('MQTT_PORT', cast=int, default=1883)
+        node_id = config('NODE_ID', cast=UUID, default='00000000-0000-0000-0000-000000000000')
 
-        # The event bus to loosely couple all three components:
-        # The database, the sensors and the PubSub network
-        event_bus = AsyncEventBus()
+        if node_id == UUID('{00000000-0000-0000-0000-000000000000}'):
+            self.__logger.warning(
+                "No node is set. How about '%s'? I will use %s for now.",
+                uuid.uuid4(),
+                node_id
+            )
+        else:
+            self.__logger.warning("This is the node with id: %s", node_id)
 
-        # wamp_manager = WampManager(url=wamp_url, realm=realm, event_bus=event_bus)
-        mqtt_manager = MqttManager(host=mqtt_host, port=mqtt_port, event_bus=event_bus)
-        database_manager = DatabaseManager(url=database_url, event_bus=event_bus)
-        sensor_manager = EthernetSensorManager(event_bus=event_bus)
+        mqtt_manager = MqttManager(host=mqtt_host, port=mqtt_port)
+        database_manager = DatabaseManager(url=database_url, node_id=node_id)
+        autodiscovery_sensor_manager = HostManager()
 
         tasks = set()
-        # wamp_task = asyncio.create_task(wamp_manager.run())
-        # tasks.add(wamp_task)
         mqtt_task = asyncio.create_task(mqtt_manager.run())
         tasks.add(mqtt_task)
         shutdown_event_task = asyncio.create_task(self.__shutdown_event.wait())
         tasks.add(shutdown_event_task)
         database_task = asyncio.create_task(database_manager.run())
         tasks.add(database_task)
-        sensor_task = asyncio.create_task(sensor_manager.run())
-        tasks.add(sensor_task)
+        autodiscovery_sensor_task = asyncio.create_task(autodiscovery_sensor_manager.run())
+        tasks.add(autodiscovery_sensor_task)
 
         try:
             done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             for t in done:
                 if t is shutdown_event_task:
+                    print("shutting down gracefully")
                     [task.cancel() for task in pending]
                     try:
                         await asyncio.gather(*pending)
@@ -131,7 +135,7 @@ class Kraken:
 
         # We should never have to do anything here, because if the __shutdown_event is set, the main loop shuts down and
         # cleans up.
-        # In case the shutdown hangs, we will kill it now
+        # In case the shutdown hangs, we will kill it now.
         # Get all running tasks
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
         # and stop them

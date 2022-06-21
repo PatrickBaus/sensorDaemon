@@ -1,0 +1,45 @@
+"""
+This is a wrapper for a generic Ethernet transport used by other generic devices like the SCPI driver. It wraps
+the IP connection and adds the stream interface via GenericTransport.
+"""
+from __future__ import annotations
+
+from typing import Any
+from uuid import UUID
+
+from connections import GenericIpConnection
+from sensors.transports.generic_transport import GenericTransport
+
+
+class EthernetTransport(GenericTransport, GenericIpConnection):
+    """
+    The transport wrapper for the generic ethernet connection
+    """
+    @classmethod
+    @property
+    def driver(cls) -> str:
+        """
+        Returns
+        -------
+        str
+            The driver that identifies it to the host factory
+        """
+        return "generic_ethernet2"
+
+    def __init__(
+            self,
+            uuid: UUID,
+            hostname: str,
+            port: int,
+            reconnect_interval: float | None,
+            *_args: Any,
+            **_kwargs: Any
+    ) -> None:
+        super().__init__(
+            uuid=uuid,
+            database_topic="db_generic_sensors",
+            label="Ethernet host",
+            reconnect_interval=reconnect_interval,
+            hostname=hostname,
+            port=port
+        )
