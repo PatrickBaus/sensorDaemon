@@ -92,23 +92,23 @@ class GenericDriver:
 
     def stream_data(self, config):
         data_stream = (
-                stream.chain(
-                    stream.just(config),
-                    stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{self.__uuid}/update"))
+            stream.chain(
+                stream.just(config),
+                stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{self.__uuid}/update"))
+            )
+            | pipe.action(
+                lambda config: logging.getLogger(__name__).info(
+                    "Got new configuration for: %s", self
+                ) if config is not None else logging.getLogger(__name__).info(
+                    "Removed configuration for: %s", self
                 )
-                | pipe.action(
-            lambda config: logging.getLogger(__name__).info(
-                "Got new configuration for: %s", self
-            ) if config is not None else logging.getLogger(__name__).info(
-                "Removed configuration for: %s", self
             )
-        )
-                | pipe.map(self._parse_config)
-                | pipe.switchmap(
-            lambda conf: stream.empty() if conf is None or not conf['enabled'] else (
-                self._configure_and_stream(conf)
+            | pipe.map(self._parse_config)
+            | pipe.switchmap(
+                lambda conf: stream.empty() if conf is None or not conf['enabled'] else (
+                    self._configure_and_stream(conf)
+                )
             )
-        )
         )
 
         return data_stream
