@@ -342,9 +342,7 @@ class HostContext(Context):
         UUID
             The unique id of the device
         """
-        async for sensor in SensorHost.find(
-                SensorHost.can_autodiscover == True and SensorHost.node_id == self._node_id
-        ).project(BaseDocument):
+        async for sensor in SensorHost.find(SensorHost.node_id == self._node_id).project(BaseDocument):
             yield sensor.id
 
     async def __get_sensor_config(self, uuid: UUID) -> dict[str, Any] | None:

@@ -46,7 +46,6 @@ class HostBaseModel(BaseModel):
     driver: str
     node_id: Optional[UUID] = UUID('{00000000-0000-0000-0000-000000000000}')
     reconnect_interval: confloat(ge=0) | None
-    can_autodiscover: bool = False
 
     class Settings:
         """
