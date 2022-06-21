@@ -56,6 +56,8 @@ class GenericDriver:
     def _configure_and_stream(self, config):
         if config is None:
             return stream.empty()
+        # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is nothing to
+        # compare them to (filter => false), then read the device.
         config_stream = (
             stream.chain(
                 stream.iterate(config['on_connect'])
@@ -98,7 +100,7 @@ class GenericDriver:
             )
             | pipe.action(
                 lambda config: logging.getLogger(__name__).info(
-                    "Got new configuration for: %s", self
+                    "Got new configuration for: %s => %s", self, config
                 ) if config is not None else logging.getLogger(__name__).info(
                     "Removed configuration for: %s", self
                 )
