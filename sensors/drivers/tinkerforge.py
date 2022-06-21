@@ -163,7 +163,7 @@ class TinkerforgeSensor:
                 stream.chain(
                     stream.iterate(config['on_connect'])
                     | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-                    | pipe.concat()
+                    | pipe.concat(task_limit=1)
                     | pipe.filter(lambda result: False),
                     stream.iterate(config['config'].items())
                     | pipe.starmap(self._parse_callback_configuration)

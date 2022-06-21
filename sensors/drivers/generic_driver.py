@@ -60,7 +60,7 @@ class GenericDriver:
             stream.chain(
                 stream.iterate(config['on_connect'])
                 | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-                | pipe.concat()
+                | pipe.concat(task_limit=1)
                 | pipe.filter(lambda result: False),
                 self._read_device(config)
                 | pipe.map(
