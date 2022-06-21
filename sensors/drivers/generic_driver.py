@@ -100,7 +100,7 @@ class GenericDriver:
             )
             | pipe.action(
                 lambda config: logging.getLogger(__name__).info(
-                    "Got new configuration for: %s => %s", self, config
+                    "Got new configuration for: %s", self
                 ) if config is not None else logging.getLogger(__name__).info(
                     "Removed configuration for: %s", self
                 )
