@@ -27,9 +27,9 @@ from database.models import BaseDocument, DeviceDocument, GenericSensor, Tinkerf
 
 class MongoDb:
     """
-    The Mongo DB abstraction for the Tinkerforge settings database.
+    The Mongo DB abstraction for the settings database.
     """
-    def __init__(self, hostname=None, port=None):
+    def __init__(self, hostname: str = None, port: int = None) -> None:
         self.__hostname = hostname
         self.__port = port
         self.__client = None
@@ -102,8 +102,7 @@ class Context:    # pylint: disable=too-few-public-methods
     def topic(self) -> str:
         return self.__topic
 
-    def __init__(self, node_id: UUID, topic: str) -> None:
-        self._node_id = node_id
+    def __init__(self, topic: str) -> None:
         self.__topic = topic
         self.__logger = logging.getLogger(__name__)
 
@@ -240,8 +239,8 @@ class GenericSensorContext(Context):
     to the database and publishes them onto the event bus. It also provides an
     endpoint to query for sensor configs via the event bus.
     """
-    def __init__(self, node_id: UUID):
-        super().__init__(node_id=node_id, topic="db_generic_sensors")
+    def __init__(self):
+        super().__init__(topic="db_generic_sensors")
         self.__logger = logging.getLogger(__name__)
 
     async def __aenter__(self) -> Self:
@@ -315,8 +314,8 @@ class HostContext(Context):
     to the database and publishes them onto the event bus. It also provides an
     endpoint to query for sensor configs via the event bus.
     """
-    def __init__(self, node_id: UUID):
-        super().__init__(node_id=node_id, topic="db_autodiscovery_sensors")
+    def __init__(self):
+        super().__init__(topic="db_autodiscovery_sensors")
         self.__logger = logging.getLogger(__name__)
 
     async def __aenter__(self) -> Self:
@@ -343,7 +342,7 @@ class HostContext(Context):
         UUID
             The unique id of the device
         """
-        async for sensor in SensorHost.find(SensorHost.node_id == self._node_id).project(BaseDocument):
+        async for sensor in SensorHost.find_all(projection_model=BaseDocument):
             yield sensor.id
 
     async def __get_sensor_config(self, uuid: UUID) -> dict[str, Any] | None:
@@ -387,17 +386,13 @@ class HostContext(Context):
             if change_type == ChangeType.UPDATE:
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
-                if change.node_id != self._node_id:
-                    event_bus.publish(f"nodes/by_uuid/{change.id}/update", None)
-                else:
-                    change_dict = change.dict()
-                    change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
-                    event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
+                change_dict = change.dict()
+                change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
-                if change.node_id == self._node_id:
-                    change_dict = change.dict()
-                    change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
-                    event_bus.publish(f"{self.topic}/add_host", change_dict['uuid'])
+                change_dict = change.dict()
+                change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"{self.topic}/add_host", change_dict['uuid'])
 
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
@@ -410,8 +405,8 @@ class TinkerforgeContext(Context):
     to the database and publishes them onto the event bus. It also provides an
     endpoint to query for sensor configs via the event bus.
     """
-    def __init__(self, node_id: UUID):
-        super().__init__(node_id=node_id, topic="db_tinkerforge_sensors")
+    def __init__(self):
+        super().__init__(topic="db_tinkerforge_sensors")
         self.__logger = logging.getLogger(__name__)
 
     async def __aenter__(self) -> Self:

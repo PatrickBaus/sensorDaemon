@@ -3,9 +3,13 @@ This file contains the implementation of the managers for the sensor hosts. All
 hosts of a certain type are managed by their managers. The mangers configure the
 hosts extract the data stream from them.
 """
+from __future__ import annotations
+
 import asyncio
 from contextlib import AsyncExitStack
 import logging
+from typing import Any, Iterable, Set
+from uuid import UUID
 
 import asyncio_mqtt
 import simplejson as json
@@ -23,13 +27,13 @@ MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 
 
 class MqttManager:
-    def __init__(self, host, port, number_of_workers=5):
+    def __init__(self, host: str, port: int, number_of_workers: int = 5) -> None:
         self.__logger = logging.getLogger(__name__)
         self.__host = host
         self.__port = port
         self.__number_of_workers = number_of_workers
 
-    async def producer(self, output_queue):
+    async def producer(self, output_queue: asyncio.Queue[(str, dict[str, str | float | int])]):
         """
         Grabs the output data from the event bus and pushes it to a worker queue,
         so that multiple workers can then publish it via MQTT.
@@ -56,7 +60,11 @@ class MqttManager:
             else:
                 output_queue.put_nowait((topic, payload))
 
-    async def consumer(self, input_queue, reconnect_interval=5):
+    async def consumer(
+            self,
+            input_queue: asyncio.Queue[(str, dict[str, str | float | int])],
+            reconnect_interval: int = 5
+    ) -> None:
         """
         Pushes the data from the input queue to the MQTT broker. It will make sure,
         that no data is lost if the MQTT broker disconnects.
@@ -104,13 +112,13 @@ class MqttManager:
                 self.__logger.exception("Error while publishing data to MQTT broker. Reconnecting.")
                 await asyncio.sleep(reconnect_interval)
 
-    async def cancel_tasks(self, tasks):
+    async def cancel_tasks(self, tasks: Set[asyncio.Task]):
         """
         Cancel all tasks and log any exceptions raised.
 
         Parameters
         ----------
-        tasks: Iterable[asyncio.Task]
+        tasks: Set[asyncio.Task]
             The tasks to cancel
         """
         try:
@@ -118,7 +126,7 @@ class MqttManager:
         except Exception:   # pylint: disable=broad-except
             self.__logger.exception("Error during shutdown of the MQTT manager")
 
-    async def run(self):
+    async def run(self) -> None:
         """
         The main task, that spawn all workers.
         """
@@ -137,18 +145,17 @@ class MqttManager:
 
 
 class DatabaseManager:
-    def __init__(self, url, node_id):
+    def __init__(self, database_url: str) -> None:
         self.__logger = logging.getLogger(__name__)
-        self.__url = url
-        self.__node_id = node_id
+        self.__database_url = database_url
 
-    async def cancel_tasks(self, tasks):
+    async def cancel_tasks(self, tasks: Set[asyncio.Task]) -> None:
         """
         Cancel all tasks and log any exceptions raised.
 
         Parameters
         ----------
-        tasks: Iterable[asyncio.Task]
+        tasks: Set[asyncio.Task]
             The tasks to cancel
         """
         try:
@@ -156,7 +163,7 @@ class DatabaseManager:
         except Exception:   # pylint: disable=broad-except
             self.__logger.exception(f"Error during shutdown of the {type(self).__name__}")
 
-    async def run(self):
+    async def run(self) -> None:
         """
         The main task, that spawn all workers.
         """
@@ -167,10 +174,10 @@ class DatabaseManager:
                     tasks = set()
                     stack.push_async_callback(self.cancel_tasks, tasks)
 
-                    database_driver = MongoDb(self.__url)
+                    database_driver = MongoDb(self.__database_url)
                     await stack.enter_async_context(database_driver)
                     context_managers = await asyncio.gather(
-                        *[stack.enter_async_context(context(self.__node_id)) for context in DATABASE_CONTEXTS]
+                        *[stack.enter_async_context(context()) for context in DATABASE_CONTEXTS]
                     )
                     for context_manager in context_managers:
                         task = asyncio.create_task(
@@ -186,12 +193,13 @@ class DatabaseManager:
 
 
 class HostManager:
-    def __init__(self) -> None:
+    def __init__(self, node_id: UUID) -> None:
+        self.__node_id = node_id
         self.__logger = logging.getLogger(__name__)
         self.__topic = "db_autodiscovery_sensors"
 
     @staticmethod
-    def _create_tranport(config):
+    def _create_transport(config: dict[str, Any]):
         if config is None:
             return None
         try:
@@ -202,7 +210,15 @@ class HostManager:
             logging.getLogger(__name__).exception("Error while creating transport '{config['driver']}'")
         return None
 
-    async def start_stream(self):
+    @staticmethod
+    def _is_config_valid(node_id, config: dict[str, Any]) -> bool:
+        return (
+            config is not None
+            and config['enabled']
+            and (config['node_id'] is None or node_id is None or config['node_id'] == node_id)
+        )
+
+    async def start_stream(self) -> None:
         # Generate the UUIDs of new sensors
         sensor_stream = (
             stream.chain(
@@ -216,8 +232,8 @@ class HostManager:
                     stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{item}/update"))
                 )
                 | pipe.until(lambda config: config is None)
-                | pipe.map(lambda config: config if config is not None and config['enabled'] else None)
-                | pipe.map(lambda config: self._create_tranport(config))
+                | pipe.map(lambda config: config if self._is_config_valid(self.__node_id, config) else None)
+                | pipe.map(lambda config: self._create_transport(config))
                 | pipe.switchmap(
                     lambda transport: stream.empty() if transport is None else stream.iterate(transport.stream_data())
                 )
@@ -227,5 +243,5 @@ class HostManager:
 
         await sensor_stream
 
-    async def run(self):
+    async def run(self) -> None:
         await self.start_stream()

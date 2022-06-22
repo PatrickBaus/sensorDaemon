@@ -30,7 +30,7 @@ import signal
 import uuid
 from uuid import UUID
 
-from decouple import config
+from decouple import UndefinedValueError, config
 
 from _version import __version__
 
@@ -74,20 +74,22 @@ class Kraken:
         #realm = "com.leapsight.test"
         mqtt_host = config('MQTT_HOST', default="localhost")
         mqtt_port = config('MQTT_PORT', cast=int, default=1883)
-        node_id = config('NODE_ID', cast=UUID, default='00000000-0000-0000-0000-000000000000')
+        try:
+            node_id = config('NODE_ID', cast=UUID)
+        except UndefinedValueError:
+            node_id = None
 
-        if node_id == UUID('{00000000-0000-0000-0000-000000000000}'):
+        if node_id is None:
             self.__logger.warning(
-                "No node is set. How about setting NODE_ID=%s ? I will use %s for now.",
-                uuid.uuid4(),
-                node_id
+                "No node is set. How about setting NODE_ID=%s ? I won't use one for now.",
+                uuid.uuid4()
             )
         else:
             self.__logger.warning("This is the node with id: %s", node_id)
 
         mqtt_manager = MqttManager(host=mqtt_host, port=mqtt_port)
-        database_manager = DatabaseManager(url=database_url, node_id=node_id)
-        autodiscovery_sensor_manager = HostManager()
+        database_manager = DatabaseManager(database_url=database_url)
+        host_manager = HostManager(node_id=node_id)
 
         tasks = set()
         mqtt_task = asyncio.create_task(mqtt_manager.run())
@@ -96,8 +98,8 @@ class Kraken:
         tasks.add(shutdown_event_task)
         database_task = asyncio.create_task(database_manager.run())
         tasks.add(database_task)
-        autodiscovery_sensor_task = asyncio.create_task(autodiscovery_sensor_manager.run())
-        tasks.add(autodiscovery_sensor_task)
+        host_manager_task = asyncio.create_task(host_manager.run())
+        tasks.add(host_manager_task)
 
         try:
             done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
