@@ -81,7 +81,7 @@ class Kraken:
 
         if node_id is None:
             self.__logger.warning(
-                "No node is set. How about setting NODE_ID=%s ? I won't use one for now.",
+                "No node is set. How about setting 'NODE_ID=%s'? I won't use a node id for now.",
                 uuid.uuid4()
             )
         else:
