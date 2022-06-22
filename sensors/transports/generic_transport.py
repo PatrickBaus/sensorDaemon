@@ -15,7 +15,7 @@ except ImportError:
 
 from aiostream import pipe, stream
 
-from async_event_bus import  event_bus
+from async_event_bus import event_bus
 from errors import UnknownDriverError
 from helper_functions import call_safely, retry
 from sensors.factories.sensor_factory import sensor_factory
@@ -82,12 +82,17 @@ class GenericTransport:
                 config_stream = (
                     stream.chain(
                         stream.call(
-                            call_safely, f"{self.__database_topic}/get_config", f"{self.__database_topic}/status_update", transport.uuid
+                            call_safely,
+                            f"{self.__database_topic}/get_config",
+                            f"{self.__database_topic}/status_update",
+                            transport.uuid
                         ),
                         stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{transport.uuid}/add"))
                     )
                     | pipe.map(lambda config: self._create_device(transport, config))
-                    | pipe.starmap(lambda config, device: stream.empty() if device is None else device.stream_data(config))
+                    | pipe.starmap(
+                        lambda config, device: stream.empty() if device is None else device.stream_data(config)
+                    )
                     | pipe.switch()
                 )
 

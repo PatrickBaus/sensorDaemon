@@ -8,6 +8,8 @@ import logging
 from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
+from aiostream import async_, pipe, stream
+
 from sensors.drivers.generic_driver import GenericDriver
 
 if TYPE_CHECKING:
@@ -22,16 +24,25 @@ class ScpiIoError(ValueError):
 class GenericScpiDriver:
     SEPARATOR = "\n"  # The default message separator (will be encoded to bytes later)
 
+    @property
+    def device_name(self) -> str:
+        return "Generic SCPI device" if self.__device_name is None else self.__device_name
+
+    @device_name.setter
+    def device_name(self, name: str):
+        self.__device_name = name
+
     def __init__(
             self,
             connection: EthernetTransport | PrologixEthernetTransport,
     ) -> None:
         self._conn = connection
+        self.__device_name = None
 
         self.__logger = logging.getLogger(__name__)
 
     def __str__(self) -> str:
-        return f"Generic SCPI device at {str(self._conn)}"
+        return f"{self.device_name} at {str(self._conn)}"
 
     async def wait_for_opc(self, timeout: float | None = None) -> None:
         await self.write("*OPC?")
@@ -142,3 +153,17 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
             **_kwargs
     ) -> None:
         super().__init__(uuid, connection)
+
+    async def enumerate(self):
+        manufacturer, model_number, serial_number, revision = await self.get_id()
+        self.device_name = f"{manufacturer} {model_number} ({serial_number})"
+
+    def stream_data(self, config):
+        return (
+            stream.chain(
+                stream.just(self)
+                    | pipe.action(async_(lambda sensor: sensor.enumerate()))
+                    | pipe.filter(lambda x: False)
+                , super().stream_data(config)
+            )
+        )
