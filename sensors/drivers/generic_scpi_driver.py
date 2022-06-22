@@ -57,7 +57,7 @@ class GenericScpiDriver:
         result: str = await self.query("*IDN?")
         result: tuple[str, ...] = tuple(result.split(","))
         if len(result) != 4:
-            raise ValueError("Device returned invalid ID: %r", result)
+            raise ValueError(f"Device returned invalid ID: {result!r}")
         result: tuple[str, str, str, str]
         return result
 
@@ -155,8 +155,15 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
         super().__init__(uuid, connection)
 
     async def enumerate(self):
-        manufacturer, model_number, serial_number, revision = await self.get_id()
-        self.device_name = f"{manufacturer} {model_number} ({serial_number})"
+        maximum_tries = 2
+        while maximum_tries:
+            try:
+                manufacturer, model_number, serial_number, revision = await self.get_id()
+                self.device_name = f"{manufacturer} {model_number} ({serial_number})"
+            except ValueError:
+                continue  # silently retry it once more
+            finally:
+                maximum_tries -= 1
 
     def stream_data(self, config):
         return (
