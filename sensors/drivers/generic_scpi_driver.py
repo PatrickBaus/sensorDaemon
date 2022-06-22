@@ -156,14 +156,22 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
 
     async def enumerate(self):
         maximum_tries = 2
+        manufacturer = None
         while maximum_tries:
             try:
                 manufacturer, model_number, serial_number, revision = await self.get_id()
                 self.device_name = f"{manufacturer} {model_number} ({serial_number})"
             except ValueError:
                 continue  # silently retry it once more
+            else:
+                break  # Stop the loop if everything went well
             finally:
                 maximum_tries -= 1
+
+        # Send a warning, if we did not get a valid id
+        if manufacturer is None:
+            logging.getLogger(__name__).warning("Could not get device id of device: %s", self)
+
 
     def stream_data(self, config):
         return (
