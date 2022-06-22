@@ -117,7 +117,7 @@ class GenericIpConnection:
         self.__read_lock = asyncio.Lock()
 
     def __str__(self) -> str:
-        return f"Ethernet connection ({self.hostname}:{self.port})"
+        return f"GenericIpConnection({self.hostname}:{self.port})"
 
     async def __aenter__(self) -> Self:
         await self.connect()
