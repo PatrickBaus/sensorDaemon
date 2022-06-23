@@ -8,7 +8,7 @@ import errno
 import logging
 from asyncio import StreamReader, StreamWriter
 from types import TracebackType
-from typing import Optional, Type
+from typing import Type
 
 try:
     from typing import Self  # Python 3.11
@@ -33,10 +33,12 @@ class HostUnreachableError(ConnectionError):
     Raised when there is no route to the host
     """
 
+
 class HostRefusedError(ConnectionError):
     """
     Raised when the host refuses the connection
     """
+
 
 class GenericIpConnection:
     @property
@@ -94,7 +96,7 @@ class GenericIpConnection:
     def is_connected(self) -> bool:
         return self.__writer is not None and not self.__writer.is_closing()
 
-    def __init__(self, hostname: str, port: int, timeout: Optional[int] = None) -> None:
+    def __init__(self, hostname: str, port: int, timeout: int | None = None) -> None:
         """
         Create new IpConnection. `hostname` and `port` parameters can be None if they are provided when calling
         `connect()`
@@ -126,13 +128,13 @@ class GenericIpConnection:
 
     async def __aexit__(
             self,
-            exc_type: Optional[Type[BaseException]],
-            exc: Optional[BaseException],
-            traceback: Optional[TracebackType]
+            exc_type: Type[BaseException] | None,
+            exc: BaseException | None,
+            traceback: TracebackType | None
     ) -> None:
         await self.disconnect()
 
-    async def connect(self, hostname: Optional[str] = None, port: Optional[int] = None, timeout: Optional[float] = None) -> None:
+    async def connect(self, hostname: str | None = None, port: int | None = None, timeout: float | None = None) -> None:
         if self.is_connected:
             return
 
@@ -174,7 +176,12 @@ class GenericIpConnection:
         finally:
             self.__writer, self.__reader = None, None
 
-    async def __read(self, length: Optional[int] = None, separator: Optional[bytes] = None, timeout: Optional[float] = None) -> bytes:
+    async def __read(
+            self,
+            length: int | None = None,
+            separator: bytes | None = None,
+            timeout: float | None = None
+    ) -> bytes:
         if not self.is_connected:
             raise NotConnectedError("Not connected")
         assert length is not None or separator is not None, "Either specify the number of bytes to read or a separator"
@@ -216,11 +223,16 @@ class GenericIpConnection:
             # TODO: catch asyncio.LimitOverrunError?
             raise
 
-    async def read(self, length: Optional[int] = None, character: Optional[bytes] = None, timeout: Optional[int] = None) -> bytes:
+    async def read(
+            self,
+            length: int | None = None,
+            character: bytes | None = None,
+            timeout: int | None = None
+    ) -> bytes:
         async with self.__read_lock:
             return await self.__read(length=length, separator=character, timeout=timeout)
 
-    async def write(self, cmd: bytes, timeout: Optional[float] = None) -> None:
+    async def write(self, cmd: bytes, timeout: float | None = None) -> None:
         if not self.is_connected:
             raise NotConnectedError("Not connected")
 
@@ -228,7 +240,13 @@ class GenericIpConnection:
         # wait_for() blocks until the request is done if timeout is None
         await asyncio.wait_for(self.__writer.drain(), timeout=timeout)
 
-    async def query(self, cmd: bytes, length: Optional[int] = None, separator: Optional[bytes] = None, timeout: Optional[float] = None) -> bytes:
+    async def query(
+            self,
+            cmd: bytes,
+            length: int | None = None,
+            separator: bytes | None = None,
+            timeout: float | None = None
+    ) -> bytes:
         if not self.is_connected:
             raise NotConnectedError("Not connected")
 

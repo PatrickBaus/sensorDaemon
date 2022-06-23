@@ -41,6 +41,16 @@ class TinkerforgeTransport(IPConnectionAsync):
         """
         return self.__reconnect_interval
 
+    @property
+    def uri(self) -> str:
+        """
+        Returns
+        -------
+        str
+            A string representation of the connection.
+        """
+        return f"{self.hostname}:{self.port}"
+
     def __init__(self, hostname: str, port: int, reconnect_interval: float | None, *_args: Any, **_kwargs: Any) -> None:
         super().__init__(hostname, port)
         self.__reconnect_interval = 1 if reconnect_interval is None else reconnect_interval

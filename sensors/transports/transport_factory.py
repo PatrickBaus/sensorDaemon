@@ -5,9 +5,10 @@ sensor hosts.
 from typing import Any, Type
 
 from errors import UnknownDriverError
-from sensors.transports.ethernet import EthernetTransport
-from sensors.transports.prologix_ethernet import PrologixEthernetTransport
-from sensors.transports.tinkerforge import TinkerforgeTransport
+from .ethernet import EthernetTransport
+from .linux_gpib import LinuxGpibTransport
+from .prologix_ethernet import PrologixEthernetTransport
+from .tinkerforge import TinkerforgeTransport
 
 
 class TransportFactory:
@@ -58,5 +59,5 @@ class TransportFactory:
 transport_factory = TransportFactory()
 transport_factory.register(TinkerforgeTransport)
 transport_factory.register(PrologixEthernetTransport)
-#host_factory.register(LabnodeSensorHost)
+# host_factory.register(LabnodeSensorHost)
 transport_factory.register(EthernetTransport)

@@ -72,7 +72,7 @@ class GenericScpiDriver:
             The number of bytes to read. Omit to read a line.
 
         separator: str, default=None
-            One or more characters, that separate replies. If not set, the default
+            One or more characters, that separates replies. If not set, the default
             separator '\n' will be used if length is not set.
 
         Returns

@@ -302,7 +302,7 @@ class GenericSensorContext(Context):
             elif change_type == ChangeType.ADD:
                 change = change.dict()
                 change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
-                event_bus.publish("db_generic_sensors/add_host", change['uuid'])
+                event_bus.publish(f"nodes/by_uuid/{change['host']}/add", change)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
                 event_bus.publish(f"nodes/by_uuid/{change}/update", None)

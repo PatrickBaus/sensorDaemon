@@ -26,6 +26,16 @@ class EthernetTransport(GenericTransport, GenericIpConnection):
         """
         return "generic_ethernet2"
 
+    @property
+    def uri(self) -> str:
+        """
+        Returns
+        -------
+        str
+            A string representation of the connection.
+        """
+        return f"{self.hostname}:{self.port}"
+
     def __init__(
             self,
             uuid: UUID,

@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import AsyncExitStack
 import logging
-from typing import Any, Iterable, Set
+from typing import Any, Set
 from uuid import UUID
 
 import asyncio_mqtt
@@ -20,7 +20,7 @@ from data_types import DataEvent
 from databases import MongoDb, CONTEXTS as DATABASE_CONTEXTS
 from errors import UnknownDriverError
 from helper_functions import catch, iterate_safely, cancel_all_tasks
-from sensors.factories.transport_factory import transport_factory
+from sensors.transports.transport_factory import transport_factory
 
 EVENT_BUS_DATA = "sensor_data/all"
 MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
@@ -135,7 +135,7 @@ class MqttManager:
             stack.push_async_callback(self.cancel_tasks, tasks)
             event_queue = asyncio.Queue()
 
-            consumers = {asyncio.create_task(self.consumer(event_queue)) for i in range(self.__number_of_workers)}
+            consumers = {asyncio.create_task(self.consumer(event_queue)) for _ in range(self.__number_of_workers)}
             tasks.update(consumers)
 
             task = asyncio.create_task(self.producer(event_queue))

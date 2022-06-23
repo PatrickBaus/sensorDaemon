@@ -77,7 +77,7 @@ class GenericTransport:
         async with transport:
             try:
                 logging.getLogger(__name__).info(
-                    "Connected to %s at %s:%i.", self.__label, transport.hostname, transport.port
+                    "Connected to %s at %s.", self.__label, transport.uri
                 )
                 config_stream = (
                     stream.chain(
@@ -101,7 +101,7 @@ class GenericTransport:
                         yield item
             finally:
                 logging.getLogger(__name__).info(
-                    "Disconnected from %s at %s:%i.", self.__label, transport.hostname, transport.port
+                    "Disconnected from %s at %s.", self.__label, transport.uri
                 )
 
     def stream_data(self):
@@ -115,7 +115,7 @@ class GenericTransport:
             stream.just(self)
             | pipe.action(
                 lambda transport: self.__logger.info(
-                    "Connecting to %s at %s:%i.", self.__label, transport.hostname, transport.port
+                    "Connecting to %s at %s.", self.__label, transport.uri
                 )
             )
             | pipe.switchmap(self._stream_transport)
