@@ -51,8 +51,27 @@ class TinkerforgeTransport(IPConnectionAsync):
         """
         return f"{self.hostname}:{self.port}"
 
-    def __init__(self, hostname: str, port: int, reconnect_interval: float | None, *_args: Any, **_kwargs: Any) -> None:
+    @property
+    def label(self) -> str:
+        """
+        Returns
+        -------
+        str
+            A label as a human-readable name of the transport.
+        """
+        return self.__label
+
+    def __init__(
+            self,
+            hostname: str,
+            port: int,
+            reconnect_interval: float | None,
+            label: str,
+            *_args: Any,
+            **_kwargs: Any
+    ) -> None:
         super().__init__(hostname, port)
+        self.__label = label
         self.__reconnect_interval = 1 if reconnect_interval is None else reconnect_interval
         self.__logger = logging.getLogger(__name__)
 
@@ -61,7 +80,7 @@ class TinkerforgeTransport(IPConnectionAsync):
         async with transport:
             try:
                 logging.getLogger(__name__).info(
-                    "Connected to Tinkerforge host at %s:%i.", transport.hostname, transport.port
+                    "Connected to Tinkerforge host at %s:%i (%s).", transport.hostname, transport.port, transport.label
                 )
                 sensor_stream = (
                     stream.chain(

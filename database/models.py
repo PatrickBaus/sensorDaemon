@@ -39,7 +39,7 @@ class HostBaseModel(BaseModel):
     The base model all network hosts must implement.
     """
     # pylint: disable=too-few-public-methods
-    hostname: str
+    hostname: int | str
     port: conint(ge=1, le=65535)
     pad: Optional[conint(ge=0, le=30)]
     sad: Optional[Union[conint(ge=0x60, le=0x7E), conint(ge=0, le=0)]]
