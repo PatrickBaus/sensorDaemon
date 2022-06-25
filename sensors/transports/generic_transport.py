@@ -137,7 +137,7 @@ class GenericTransport:
             stream.just(self)
             | pipe.action(
                 lambda transport: self.__logger.info(
-                    "Connecting to %s at %s (name).", transport.name, transport.uri, transport.label
+                    "Connecting to %s at %s (%s).", transport.name, transport.uri, transport.label
                 )
             )
             | pipe.switchmap(self._stream_transport)
