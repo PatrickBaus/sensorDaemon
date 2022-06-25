@@ -45,14 +45,16 @@ class PrologixEthernetTransport(GenericTransport, AsyncPrologixGpibEthernetContr
             sad: int,
             reconnect_interval: float | None,
             uuid: UUID,
+            label: str,
             *_args: Any,
             **_kwargs: Any
     ) -> None:
         super().__init__(
             uuid=uuid,
             database_topic="db_generic_sensors",
-            label="Prologix GPIB controller",
+            transport_name="Prologix GPIB controller",
             reconnect_interval=reconnect_interval,
+            label=label,
             hostname=hostname,
             port=port,
             pad=pad,

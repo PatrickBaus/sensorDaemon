@@ -45,20 +45,42 @@ class GenericTransport:
         """
         return self.__uuid
 
+    @property
+    def name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            The name of the transport. Like Ethernet, GPIB, etc.
+        """
+        return self.__name
+
+    @property
+    def label(self) -> str:
+        """
+        Returns
+        -------
+        str
+            A label as a human-readable descriptor of the transport.
+        """
+        return self.__label
+
     def __init__(
             self,
             uuid: UUID,
             database_topic: str,
-            label: str,
+            transport_name: str,
             reconnect_interval: float | None,
+            label: str,
             *args: Any,
             **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
         self.__uuid = uuid
-        self.__label = label
         self.__database_topic = database_topic
+        self.__name = transport_name
         self.__reconnect_interval = 1 if reconnect_interval is None else reconnect_interval
+        self.__label = label
         self.__logger = logging.getLogger(__name__)
 
     @staticmethod
@@ -77,7 +99,7 @@ class GenericTransport:
         async with transport:
             try:
                 logging.getLogger(__name__).info(
-                    "Connected to %s at %s.", self.__label, transport.uri
+                    "Connected to %s at %s (%s).", transport.name, transport.uri, transport.label
                 )
                 config_stream = (
                     stream.chain(
@@ -101,7 +123,7 @@ class GenericTransport:
                         yield item
             finally:
                 logging.getLogger(__name__).info(
-                    "Disconnected from %s at %s.", self.__label, transport.uri
+                    "Disconnected from %s at %s (%s).", transport.name, transport.uri, transport.label
                 )
 
     def stream_data(self):
@@ -115,7 +137,7 @@ class GenericTransport:
             stream.just(self)
             | pipe.action(
                 lambda transport: self.__logger.info(
-                    "Connecting to %s at %s.", self.__label, transport.uri
+                    "Connecting to %s at %s (name).", transport.name, transport.uri, transport.label
                 )
             )
             | pipe.switchmap(self._stream_transport)

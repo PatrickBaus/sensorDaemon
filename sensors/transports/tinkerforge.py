@@ -57,7 +57,7 @@ class TinkerforgeTransport(IPConnectionAsync):
         Returns
         -------
         str
-            A label as a human-readable name of the transport.
+            A label as a human-readable descriptor of the transport.
         """
         return self.__label
 
@@ -80,7 +80,7 @@ class TinkerforgeTransport(IPConnectionAsync):
         async with transport:
             try:
                 logging.getLogger(__name__).info(
-                    "Connected to Tinkerforge host at %s:%i (%s).", transport.hostname, transport.port, transport.label
+                    "Connected to Tinkerforge host at %s (%s).", transport.uri, transport.label
                 )
                 sensor_stream = (
                     stream.chain(
@@ -101,7 +101,7 @@ class TinkerforgeTransport(IPConnectionAsync):
                         yield item
             finally:
                 logging.getLogger(__name__).info(
-                    "Disconnected from Tinkerforge host at %s:%i.", transport.hostname, transport.port
+                    "Disconnected from Tinkerforge host at %s (%s).", transport.uri, transport.label
                 )
 
     def stream_data(self):
@@ -115,7 +115,7 @@ class TinkerforgeTransport(IPConnectionAsync):
             stream.just(self)
             | pipe.action(
                 lambda transport: logging.getLogger(__name__).info(
-                    "Connecting to Tinkerforge host at %s:%i.", transport.hostname, transport.port
+                    "Connecting to Tinkerforge host at %s (%s).", transport.uri, transport.label
                 )
             )
             | pipe.switchmap(self._stream_transport)

@@ -42,14 +42,16 @@ class EthernetTransport(GenericTransport, GenericIpConnection):
             hostname: str,
             port: int,
             reconnect_interval: float | None,
+            label: str,
             *_args: Any,
             **_kwargs: Any
     ) -> None:
         super().__init__(
             uuid=uuid,
             database_topic="db_generic_sensors",
-            label="Ethernet host",
+            transport_name="Ethernet host",
             reconnect_interval=reconnect_interval,
+            label=label,
             hostname=hostname,
             port=port
         )
