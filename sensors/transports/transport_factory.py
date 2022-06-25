@@ -6,7 +6,6 @@ from typing import Any, Type
 
 from errors import UnknownDriverError
 from .ethernet import EthernetTransport
-from .linux_gpib import LinuxGpibTransport
 from .prologix_ethernet import PrologixEthernetTransport
 from .tinkerforge import TinkerforgeTransport
 
