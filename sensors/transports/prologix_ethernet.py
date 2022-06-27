@@ -9,10 +9,10 @@ from uuid import UUID
 
 from prologix_gpib_async import AsyncPrologixGpibEthernetController
 
-from sensors.transports.generic_transport import GenericTransport
+from sensors.transports.generic_ethernet_transport import GenericEthernetTransport
 
 
-class PrologixEthernetTransport(GenericTransport, AsyncPrologixGpibEthernetController):
+class PrologixEthernetTransport(GenericEthernetTransport, AsyncPrologixGpibEthernetController):
     """
     The transport wrapper for the generic ethernet connection
     """

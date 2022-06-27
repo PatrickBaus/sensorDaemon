@@ -184,10 +184,9 @@ class GenericIpConnection:
     ) -> bytes:
         if not self.is_connected:
             raise NotConnectedError("Not connected")
-        assert length is not None or separator is not None, "Either specify the number of bytes to read or a separator"
 
         if length is None:
-            coro = self.__reader.readuntil(separator)
+            coro = self.__reader.readuntil(separator if separator is not None else b'\n')
         else:
             if length > 0:
                 coro = self.__reader.readexactly(length)

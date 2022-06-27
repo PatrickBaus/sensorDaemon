@@ -12,7 +12,7 @@ from tinkerforge_async import IPConnectionAsync
 from tinkerforge_async.ip_connection import EnumerationType, NotConnectedError
 
 from async_event_bus import event_bus
-from helper_functions import retry
+from helper_functions import context, retry
 from sensors.drivers.tinkerforge import TinkerforgeSensor
 
 
@@ -76,33 +76,30 @@ class TinkerforgeTransport(IPConnectionAsync):
         self.__logger = logging.getLogger(__name__)
 
     @staticmethod
-    async def _stream_transport(transport: TinkerforgeTransport):
-        async with transport:
-            try:
-                logging.getLogger(__name__).info(
-                    "Connected to Tinkerforge host at %s (%s).", transport.uri, transport.label
-                )
-                sensor_stream = (
-                    stream.chain(
-                        stream.just(transport.enumerate()) | pipe.filter(lambda x: False),
-                        stream.iterate(transport.read_enumeration())
-                            | pipe.action(lambda enumeration: event_bus.publish(
-                                    f"nodes/tinkerforge/{enumeration[1].uid}/remove", None)
-                            )
-                            | pipe.filter(lambda enumeration: enumeration[0] is not EnumerationType.DISCONNECTED)
-                            | pipe.starmap(lambda enumeration_type, sensor: TinkerforgeSensor(sensor))
-                            | pipe.map(lambda sensor: sensor.stream_data())
-                            | pipe.flatten()
+    def _stream_transport(transport: TinkerforgeTransport):
+        sensor_stream = (
+            stream.chain(
+                stream.call(transport.enumerate) | pipe.filter(lambda x: False),
+                stream.iterate(transport.read_enumeration())
+                    | pipe.action(lambda enumeration: event_bus.publish(
+                            f"nodes/tinkerforge/{enumeration[1].uid}/remove", None)
                     )
-                )
-
-                async with sensor_stream.stream() as streamer:
-                    async for item in streamer:
-                        yield item
-            finally:
-                logging.getLogger(__name__).info(
+                    | pipe.filter(lambda enumeration: enumeration[0] is not EnumerationType.DISCONNECTED)
+                    | pipe.starmap(lambda enumeration_type, sensor: TinkerforgeSensor(sensor))
+                    | pipe.map(lambda sensor: sensor.stream_data())
+                    | pipe.flatten()
+            )
+            | context.pipe(
+                transport,
+                on_enter=lambda: logging.getLogger(__name__).info(
+                    "Connected to Tinkerforge host at %s (%s).", transport.uri, transport.label
+                ),
+                on_exit=lambda: logging.getLogger(__name__).info(
                     "Disconnected from Tinkerforge host at %s (%s).", transport.uri, transport.label
                 )
+            )
+        )
+        return sensor_stream
 
     def stream_data(self):
         """

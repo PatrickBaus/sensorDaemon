@@ -2,10 +2,11 @@
 A collection of helper functions used in Kraken.
 """
 import asyncio
+import inspect
 from functools import partial
 from typing import Any, AsyncGenerator, Union
 
-from aiostream import operator, streamcontext
+from aiostream import operator, stream, streamcontext
 
 from async_event_bus import TopicNotRegisteredError, event_bus
 from errors import ConfigurationError
@@ -70,6 +71,22 @@ async def retry(source, exc_class: Exception = Exception, interval: float = 0):
         else:
             return
 
+
+@operator(pipable=True)
+async def context(source, cm, on_enter=None, on_exit=None):
+    async with cm:
+        try:
+            if on_enter is not None:
+                on_enter()
+            async with streamcontext(source) as streamer:
+                async for item in streamer:
+                    yield item
+            #yield in_context
+        finally:
+            if on_exit is not None:
+                on_exit()
+
+
 @operator(pipable=True)
 async def finally_action(source, func):
     try:
@@ -77,7 +94,11 @@ async def finally_action(source, func):
             async for item in streamer:
                 yield item
     finally:
-        await func
+        if inspect.isawaitable(func):
+            await func
+        else:
+            func()
+
 
 @operator(pipable=True)
 async def catch(source, exc_class: Exception, on_exc=None):
@@ -86,9 +107,12 @@ async def catch(source, exc_class: Exception, on_exc=None):
             async for item in streamer:
                 yield item
     except exc_class as exc:
-        print("caught", exc)
         if on_exc is not None:
-            on_exc()
+            async with on_exc(exc).stream() as streamer:
+                async for item in streamer:
+                    yield item
+        else:
+            yield stream.empty()
 
 async def call_safely(
         topic: str,

@@ -8,10 +8,10 @@ from typing import Any
 from uuid import UUID
 
 from connections import GenericIpConnection
-from sensors.transports.generic_transport import GenericTransport
+from sensors.transports.generic_ethernet_transport import GenericEthernetTransport
 
 
-class EthernetTransport(GenericTransport, GenericIpConnection):
+class EthernetTransport(GenericEthernetTransport, GenericIpConnection):
     """
     The transport wrapper for the generic ethernet connection
     """

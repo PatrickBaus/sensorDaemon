@@ -7,15 +7,12 @@ import asyncio
 import inspect
 import logging
 from functools import partial
-from typing import TYPE_CHECKING
 
 from aiostream import pipe, stream
-from aiostream.aiter_utils import is_async_iterable
-from hp3478a_async import HP_3478A
 
 from async_event_bus import event_bus
 from data_types import DataEvent
-from helper_functions import create_device_function, finally_action
+from helper_functions import catch, create_device_function, finally_action
 from errors import ConfigurationError
 
 
@@ -53,6 +50,13 @@ class GenericDriver:
                     | pipe.concat(task_limit=1)
             )
 
+    def on_error(self, exc):
+        logging.getLogger(__name__).error(
+            "Error while while reading %s. Terminating device. Error: %s",
+            self, exc
+        )
+        return stream.empty()
+
     def _configure_and_stream(self, config):
         if config is None:
             return stream.empty()
@@ -72,6 +76,7 @@ class GenericDriver:
                 )
                 | finally_action.pipe(stream.call(self._clean_up, config['on_disconnect']))
             )
+            | catch.pipe(TypeError, on_exc=self.on_error)
         )
         return config_stream
 

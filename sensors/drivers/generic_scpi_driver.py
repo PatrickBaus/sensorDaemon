@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from aiostream import async_, pipe, stream
@@ -22,7 +22,7 @@ class ScpiIoError(ValueError):
 
 
 class GenericScpiDriver:
-    SEPARATOR = "\n"  # The default message separator (will be encoded to bytes later)
+    TERMINATOR = "\n"  # The default message terminator (will be encoded to bytes later)
 
     @property
     def device_name(self) -> str:
@@ -61,36 +61,33 @@ class GenericScpiDriver:
         result: tuple[str, str, str, str]
         return result
 
-    async def read(self, length: int | None = None, separator: str | None = None) -> str:
+    async def read(self, scpi_terminator: str | None = None, *args, **kwargs) -> str:
         """
         Read a single value from the device. If `length' is given, read `length` bytes, else
         read until a line break.
 
         Parameters
         ----------
-        length: int, default=None
-            The number of bytes to read. Omit to read a line.
-
-        separator: str, default=None
-            One or more characters, that separates replies. If not set, the default
-            separator '\n' will be used if length is not set.
+        scpi_terminator: str, default=None
+            One or more characters, that terminate SCPI replies. If not set, the default terminator '\n' will be used.
+            The terminator will be stripped from the end of the data.
 
         Returns
         ----------
         Decimal or bytes
             Either a value or a number of bytes as defined by `length`.
         """
-        if length is None:
-            # use the default separator if none is given
-            try:
-                separator = self.SEPARATOR.encode() if separator is None else separator.encode()
-            except UnicodeEncodeError:
-                self.__logger.warning("Invalid separator '%r', using default: '%r'", separator, self.SEPARATOR)
-                separator = self.SEPARATOR.encode()
+        # use the default terminator if none is given
+        try:
+            scpi_terminator = self.TERMINATOR.encode() if scpi_terminator is None else scpi_terminator.encode()
+        except UnicodeEncodeError:
+            self.__logger.warning("Invalid terminator '%r', using default: '%r'", scpi_terminator, self.TERMINATOR)
+            scpi_terminator = self.TERMINATOR.encode()
 
-        data = await self._conn.read(length=length, character=separator)
-        # Strip the separator if we are using one
-        data = data[:-len(separator)] if length is None else data
+        data = await self._conn.read(*args, **kwargs)
+        # Strip the terminator if we are using one and the last bytes match the terminator
+        if scpi_terminator and data[-len(scpi_terminator):] == scpi_terminator:
+            data = data[:-len(scpi_terminator)]
         try:
             return data.decode("utf-8")
         except UnicodeDecodeError:
@@ -98,20 +95,20 @@ class GenericScpiDriver:
             self.__logger.error("Invalid data read '%r'. This driver requires ASCII or UTF-8 data", data)
             raise ScpiIoError("Received invalid data from device %s", self)
 
-    async def write(self, cmd: str, separator: str | None = None) -> None:
-        if separator is None:
-            cmd += self.SEPARATOR
+    async def write(self, cmd: str, scpi_terminator: str | None = None) -> None:
+        if scpi_terminator is None:
+            cmd += self.TERMINATOR
         else:
-            cmd += separator
+            cmd += scpi_terminator
         try:
             await self._conn.write(cmd.encode())
         except UnicodeEncodeError:
             self.__logger.error("Cannot write invalid command '%r'. Use ASCII or UTF-8 strings only.", cmd)
             raise ScpiIoError("Cannot write illegal command %s to device %s", self)
 
-    async def query(self, cmd: str, length: int | None = None, separator: str | None = None) -> str:
-        await self.write(cmd, separator)
-        return await self.read(length, separator)
+    async def query(self, cmd: str, scpi_terminator: str | None = None, *args, **kwargs) -> str:
+        await self.write(cmd, scpi_terminator)
+        return await self.read(scpi_terminator, *args, **kwargs)
 
     async def read_number(self, length: int | None = None, separator: str | None = None) -> Decimal:
         result = await self.read(length, separator)
@@ -127,9 +124,9 @@ class GenericScpiDriver:
             return Decimal('-Infinity')
         return Decimal(result)
 
-    async def query_number(self, cmd: str, length: int | None = None, separator: str | None = None) -> Decimal:
-        await self.write(cmd, separator)
-        return await self.read_number(length, separator)
+    async def query_number(self, cmd: str, length: int | None = None, scpi_terminator: str | None = None) -> Decimal:
+        await self.write(cmd, scpi_terminator)
+        return await self.read_number(length, scpi_terminator)
 
 
 class GenericScpiSensor(GenericDriver, GenericScpiDriver):
@@ -170,8 +167,7 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
 
         # Send a warning, if we did not get a valid id
         if manufacturer is None:
-            logging.getLogger(__name__).warning("Could not get device id of device: %s", self)
-
+            logging.getLogger(__name__).warning("Could not query '*IDN?' of device: %s", self)
 
     def stream_data(self, config):
         return (
