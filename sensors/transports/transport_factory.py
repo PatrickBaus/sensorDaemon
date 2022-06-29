@@ -6,6 +6,7 @@ from typing import Any, Type
 
 from errors import UnknownDriverError
 from .ethernet import EthernetTransport
+from .linux_gpib import LinuxGpibTransport
 from .prologix_ethernet import PrologixEthernetTransport
 from .tinkerforge import TinkerforgeTransport
 
@@ -60,3 +61,4 @@ transport_factory.register(TinkerforgeTransport)
 transport_factory.register(PrologixEthernetTransport)
 # host_factory.register(LabnodeSensorHost)
 transport_factory.register(EthernetTransport)
+transport_factory.register(LinuxGpibTransport)

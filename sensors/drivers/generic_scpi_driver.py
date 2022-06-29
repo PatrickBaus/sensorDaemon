@@ -14,6 +14,7 @@ from sensors.drivers.generic_driver import GenericDriver
 
 if TYPE_CHECKING:
     from sensors.transports.ethernet import EthernetTransport
+    from sensors.transports.linux_gpib import LinuxGpibTransport
     from sensors.transports.prologix_ethernet import PrologixEthernetTransport
 
 
@@ -34,7 +35,7 @@ class GenericScpiDriver:
 
     def __init__(
             self,
-            connection: EthernetTransport | PrologixEthernetTransport,
+            connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport,
     ) -> None:
         self._conn = connection
         self.__device_name = None
@@ -145,7 +146,7 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
     def __init__(
             self,
             uuid,
-            connection: EthernetTransport | PrologixEthernetTransport,
+            connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport,
             *_args,
             **_kwargs
     ) -> None:
