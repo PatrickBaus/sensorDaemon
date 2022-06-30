@@ -6,6 +6,7 @@ pydantic~=1.9.1
 pymongo~=3.12.3
 python-decouple~=3.6
 simplejson~=3.17.6
+-e git+https://github.com/PatrickBaus/pyAsyncGpib#egg=async_gpib
 -e git+https://github.com/PatrickBaus/pyAsyncPrologixGpib#egg=prologix_gpib_async
 -e git+https://github.com/PatrickBaus/pyAsyncHP3478A#egg=hp3478a_async
 -e git+https://github.com/PatrickBaus/TinkerforgeAsync@generators#egg=tinkerforge_async
