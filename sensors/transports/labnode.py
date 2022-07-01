@@ -66,11 +66,11 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
     def _stream_data(self, transport):
         config_stream = (
             with_context(transport, on_exit=lambda: logging.getLogger(__name__).info(
-                    "Disconnected from Labnode host at %s (%s).", transport.uri, transport.label
+                    "Disconnected from APQ Labnode at %s (%s).", transport.uri, transport.label
                 )
             )
             | pipe.action(lambda _: logging.getLogger(__name__).info(
-                "Connected to Labnode host at %s (%s).", transport.uri, transport.label
+                "Connected to APQ Labnode at %s (%s).", transport.uri, transport.label
             ))
             | pipe.map(LabnodeSensor)
             | pipe.action(async_(lambda sensor: sensor.enumerate()))

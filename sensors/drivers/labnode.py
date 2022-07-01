@@ -53,7 +53,7 @@ class LabnodeSensor:
             )
             | pipe.action(
                 lambda config: logging.getLogger(__name__).info(
-                    "Configuration update for Labnode sensor: %s", self._device,
+                    "Got new configuration for: %s", self._device,
                 )
             )
             | pipe.map(self._create_config)

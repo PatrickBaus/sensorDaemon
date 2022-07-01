@@ -76,7 +76,7 @@ class TinkerforgeSensor:
                     )
                     | pipe.action(
                         lambda config: logging.getLogger(__name__).info(
-                            "Configuration update for Tinkerforge sensor: %s", sensor._device,
+                            "Got new configuration for: %s", sensor._device,
                         )
                     )
                     | pipe.map(self._create_config)
