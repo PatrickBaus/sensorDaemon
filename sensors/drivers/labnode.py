@@ -49,7 +49,7 @@ class LabnodeSensor:
                 stream.call(call_safely, "db_labnode_sensors/get_config",
                             "db_labnode_sensors/status_update", self.__uuid)
                 | pipe.takewhile(lambda config: config is not None),
-                stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{self.__uuid}"))
+                stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{self.__uuid}/update"))
             )
             | pipe.action(
                 lambda config: logging.getLogger(__name__).info(
