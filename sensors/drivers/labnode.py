@@ -57,7 +57,11 @@ class LabnodeSensor:
                 )
             )
             | pipe.map(self._create_config)
-            | pipe.switchmap(self._configure_and_stream)
+            | pipe.switchmap(
+                lambda config: stream.empty() if config is None or not config['enabled'] else (
+                    self._configure_and_stream(config)
+                )
+            )
         )
 
         return data_stream
