@@ -123,6 +123,7 @@ class LabnodeSensorConfigModel(BaseModel):
     description: Optional[str] = ""
     topic: str
     unit: PydanticObjectId | str
+    timeout: Optional[confloat(ge=0)]
 
 
 class LabnodeSensorModel(DeviceDocument):

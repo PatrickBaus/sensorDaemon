@@ -175,12 +175,12 @@ class LabnodeContext(Context):
     endpoint to query for sensor configs via the event bus.
     """
     def __init__(self):
-        super().__init__()
-        self.__sensors = {}
+        super().__init__(topic="db_labnode_sensors")
+        self.__logger = logging.getLogger(__name__)
 
     async def __aenter__(self) -> Self:
-        event_bus.register("/database/labnode/get_sensor_config", self.__get_sensor_config)
-        self.__sensors = {}
+        event_bus.register(self.topic + "/get_config", self.__get_sensor_config)
+        event_bus.publish(self.topic + "/status_update", True)  # FIXME: use a proper event
         return self
 
     async def __aexit__(
@@ -189,49 +189,55 @@ class LabnodeContext(Context):
             exc: BaseException | None,
             traceback: TracebackType | None
     ) -> None:
-        event_bus.unregister("/database/labnode/get_sensor_config")
+        event_bus.unregister(self.topic + "/get_config")
 
-    async def __get_sensor_config(self, uid):
+    async def __get_sensor_config(self, uuid: UUID) -> dict[str, Any] | None:
         """
         Get all host configs from the database.
 
         Parameters
         ----------
-        uid: int
-            The serial number of the labnode sensor
+        uuid: UUID
+            The device uuid
 
         Returns
         -------
         dict
             A dictionary, that contains the configuration of the sensor.
         """
-        config = await LabnodeSensorModel.find_one(LabnodeSensorModel.uid == uid)
-        if config is not None:
-            self.__sensors[config.id] = config.uid
-            return config.dict()
-        return {}
+        try:
+            device = await LabnodeSensorModel.find_one(LabnodeSensorModel.id == uuid)
+        except ValueError as exc:
+            # If the pydantic validation fails, we get a ValueError
+            self.__logger.error("Error while getting configuration for labnode device %s: %s", uuid, exc)
+            device = None
+
+        if device is None:
+            return device
+
+        device = device.dict()
+        # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
+        # the back of the dict
+        device['uuid'] = device.pop('id')
+
+        return device
 
     async def monitor_changes(self, timeout):
-        """
-        Adds the driver string to the output of the iterator.
-        """
         async for change_type, change in self._monitor_database(LabnodeSensorModel, timeout):
-            if change_type == ChangeType.ADD:
-                self.__sensors[change.id] = change.uid
-                event_bus.publish(f"/sensors/labnode/by_uid/{change.uid}/update", UpdateChangeEvent(change.dict()))
-            elif change_type == ChangeType.UPDATE:
-                sensor_uid = self.__sensors.pop(change.id, None)
-                if sensor_uid is not None and sensor_uid != change.uid:
-                    # The uid was changed, so we need to unregister the old sensor
-                    event_bus.publish(f"/sensors/labnode/by_uid/{sensor_uid}/update", UpdateChangeEvent({}))
-                self.__sensors[change.id] = change.uid
-                event_bus.publish(f"/sensors/labnode/by_uid/{change.uid}/update", UpdateChangeEvent(change.dict()))
+            # Remember: Do not await in the iterator, as this stops the stream of updates
+            if change_type == ChangeType.UPDATE:
+                change = change.dict()
+                # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
+                # used in Python
+                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change['uuid']}/update", change)
+            elif change_type == ChangeType.ADD:
+                change = change.dict()
+                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change['host']}/add", change)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
-                sensor_uid = self.__sensors.pop(change, None)
-                if sensor_uid is not None:
-                    event_bus.publish(f"/sensors/labnode/by_uid/{sensor_uid}/update", UpdateChangeEvent({}))
-
+                event_bus.publish(f"nodes/by_uuid/{change}/update", None)
 
 class GenericSensorContext(Context):
     """
@@ -292,7 +298,7 @@ class GenericSensorContext(Context):
         Adds the driver string to the output of the iterator.
         """
         async for change_type, change in self._monitor_database(GenericSensorModel, timeout):
-            # Remember: Do not await in the iterator, as this stop the stream of
+            # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
                 change = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
@@ -342,7 +348,7 @@ class HostContext(Context):
         UUID
             The unique id of the device
         """
-        async for sensor in SensorHostModel.find_all():#(projection_model=BaseDocument):
+        async for sensor in SensorHostModel.find_all(projection_model=BaseDocument):
             yield sensor.id
 
     async def __get_sensor_config(self, uuid: UUID) -> dict[str, Any] | None:
@@ -382,7 +388,7 @@ class HostContext(Context):
         """
         change: SensorHostModel
         async for change_type, change in self._monitor_database(SensorHostModel, timeout):
-            # Remember: Do not await in the iterator, as this stop the stream of
+            # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
@@ -458,7 +464,7 @@ class TinkerforgeContext(Context):
         Adds the driver string to the output of the iterator.
         """
         async for change_type, change in self._monitor_database(TinkerforgeSensorModel, timeout):
-            # Remember: Do not await in the iterator, as this stop the stream of
+            # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
                 change = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
@@ -479,6 +485,6 @@ class TinkerforgeContext(Context):
 CONTEXTS = {
     GenericSensorContext,
     HostContext,
+    LabnodeContext,
     TinkerforgeContext,
-    # LabnodeContext,
 }

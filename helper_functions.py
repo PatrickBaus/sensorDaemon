@@ -87,6 +87,21 @@ async def context(source, cm, on_enter=None, on_exit=None):
                 on_exit()
 
 
+@operator
+async def with_context(context_manager, on_exit=None):
+    try:
+        async with context_manager as ctx:
+            yield ctx
+            future = asyncio.Future()
+            try:
+                await future
+            finally:
+                future.cancel()
+    finally:
+        if on_exit is not None:
+            on_exit()
+
+
 @operator(pipable=True)
 async def finally_action(source, func):
     try:
