@@ -28,7 +28,7 @@ class FunctionCall(BaseModel):
         Execute the function call on a sensor object.
         Parameters
         ----------
-        sensor: TinkerforgeSensor
+        sensor: TinkerforgeSensorModel
             A sensor that implements the function
         """
         getattr(sensor, self.function)(*self.args, **self.kwargs)
@@ -79,14 +79,17 @@ class DeviceDocument(TimeStampedDocument):
     description: Optional[str] = ""
 
 
-class SensorHost(DeviceDocument, HostBaseModel):
+class SensorHostModel(DeviceDocument, HostBaseModel):
     """
     An ethernet connected sensor host (inherited from the HostBaseModel).
     """
     # pylint: disable=too-few-public-methods
 
+    class Settings:
+        name = "SensorHost"
 
-class TinkforgeSensorConfig(BaseModel):
+
+class TinkforgeSensorConfigModel(BaseModel):
     """
     The configuration of a sensor made by Tinkerforge GmbH.
     """
@@ -98,17 +101,20 @@ class TinkforgeSensorConfig(BaseModel):
     unit: PydanticObjectId | str
 
 
-class TinkerforgeSensor(DeviceDocument):
+class TinkerforgeSensorModel(DeviceDocument):
     """
     The configuration of a sensor node, which is called a stack by Tinkerforge.
     """
     # pylint: disable=too-few-public-methods
     uid: Indexed(int, unique=True)
-    config: Dict[str, TinkforgeSensorConfig]    # bson does not allow int keys
+    config: Dict[str, TinkforgeSensorConfigModel]    # bson does not allow int keys
     on_connect: Union[List[FunctionCall], List[None]] = []
 
+    class Settings:
+        name = "TinkerforgeSensor"
 
-class LabnodeSensorConfig(BaseModel):
+
+class LabnodeSensorConfigModel(BaseModel):
     """
     The configuration of a sensor made by Tinkerforge GmbH.
     """
@@ -119,13 +125,15 @@ class LabnodeSensorConfig(BaseModel):
     unit: PydanticObjectId | str
 
 
-class LabnodeSensor(DeviceDocument):
+class LabnodeSensorModel(DeviceDocument):
     uid: Indexed(int, unique=True)
-    config: Dict[str, LabnodeSensorConfig]    # bson does not allow int keys
+    config: Dict[str, LabnodeSensorConfigModel]    # bson does not allow int keys
     on_connect: Union[List[FunctionCall], List[None]] = []
 
+    class Settings:
+        name = "LabnodeSensor"
 
-class GenericSensor(DeviceDocument):
+class GenericSensorModel(DeviceDocument):
     host: Indexed(UUID, unique=True)
     driver: str
     interval: confloat(ge=0)
@@ -135,3 +143,6 @@ class GenericSensor(DeviceDocument):
     on_disconnect: Union[List[FunctionCall], List[None]] = []
     topic: str
     unit: str
+
+    class Settings:
+        name = "GenericSensor"

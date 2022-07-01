@@ -21,8 +21,8 @@ import pymongo  # to access the error classes
 
 from async_event_bus import event_bus
 from data_types import ChangeType, UpdateChangeEvent
-from database.models import BaseDocument, DeviceDocument, GenericSensor, TinkerforgeSensor, SensorHost, \
-    LabnodeSensor
+from database.models import BaseDocument, DeviceDocument, GenericSensorModel, TinkerforgeSensorModel, SensorHostModel, \
+    LabnodeSensorModel
 
 
 class MongoDb:
@@ -74,7 +74,7 @@ class MongoDb:
                 await init_beanie(
                     database=database,
                     document_models=[
-                        BaseDocument, SensorHost, TinkerforgeSensor, LabnodeSensor, GenericSensor
+                        BaseDocument, SensorHostModel, TinkerforgeSensorModel, LabnodeSensorModel, GenericSensorModel
                     ]
                 )
                 self.__logger.info("MongoDB (%s) connected.", hostname_string[hostname_string.find('@')+1:])
@@ -205,7 +205,7 @@ class LabnodeContext(Context):
         dict
             A dictionary, that contains the configuration of the sensor.
         """
-        config = await LabnodeSensor.find_one(LabnodeSensor.uid == uid)
+        config = await LabnodeSensorModel.find_one(LabnodeSensorModel.uid == uid)
         if config is not None:
             self.__sensors[config.id] = config.uid
             return config.dict()
@@ -215,7 +215,7 @@ class LabnodeContext(Context):
         """
         Adds the driver string to the output of the iterator.
         """
-        async for change_type, change in self._monitor_database(LabnodeSensor, timeout):
+        async for change_type, change in self._monitor_database(LabnodeSensorModel, timeout):
             if change_type == ChangeType.ADD:
                 self.__sensors[change.id] = change.uid
                 event_bus.publish(f"/sensors/labnode/by_uid/{change.uid}/update", UpdateChangeEvent(change.dict()))
@@ -271,7 +271,7 @@ class GenericSensorContext(Context):
             A dictionary, that contains the configuration of the sensor.
         """
         try:
-            device = await GenericSensor.find_one(GenericSensor.host == uuid)
+            device = await GenericSensorModel.find_one(GenericSensorModel.host == uuid)
         except ValueError as exc:
             # If the pydantic validation fails, we get a ValueError
             self.__logger.error("Error while getting configuration for ethernet device %s: %s", uuid, exc)
@@ -291,7 +291,7 @@ class GenericSensorContext(Context):
         """
         Adds the driver string to the output of the iterator.
         """
-        async for change_type, change in self._monitor_database(GenericSensor, timeout):
+        async for change_type, change in self._monitor_database(GenericSensorModel, timeout):
             # Remember: Do not await in the iterator, as this stop the stream of
             if change_type == ChangeType.UPDATE:
                 change = change.dict()
@@ -342,7 +342,7 @@ class HostContext(Context):
         UUID
             The unique id of the device
         """
-        async for sensor in SensorHost.find_all(projection_model=BaseDocument):
+        async for sensor in SensorHostModel.find_all():#(projection_model=BaseDocument):
             yield sensor.id
 
     async def __get_sensor_config(self, uuid: UUID) -> dict[str, Any] | None:
@@ -360,7 +360,7 @@ class HostContext(Context):
             A dictionary, that contains the configuration of the sensor.
         """
         try:
-            device = await SensorHost.find_one(SensorHost.id == uuid)
+            device = await SensorHostModel.find_one(SensorHostModel.id == uuid)
         except ValueError as exc:
             # If the pydantic validation fails, we get a ValueError
             self.__logger.error("Error while getting configuration for ethernet device %s: %s", uuid, exc)
@@ -380,8 +380,8 @@ class HostContext(Context):
         """
         Adds the driver string to the output of the iterator.
         """
-        change: SensorHost
-        async for change_type, change in self._monitor_database(SensorHost, timeout):
+        change: SensorHostModel
+        async for change_type, change in self._monitor_database(SensorHostModel, timeout):
             # Remember: Do not await in the iterator, as this stop the stream of
             if change_type == ChangeType.UPDATE:
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
@@ -437,7 +437,7 @@ class TinkerforgeContext(Context):
             A dictionary, that contains the configuration of the sensor.
         """
         try:
-            device = await TinkerforgeSensor.find_one(TinkerforgeSensor.uid == uid)
+            device = await TinkerforgeSensorModel.find_one(TinkerforgeSensorModel.uid == uid)
         except ValueError as exc:
             # If the pydantic validation fails, we get a ValueError
             self.__logger.error("Error while getting configuration for tinkerforge device %s: %s", uid, exc)
@@ -457,7 +457,7 @@ class TinkerforgeContext(Context):
         """
         Adds the driver string to the output of the iterator.
         """
-        async for change_type, change in self._monitor_database(TinkerforgeSensor, timeout):
+        async for change_type, change in self._monitor_database(TinkerforgeSensorModel, timeout):
             # Remember: Do not await in the iterator, as this stop the stream of
             if change_type == ChangeType.UPDATE:
                 change = change.dict()

@@ -23,7 +23,7 @@ class Hp3478ADriver(GenericDriver, HP_3478A):
         Returns
         -------
         str
-            The driver that identifies it to the host factory
+            The driver that identifies it to the sensor factory
         """
         return "hp3478a2"
 

@@ -139,7 +139,7 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
         Returns
         -------
         str
-            The driver that identifies it to the host factory
+            The driver that identifies it to the sensor factory
         """
         return "generic_scpi2"
 

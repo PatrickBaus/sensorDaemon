@@ -26,7 +26,7 @@ class TinkerforgeSensor:
         Returns
         -------
         str
-            The driver that identifies it to the host factory
+            The driver that identifies it to the sensor factory
         """
         return "tinkerforge2"
 

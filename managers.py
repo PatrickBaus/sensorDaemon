@@ -205,9 +205,9 @@ class HostManager:
         try:
             return transport_factory.get(**config)
         except UnknownDriverError:
-            logging.getLogger(__name__).warning(f"No driver available for transport '{config['driver']}'")
+            logging.getLogger(__name__).warning(f"No driver available for transport '{config['driver']}'.")
         except Exception:
-            logging.getLogger(__name__).exception(f"Error while creating transport '{config['driver']}'")
+            logging.getLogger(__name__).exception(f"Error while creating transport '{config['driver']}'.")
         return None
 
     @staticmethod
