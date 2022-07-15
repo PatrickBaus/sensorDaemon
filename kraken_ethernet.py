@@ -161,8 +161,7 @@ async def main():
     try:
         await daemon.run()
     except asyncio.CancelledError:
-        # Swallow that error, because this is the root task, there is nothing
-        # to cancel above it.
+        # Silently swallow the error to suppress the noise, then terminate.
         pass
 
 # Report all mistakes managing asynchronous resources.

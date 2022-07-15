@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from prologix_gpib_async import AsyncPrologixGpibEthernetController
+from helper_functions import retry
 
 from sensors.transports.generic_ethernet_transport import GenericEthernetTransport
 
@@ -60,3 +61,6 @@ class PrologixEthernetTransport(GenericEthernetTransport, AsyncPrologixGpibEther
             pad=pad,
             sad=sad
         )
+
+    def _stream_data(self, transport):
+        return super()._stream_data(transport) | retry.pipe((ValueError,), self.reconnect_interval)

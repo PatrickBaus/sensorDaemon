@@ -16,7 +16,7 @@ from aiostream import pipe, stream
 
 from async_event_bus import event_bus
 from errors import UnknownDriverError
-from helper_functions import call_safely, context, finally_action, retry
+from helper_functions import call_safely, context
 from sensors.factories.sensor_factory import sensor_factory
 
 
