@@ -1,5 +1,5 @@
 """
-A lightweight event bus for the AsyncIO framework, that relies on asynchronous
+A lightweight event bus for the asyncio framework, that relies on asynchronous
 generators to deliver messages.
 """
 import asyncio
@@ -24,7 +24,7 @@ class AsyncEventBus:
     An event bus, that is using the async generator syntax for distributing events.
     It uses dicts and sets internally to ensure good performance.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self.__subscribers: dict[str, set[asyncio.Queue]] = {}
         self.__registered_calls: dict[str, Union[Callable[[Any], Coroutine], Callable[[Any], AsyncGenerator]]] = {}
 
@@ -35,7 +35,7 @@ class AsyncEventBus:
         Parameters
         ----------
         event_name: str
-            The type of event to listen for, typically a str, but can be anything.
+            The type of event to listen for.
 
         Yields
         -------

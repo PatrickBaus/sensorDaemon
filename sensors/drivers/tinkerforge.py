@@ -8,7 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from aiostream import async_, pipe, stream
-from tinkerforge_async.devices import GetCallbackConfiguration, ThresholdOption
+from tinkerforge_async.devices import AdvancedCallbackConfiguration, ThresholdOption
 from tinkerforge_async.ip_connection import NotConnectedError
 
 from async_event_bus import event_bus
@@ -104,7 +104,7 @@ class TinkerforgeSensor:
 
         return config
 
-    def _read_sensor(self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: GetCallbackConfiguration):
+    def _read_sensor(self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: AdvancedCallbackConfiguration):
         monitor_stream = (
             stream.repeat(self._device, interval=1)
             | pipe.map(async_(lambda sensor: sensor.get_callback_configuration(sid)))
@@ -120,7 +120,7 @@ class TinkerforgeSensor:
             stream.iterate(self._device.read_events(sids=(sid,)))
             | pipe.map(
                 lambda item: DataEvent(
-                    sender=source_uuid, topic=topic, value=item['payload'], sid=item['sid'], unit=str(unit)
+                    sender=source_uuid, topic=topic, value=item.payload, sid=item.sid, unit=str(unit)
                 )
             )
         )
@@ -128,7 +128,7 @@ class TinkerforgeSensor:
     @staticmethod
     def _parse_callback_configuration(sid: str, config: dict[str, Any]):
         sid = int(sid)
-        callback_config = GetCallbackConfiguration(
+        callback_config = AdvancedCallbackConfiguration(
             period=config['interval'],
             value_has_to_change=config['trigger_only_on_change'],
             option=ThresholdOption.OFF,
@@ -137,13 +137,13 @@ class TinkerforgeSensor:
         )
         return sid, config['unit'], config['topic'], callback_config
 
-    async def _set_callback_configuration(self, sid: int, unit: str, topic: str,  config: GetCallbackConfiguration):
+    async def _set_callback_configuration(self, sid: int, unit: str, topic: str,  config: AdvancedCallbackConfiguration):
         try:
             await self._device.set_callback_configuration(sid, *config)
         except AssertionError:
             self._logger.error("Invalid configuration for %s: sid=%i, config=%s", self._device, sid, config)
             return stream.empty()
-        remote_callback_config: GetCallbackConfiguration
+        remote_callback_config: AdvancedCallbackConfiguration
         remote_callback_config = await self._device.get_callback_configuration(sid)
         if remote_callback_config.period == 0:
             self._logger.warning(
