@@ -1,32 +1,35 @@
-# -*- coding: utf-8 -*-
 """
 This file contains all database data models, that represent either sensor
 hosts/nodes or sensors.
 """
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional, List, Dict, Union
+from typing import Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from beanie import Document, Indexed, PydanticObjectId
-from pydantic import BaseModel, conint, Field   # pylint: disable=no-name-in-module
 import pymongo
+from beanie import Document, Indexed, PydanticObjectId
+from pydantic import BaseModel, Field, confloat, conint  # pylint: disable=no-name-in-module
 
 
 class FunctionCall(BaseModel):
     """
     Abstracted function call that can be called on a sensor.
     """
+
     # pylint: disable=too-few-public-methods
     function: str
     args: Optional[list] = []
     kwargs: Optional[dict] = {}
+    timeout: Optional[confloat(ge=0)]
 
     def execute(self, sensor) -> None:
         """
         Execute the function call on a sensor object.
         Parameters
         ----------
-        sensor: TinkerforgeSensor
+        sensor: TinkerforgeSensorModel
             A sensor that implements the function
         """
         getattr(sensor, self.function)(*self.args, **self.kwargs)
@@ -36,126 +39,120 @@ class HostBaseModel(BaseModel):
     """
     The base model all network hosts must implement.
     """
-    # pylint: disable=too-few-public-methods
-    hostname: str
-    port: conint(ge=1, le=65535)
-    driver: str
 
-    class Collection:
+    # pylint: disable=too-few-public-methods
+    hostname: int | str
+    port: conint(ge=1, le=65535)
+    pad: Optional[conint(ge=0, le=30)]
+    sad: Optional[Union[conint(ge=0x60, le=0x7E), conint(ge=0, le=0)]]
+    driver: str
+    node_id: Optional[UUID] = UUID("{00000000-0000-0000-0000-000000000000}")
+    reconnect_interval: confloat(ge=0) | None
+
+    class Settings:
         """
         The index, that makes sure, that a (host, port) tuple is unique.
         """
+
         indexes = [
             pymongo.IndexModel(
-                [('hostname', pymongo.ASCENDING), ('port', pymongo.ASCENDING)],
+                [("hostname", pymongo.ASCENDING), ("port", pymongo.ASCENDING)],
                 unique=True,
             )
         ]
 
 
-class TimeStampedDocument(Document):
+class BaseDocument(Document):
+    id: UUID = Field(default_factory=uuid4)
+
+
+class TimeStampedDocument(BaseDocument):
     """
     A base class that implements a minimal audit trail by recording the
-    creation date and the the date of the last cahnge.
+    creation date and the date of the last change.
     """
+
     # pylint: disable=too-few-public-methods
     date_created: datetime = datetime.utcnow()
     date_modified: datetime = datetime.utcnow()
 
 
-class SensorHost(TimeStampedDocument, HostBaseModel):
+class DeviceDocument(TimeStampedDocument):
+    enabled: bool = True
+    label: str | None
+    description: Optional[str] = ""
+
+
+class SensorHostModel(DeviceDocument, HostBaseModel):
     """
     An ethernet connected sensor host (inherited from the HostBaseModel).
     """
+
     # pylint: disable=too-few-public-methods
-    id: UUID = Field(default_factory=uuid4)
-    label: str
-    description: Optional[str] = ""
+
+    class Settings:
+        name = "SensorHost"
 
 
-class Sensor(TimeStampedDocument):
-    """
-    The basic model used by all sensors with some basic
-    auditing.
-    """
-    id: UUID = Field(default_factory=uuid4)
-
-
-class SensorUnit(Document):
-    """
-    The (SI) unit of the sensor output.
-    """
-    # pylint: disable=too-few-public-methods
-    label: Indexed(str, unique=True)
-
-
-class TinkforgeSensorConfig(BaseModel):
+class TinkforgeSensorConfigModel(BaseModel):
     """
     The configuration of a sensor made by Tinkerforge GmbH.
     """
+
     # pylint: disable=too-few-public-methods
-    interval: conint(ge=0, le=2**32-1)
+    interval: conint(ge=0, le=2**32 - 1)
     trigger_only_on_change: Optional[bool] = True
     description: Optional[str] = ""
     topic: str
-    unit: PydanticObjectId
+    unit: PydanticObjectId | str
 
 
-class TinkerforgeSensor(Sensor):
+class TinkerforgeSensorModel(DeviceDocument):
     """
     The configuration of a sensor node, which is called a stack by Tinkerforge.
     """
+
     # pylint: disable=too-few-public-methods
     uid: Indexed(int, unique=True)
-    config: Dict[str, TinkforgeSensorConfig]    # bson does not allow int keys
+    config: Dict[str, TinkforgeSensorConfigModel]  # bson does not allow int keys
     on_connect: Union[List[FunctionCall], List[None]] = []
 
-
-class GpibSensor(Sensor):
-    """
-    The configuration of a GPIB connector.
-    """
-    # pylint: disable=too-few-public-methods
-    label: str
-    pad: conint(ge=0, le=30)
-    sad: Optional[Union[conint(ge=0x60, le=0x7E), conint(ge=0, le=0)]] = 0
-    driver: str
-    interval: conint(ge=0)
-    on_read: FunctionCall
-    on_connect: Union[List[FunctionCall], List[None]]
-    on_after_read: Union[List[FunctionCall], List[None]]
-    topic: str
-    unit: PydanticObjectId
-    host: Indexed(UUID)
-
-    class Collection:
-        """
-        The index, that makes sure, that a (host, port) tuple is unique.
-        """
-        indexes = [
-            pymongo.IndexModel(
-                [('pad', pymongo.ASCENDING), ('sad', pymongo.ASCENDING), ('host', pymongo.ASCENDING)],
-                unique=True,
-            )
-        ]
+    class Settings:
+        name = "TinkerforgeSensor"
 
 
-class LabnodeSensorConfig(BaseModel):
+class LabnodeSensorConfigModel(BaseModel):
     """
     The configuration of a sensor made by Tinkerforge GmbH.
     """
+
     # pylint: disable=too-few-public-methods
-    interval: conint(ge=0, le=2**32-1)
+    interval: conint(ge=0, le=2**32 - 1)
     description: Optional[str] = ""
     topic: str
-    unit: PydanticObjectId
+    unit: PydanticObjectId | str
+    timeout: Optional[confloat(ge=0)]
 
 
-class LabnodeSensor(Sensor):
-    """
-    The configuration of a sensor node, which is called a stack by Tinkerforge.
-    """
-    # pylint: disable=too-few-public-methods
+class LabnodeSensorModel(DeviceDocument):
     uid: Indexed(int, unique=True)
-    config: Dict[str, LabnodeSensorConfig]    # bson does not allow int keys
+    config: Dict[str, LabnodeSensorConfigModel]  # bson does not allow int keys
     on_connect: Union[List[FunctionCall], List[None]] = []
+
+    class Settings:
+        name = "LabnodeSensor"
+
+
+class GenericSensorModel(DeviceDocument):
+    host: Indexed(UUID, unique=True)
+    driver: str
+    interval: confloat(ge=0)
+    on_connect: Union[List[FunctionCall], List[None]] = []
+    on_read: FunctionCall
+    on_after_read: Union[List[FunctionCall], List[None]]
+    on_disconnect: Union[List[FunctionCall], List[None]] = []
+    topic: str
+    unit: str
+
+    class Settings:
+        name = "GenericSensor"
