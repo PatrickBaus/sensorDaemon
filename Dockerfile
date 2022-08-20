@@ -19,7 +19,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ADD https://api.github.com/repos/PatrickBaus/sensorDaemon/git/refs/heads/master version.json
 RUN COLOUR='\e[1;93m' && \
   echo -e "${COLOUR}Installing Kraken database logger...\e[0m" && \
-  git https://github.com/PatrickBaus/sensorDaemon app && \
+  git clone https://github.com/PatrickBaus/sensorDaemon app && \
   pip install -r /app/requirements.txt && \
   echo -e "${COLOUR}Done.\e[0m"
 
