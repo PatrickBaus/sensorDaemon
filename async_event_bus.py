@@ -24,6 +24,7 @@ class AsyncEventBus:
     An event bus, that is using the async generator syntax for distributing events.
     It uses dicts and sets internally to ensure good performance.
     """
+
     def __init__(self) -> None:
         self.__subscribers: dict[str, set[asyncio.Queue]] = {}
         self.__registered_calls: dict[str, Union[Callable[[Any], Coroutine], Callable[[Any], AsyncGenerator]]] = {}
@@ -73,7 +74,9 @@ class AsyncEventBus:
         for queue in listener_queues:
             queue.put_nowait(event)
 
-    def register(self, event_name: str, function: Union[Callable[[Any], Coroutine], Callable[[Any], AsyncGenerator]]) -> None:
+    def register(
+        self, event_name: str, function: Union[Callable[[Any], Coroutine], Callable[[Any], AsyncGenerator]]
+    ) -> None:
         """
         Register a function to be called via `call()`.
 

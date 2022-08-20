@@ -24,6 +24,7 @@ class GenericTransport:
     """
     The transport base class for a generic connection.
     """
+
     @property
     def reconnect_interval(self) -> float:
         """
@@ -65,14 +66,14 @@ class GenericTransport:
         return self.__label
 
     def __init__(
-            self,
-            uuid: UUID,
-            database_topic: str,
-            transport_name: str,
-            reconnect_interval: float | None,
-            label: str,
-            *args: Any,
-            **kwargs: Any
+        self,
+        uuid: UUID,
+        database_topic: str,
+        transport_name: str,
+        reconnect_interval: float | None,
+        label: str,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.__uuid = uuid
@@ -100,14 +101,12 @@ class GenericTransport:
                     call_safely,
                     f"{self.__database_topic}/get_config",
                     f"{self.__database_topic}/status_update",
-                    transport.uuid
+                    transport.uuid,
                 ),
-                stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{transport.uuid}/add"))
+                stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{transport.uuid}/add")),
             )
             | pipe.map(lambda config: self._create_device(transport, config))
-            | pipe.starmap(
-                lambda config, device: stream.empty() if device is None else device.stream_data(config)
-            )
+            | pipe.starmap(lambda config, device: stream.empty() if device is None else device.stream_data(config))
             | pipe.switch()
             | context.pipe(
                 transport,
@@ -116,7 +115,7 @@ class GenericTransport:
                 ),
                 on_exit=lambda: logging.getLogger(__name__).info(
                     "Disconnected from %s at %s (%s).", transport.name, transport.uri, transport.label
-                )
+                ),
             )
         )
 

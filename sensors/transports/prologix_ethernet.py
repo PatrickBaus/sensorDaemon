@@ -8,8 +8,8 @@ from typing import Any
 from uuid import UUID
 
 from prologix_gpib_async import AsyncPrologixGpibEthernetController
-from helper_functions import retry
 
+from helper_functions import retry
 from sensors.transports.generic_ethernet_transport import GenericEthernetTransport
 
 
@@ -17,6 +17,7 @@ class PrologixEthernetTransport(GenericEthernetTransport, AsyncPrologixGpibEther
     """
     The transport wrapper for the generic ethernet connection
     """
+
     @classmethod
     @property
     def driver(cls) -> str:
@@ -39,16 +40,16 @@ class PrologixEthernetTransport(GenericEthernetTransport, AsyncPrologixGpibEther
         return f"{self.hostname}:{self.port}"
 
     def __init__(
-            self,
-            hostname: str,
-            port: int,
-            pad: int,
-            sad: int,
-            reconnect_interval: float | None,
-            uuid: UUID,
-            label: str,
-            *_args: Any,
-            **_kwargs: Any
+        self,
+        hostname: str,
+        port: int,
+        pad: int,
+        sad: int,
+        reconnect_interval: float | None,
+        uuid: UUID,
+        label: str,
+        *_args: Any,
+        **_kwargs: Any,
     ) -> None:
         super().__init__(
             uuid=uuid,
@@ -59,7 +60,7 @@ class PrologixEthernetTransport(GenericEthernetTransport, AsyncPrologixGpibEther
             hostname=hostname,
             port=port,
             pad=pad,
-            sad=sad
+            sad=sad,
         )
 
     def _stream_data(self, transport):

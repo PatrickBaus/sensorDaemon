@@ -20,6 +20,7 @@ class LinuxGpibTransport(GenericTransport, AsyncGpib):
     """
     The transport wrapper for the generic ethernet connection
     """
+
     @classmethod
     @property
     def driver(cls) -> str:
@@ -42,15 +43,15 @@ class LinuxGpibTransport(GenericTransport, AsyncGpib):
         return str(self.id)
 
     def __init__(
-            self,
-            hostname: int | str,
-            pad: int,
-            sad: int,
-            reconnect_interval: float | None,
-            uuid: UUID,
-            label: str,
-            *_args: Any,
-            **_kwargs: Any
+        self,
+        hostname: int | str,
+        pad: int,
+        sad: int,
+        reconnect_interval: float | None,
+        uuid: UUID,
+        label: str,
+        *_args: Any,
+        **_kwargs: Any,
     ) -> None:
         super().__init__(
             uuid=uuid,
@@ -60,7 +61,7 @@ class LinuxGpibTransport(GenericTransport, AsyncGpib):
             label=label,
             name=hostname,
             pad=pad,
-            sad=sad
+            sad=sad,
         )
 
     def stream_data(self):

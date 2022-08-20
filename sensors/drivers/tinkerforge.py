@@ -13,12 +13,13 @@ from tinkerforge_async.ip_connection import NotConnectedError
 
 from async_event_bus import event_bus
 from data_types import DataEvent
-from helper_functions import call_safely, create_device_function
 from errors import ConfigurationError
+from helper_functions import call_safely, create_device_function
 
 
 class TinkerforgeSensor:
     """This class extends the driver with catch-all arguments in the constructor"""
+
     @classmethod
     @property
     def driver(cls) -> str:
@@ -30,10 +31,7 @@ class TinkerforgeSensor:
         """
         return "tinkerforge2"
 
-    def __init__(
-            self,
-            device
-    ) -> None:
+    def __init__(self, device) -> None:
         self._device = device
         self._logger = logging.getLogger(__name__)
 
@@ -51,40 +49,47 @@ class TinkerforgeSensor:
         stream
         """
         return stream.chain(
-            stream.call(call_safely, "db_tinkerforge_sensors/get_config", "db_tinkerforge_sensors/status_update", sensor._device.uid)
-                | pipe.takewhile(lambda config: config is not None),
-            stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{sensor._device.uid}/update"))
+            stream.call(
+                call_safely,
+                "db_tinkerforge_sensors/get_config",
+                "db_tinkerforge_sensors/status_update",
+                sensor._device.uid,
+            )
+            | pipe.takewhile(lambda config: config is not None),
+            stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{sensor._device.uid}/update")),
         )
 
     def stream_data(self):
         # Generates the first configuration
         # Query the database and if it does not have a config for the sensor, wait until there is one
 
-        data_stream = (
-            stream.chain(
-                stream.just(self),
-                stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{self._device.uid}/remove"))[:1] | pipe.map(lambda x: None)
-            )
-            | pipe.switchmap(
-                lambda sensor: stream.empty() if sensor is None else (
-                    self._stream_config_updates(sensor)
-                    | pipe.switchmap(
-                        lambda config: stream.chain(
-                                stream.just(config),
-                                stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{config['uuid']}/remove"))[:1] | pipe.map(lambda x: None),
-                            )
+        data_stream = stream.chain(
+            stream.just(self),
+            stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{self._device.uid}/remove"))[:1]
+            | pipe.map(lambda x: None),
+        ) | pipe.switchmap(
+            lambda sensor: stream.empty()
+            if sensor is None
+            else (
+                self._stream_config_updates(sensor)
+                | pipe.switchmap(
+                    lambda config: stream.chain(
+                        stream.just(config),
+                        stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{config['uuid']}/remove"))[:1]
+                        | pipe.map(lambda x: None),
                     )
-                    | pipe.action(
-                        lambda config: logging.getLogger(__name__).info(
-                            "Got new configuration for: %s", sensor._device,
-                        )
+                )
+                | pipe.action(
+                    lambda config: logging.getLogger(__name__).info(
+                        "Got new configuration for: %s",
+                        sensor._device,
                     )
-                    | pipe.map(self._create_config)
-                    | pipe.switchmap(
-                        lambda config: stream.empty() if config is None or not config['enabled'] else (
-                            self._configure_and_stream(config)
-                        )
-                    )
+                )
+                | pipe.map(self._create_config)
+                | pipe.switchmap(
+                    lambda config: stream.empty()
+                    if config is None or not config["enabled"]
+                    else (self._configure_and_stream(config))
                 )
             )
         )
@@ -95,16 +100,16 @@ class TinkerforgeSensor:
         if config is None:
             return None
         try:
-            on_connect = tuple(
-                create_device_function(self._device, func_call) for func_call in config['on_connect']
-            )
-            config['on_connect'] = on_connect
+            on_connect = tuple(create_device_function(self._device, func_call) for func_call in config["on_connect"])
+            config["on_connect"] = on_connect
         except ConfigurationError:
             config = None
 
         return config
 
-    def _read_sensor(self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: AdvancedCallbackConfiguration):
+    def _read_sensor(
+        self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: AdvancedCallbackConfiguration
+    ):
         monitor_stream = (
             stream.repeat(self._device, interval=1)
             | pipe.map(async_(lambda sensor: sensor.get_callback_configuration(sid)))
@@ -122,22 +127,22 @@ class TinkerforgeSensor:
                 lambda item: DataEvent(
                     sender=source_uuid, topic=topic, value=item.payload, sid=item.sid, unit=str(unit)
                 )
-            )
+            ),
         )
 
     @staticmethod
     def _parse_callback_configuration(sid: str, config: dict[str, Any]):
         sid = int(sid)
         callback_config = AdvancedCallbackConfiguration(
-            period=config['interval'],
-            value_has_to_change=config['trigger_only_on_change'],
+            period=config["interval"],
+            value_has_to_change=config["trigger_only_on_change"],
             option=ThresholdOption.OFF,
             minimum=None,
-            maximum=None
+            maximum=None,
         )
-        return sid, config['unit'], config['topic'], callback_config
+        return sid, config["unit"], config["topic"], callback_config
 
-    async def _set_callback_configuration(self, sid: int, unit: str, topic: str,  config: AdvancedCallbackConfiguration):
+    async def _set_callback_configuration(self, sid: int, unit: str, topic: str, config: AdvancedCallbackConfiguration):
         try:
             await self._device.set_callback_configuration(sid, *config)
         except AssertionError:
@@ -150,7 +155,7 @@ class TinkerforgeSensor:
                 "Callback configuration configuration for %s: sid=%i, config=%s failed. Source disabled.",
                 self._device,
                 sid,
-                config
+                config,
             )
             return stream.empty()
         return stream.just((sid, unit, topic, remote_callback_config))
@@ -162,19 +167,17 @@ class TinkerforgeSensor:
             # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is
             # nothing to compare them to (filter => false), then read all sensors of the bricklet and process them in
             # parallel (flatten).
-            config_stream = (
-                stream.chain(
-                    stream.iterate(config['on_connect'])
-                    | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-                    | pipe.concat(task_limit=1)
-                    | pipe.filter(lambda result: False),
-                    stream.iterate(config['config'].items())
-                    | pipe.starmap(self._parse_callback_configuration)
-                    | pipe.starmap(self._set_callback_configuration)
-                    | pipe.flatten()
-                    | pipe.map(lambda args: self._read_sensor(config['uuid'], *args))
-                    | pipe.flatten()
-                )
+            config_stream = stream.chain(
+                stream.iterate(config["on_connect"])
+                | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
+                | pipe.concat(task_limit=1)
+                | pipe.filter(lambda result: False),
+                stream.iterate(config["config"].items())
+                | pipe.starmap(self._parse_callback_configuration)
+                | pipe.starmap(self._set_callback_configuration)
+                | pipe.flatten()
+                | pipe.map(lambda args: self._read_sensor(config["uuid"], *args))
+                | pipe.flatten(),
             )
             return config_stream
         except NotConnectedError:

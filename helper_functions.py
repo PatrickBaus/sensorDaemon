@@ -31,18 +31,13 @@ async def cancel_all_tasks(tasks: set[asyncio.Task]) -> None:
             raise result
 
 
-async def iterate_safely(
-        topic: str,
-        status_topic: str,
-        *args: Any,
-        **kwargs: Any
-) -> AsyncGenerator[Any, None]:
+async def iterate_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any) -> AsyncGenerator[Any, None]:
     while "database not ready":
         try:
             gen = await event_bus.call(topic, *args, **kwargs)
         except NameError:
             # The database is not yet ready, wait for it
-            status: bool    # TODO: Replace with proper event
+            status: bool  # TODO: Replace with proper event
             async for status in event_bus.subscribe(status_topic):
                 if status:
                     break
@@ -81,7 +76,7 @@ async def context(source, cm, on_enter=None, on_exit=None):
             async with streamcontext(source) as streamer:
                 async for item in streamer:
                     yield item
-            #yield in_context
+            # yield in_context
         finally:
             if on_exit is not None:
                 on_exit()
@@ -129,18 +124,14 @@ async def catch(source, exc_class: Exception, on_exc=None):
         else:
             yield stream.empty()
 
-async def call_safely(
-        topic: str,
-        status_topic: str,
-        *args: Any,
-        **kwargs: Any
-):
+
+async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any):
     while "database not ready":
         try:
             result = await event_bus.call(topic, *args, **kwargs)
         except TopicNotRegisteredError:
             # The database is not yet ready, wait for it
-            status: bool    # TODO: Replace with proper event
+            status: bool  # TODO: Replace with proper event
             async for status in event_bus.subscribe(status_topic):
                 if status:
                     break
@@ -150,10 +141,7 @@ async def call_safely(
         break
 
 
-def create_device_function(
-        device: Any,
-        func_call: dict[str, Union[str, tuple[Any, ...], dict[str, Any]]]
-) -> partial:
+def create_device_function(device: Any, func_call: dict[str, Union[str, tuple[Any, ...], dict[str, Any]]]) -> partial:
     """
     Creates a partial function from the function call with the parameters given and returns it
     Parameters
@@ -167,11 +155,9 @@ def create_device_function(
         The function call
     """
     try:
-        function = getattr(device, func_call['function'])
+        function = getattr(device, func_call["function"])
         # Create a partial function, that freezes the parameters and can be called later
-        func = partial(function, *func_call.get('args', []), **func_call.get('kwargs', {})), func_call['timeout']
+        func = partial(function, *func_call.get("args", []), **func_call.get("kwargs", {})), func_call["timeout"]
     except AttributeError:
-        raise ConfigurationError(
-            f"Function '{func_call['function']}' not found"
-        ) from None
+        raise ConfigurationError(f"Function '{func_call['function']}' not found") from None
     return func

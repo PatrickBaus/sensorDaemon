@@ -5,18 +5,19 @@ hosts/nodes or sensors.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, List, Dict, Union
+from typing import Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from beanie import Document, Indexed, PydanticObjectId
-from pydantic import BaseModel, confloat, conint, Field  # pylint: disable=no-name-in-module
 import pymongo
+from beanie import Document, Indexed, PydanticObjectId
+from pydantic import BaseModel, Field, confloat, conint  # pylint: disable=no-name-in-module
 
 
 class FunctionCall(BaseModel):
     """
     Abstracted function call that can be called on a sensor.
     """
+
     # pylint: disable=too-few-public-methods
     function: str
     args: Optional[list] = []
@@ -38,22 +39,24 @@ class HostBaseModel(BaseModel):
     """
     The base model all network hosts must implement.
     """
+
     # pylint: disable=too-few-public-methods
     hostname: int | str
     port: conint(ge=1, le=65535)
     pad: Optional[conint(ge=0, le=30)]
     sad: Optional[Union[conint(ge=0x60, le=0x7E), conint(ge=0, le=0)]]
     driver: str
-    node_id: Optional[UUID] = UUID('{00000000-0000-0000-0000-000000000000}')
+    node_id: Optional[UUID] = UUID("{00000000-0000-0000-0000-000000000000}")
     reconnect_interval: confloat(ge=0) | None
 
     class Settings:
         """
         The index, that makes sure, that a (host, port) tuple is unique.
         """
+
         indexes = [
             pymongo.IndexModel(
-                [('hostname', pymongo.ASCENDING), ('port', pymongo.ASCENDING)],
+                [("hostname", pymongo.ASCENDING), ("port", pymongo.ASCENDING)],
                 unique=True,
             )
         ]
@@ -68,6 +71,7 @@ class TimeStampedDocument(BaseDocument):
     A base class that implements a minimal audit trail by recording the
     creation date and the date of the last change.
     """
+
     # pylint: disable=too-few-public-methods
     date_created: datetime = datetime.utcnow()
     date_modified: datetime = datetime.utcnow()
@@ -83,6 +87,7 @@ class SensorHostModel(DeviceDocument, HostBaseModel):
     """
     An ethernet connected sensor host (inherited from the HostBaseModel).
     """
+
     # pylint: disable=too-few-public-methods
 
     class Settings:
@@ -93,8 +98,9 @@ class TinkforgeSensorConfigModel(BaseModel):
     """
     The configuration of a sensor made by Tinkerforge GmbH.
     """
+
     # pylint: disable=too-few-public-methods
-    interval: conint(ge=0, le=2**32-1)
+    interval: conint(ge=0, le=2**32 - 1)
     trigger_only_on_change: Optional[bool] = True
     description: Optional[str] = ""
     topic: str
@@ -105,9 +111,10 @@ class TinkerforgeSensorModel(DeviceDocument):
     """
     The configuration of a sensor node, which is called a stack by Tinkerforge.
     """
+
     # pylint: disable=too-few-public-methods
     uid: Indexed(int, unique=True)
-    config: Dict[str, TinkforgeSensorConfigModel]    # bson does not allow int keys
+    config: Dict[str, TinkforgeSensorConfigModel]  # bson does not allow int keys
     on_connect: Union[List[FunctionCall], List[None]] = []
 
     class Settings:
@@ -118,8 +125,9 @@ class LabnodeSensorConfigModel(BaseModel):
     """
     The configuration of a sensor made by Tinkerforge GmbH.
     """
+
     # pylint: disable=too-few-public-methods
-    interval: conint(ge=0, le=2**32-1)
+    interval: conint(ge=0, le=2**32 - 1)
     description: Optional[str] = ""
     topic: str
     unit: PydanticObjectId | str
@@ -128,11 +136,12 @@ class LabnodeSensorConfigModel(BaseModel):
 
 class LabnodeSensorModel(DeviceDocument):
     uid: Indexed(int, unique=True)
-    config: Dict[str, LabnodeSensorConfigModel]    # bson does not allow int keys
+    config: Dict[str, LabnodeSensorConfigModel]  # bson does not allow int keys
     on_connect: Union[List[FunctionCall], List[None]] = []
 
     class Settings:
         name = "LabnodeSensor"
+
 
 class GenericSensorModel(DeviceDocument):
     host: Indexed(UUID, unique=True)

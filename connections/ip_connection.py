@@ -127,10 +127,7 @@ class GenericIpConnection:
         return self
 
     async def __aexit__(
-            self,
-            exc_type: Type[BaseException] | None,
-            exc: BaseException | None,
-            traceback: TracebackType | None
+        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         await self.disconnect()
 
@@ -145,8 +142,7 @@ class GenericIpConnection:
         try:
             # wait_for() blocks until the request is done if timeout is None
             self.__reader, self.__writer = await asyncio.wait_for(
-                asyncio.open_connection(self.__hostname, self.__port),
-                timeout=self.__timeout
+                asyncio.open_connection(self.__hostname, self.__port), timeout=self.__timeout
             )
         except OSError as exc:
             if exc.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH):
@@ -170,23 +166,20 @@ class GenericIpConnection:
             pass
         except OSError as exc:
             if exc.errno == errno.ENOTCONN:
-                pass    # Socket is no longer connected, so we can't send the EOF.
+                pass  # Socket is no longer connected, so we can't send the EOF.
             else:
                 raise
         finally:
             self.__writer, self.__reader = None, None
 
     async def __read(
-            self,
-            length: int | None = None,
-            separator: bytes | None = None,
-            timeout: float | None = None
+        self, length: int | None = None, separator: bytes | None = None, timeout: float | None = None
     ) -> bytes:
         if not self.is_connected:
             raise NotConnectedError("Not connected")
 
         if length is None:
-            coro = self.__reader.readuntil(separator if separator is not None else b'\n')
+            coro = self.__reader.readuntil(separator if separator is not None else b"\n")
         else:
             if length > 0:
                 coro = self.__reader.readexactly(length)
@@ -217,16 +210,14 @@ class GenericIpConnection:
                     # We are shutting down anyway.
                     self.__logger.exception("Exception during read error.")
                 raise ConnectionLostError(
-                    f"IP connection error. The host '{self.__hostname}:{self.__port}' did not reply") from None
+                    f"IP connection error. The host '{self.__hostname}:{self.__port}' did not reply"
+                ) from None
         except asyncio.LimitOverrunError:
             # TODO: catch asyncio.LimitOverrunError?
             raise
 
     async def read(
-            self,
-            length: int | None = None,
-            character: bytes | None = None,
-            timeout: int | None = None
+        self, length: int | None = None, character: bytes | None = None, timeout: int | None = None
     ) -> bytes:
         async with self.__read_lock:
             return await self.__read(length=length, separator=character, timeout=timeout)
@@ -240,11 +231,7 @@ class GenericIpConnection:
         await asyncio.wait_for(self.__writer.drain(), timeout=timeout)
 
     async def query(
-            self,
-            cmd: bytes,
-            length: int | None = None,
-            separator: bytes | None = None,
-            timeout: float | None = None
+        self, cmd: bytes, length: int | None = None, separator: bytes | None = None, timeout: float | None = None
     ) -> bytes:
         if not self.is_connected:
             raise NotConnectedError("Not connected")

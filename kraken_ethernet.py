@@ -33,8 +33,7 @@ from uuid import UUID
 from decouple import UndefinedValueError, config
 
 from _version import __version__
-
-from managers import HostManager, DatabaseManager, MqttManager
+from managers import DatabaseManager, HostManager, MqttManager
 
 
 class Kraken:
@@ -63,26 +62,24 @@ class Kraken:
         # Catch signals and shutdown
         signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
         for sig in signals:
-            asyncio.get_running_loop().add_signal_handler(
-                sig, lambda: asyncio.create_task(self.__shutdown()))
+            asyncio.get_running_loop().add_signal_handler(sig, lambda: asyncio.create_task(self.__shutdown()))
 
         # Read either environment variable, settings.ini or .env file
-        database_url = config('SENSORS_DATABASE_HOST')
-        #wamp_host = config('WAMP_HOST')
-        #wamp_port = config('WAMP_PORT', cast=int, default=18080)
-        #wamp_url = f"ws://{wamp_host}:{wamp_port}/ws"
-        #realm = "com.leapsight.test"
-        mqtt_host = config('MQTT_HOST', default="localhost")
-        mqtt_port = config('MQTT_PORT', cast=int, default=1883)
+        database_url = config("SENSORS_DATABASE_HOST")
+        # wamp_host = config('WAMP_HOST')
+        # wamp_port = config('WAMP_PORT', cast=int, default=18080)
+        # wamp_url = f"ws://{wamp_host}:{wamp_port}/ws"
+        # realm = "com.leapsight.test"
+        mqtt_host = config("MQTT_HOST", default="localhost")
+        mqtt_port = config("MQTT_PORT", cast=int, default=1883)
         try:
-            node_id = config('NODE_ID', cast=UUID)
+            node_id = config("NODE_ID", cast=UUID)
         except UndefinedValueError:
             node_id = None
 
         if node_id is None:
             self.__logger.warning(
-                "No node is set. How about setting 'NODE_ID=%s'? I won't use a node id for now.",
-                uuid.uuid4()
+                "No node is set. How about setting 'NODE_ID=%s'? I won't use a node id for now.", uuid.uuid4()
             )
         else:
             self.__logger.warning("This is the node with id: %s", node_id)
@@ -164,13 +161,14 @@ async def main():
         # Silently swallow the error to suppress the noise, then terminate.
         pass
 
+
 # Report all mistakes managing asynchronous resources.
 # import warnings
 # warnings.simplefilter('always', ResourceWarning)
 logging.basicConfig(
     format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
     level=logging.INFO,  # Enable logs from the ip connection. Set to debug for even more info
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 asyncio.run(main())

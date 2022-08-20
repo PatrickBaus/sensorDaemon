@@ -6,20 +6,21 @@ hosts extract the data stream from them.
 from __future__ import annotations
 
 import asyncio
-from contextlib import AsyncExitStack
 import logging
+from contextlib import AsyncExitStack
 from typing import Any, Set
 from uuid import UUID
 
 import asyncio_mqtt
 import simplejson as json
-from aiostream import stream, pipe
+from aiostream import pipe, stream
 
 from async_event_bus import TopicNotRegisteredError, event_bus
 from data_types import DataEvent
-from databases import MongoDb, CONTEXTS as DATABASE_CONTEXTS
+from databases import CONTEXTS as DATABASE_CONTEXTS
+from databases import MongoDb
 from errors import UnknownDriverError
-from helper_functions import catch, iterate_safely, cancel_all_tasks
+from helper_functions import cancel_all_tasks, catch, iterate_safely
 from sensors.transports.transport_factory import transport_factory
 
 EVENT_BUS_DATA = "sensor_data/all"
@@ -49,21 +50,19 @@ class MqttManager:
                 # Events are DataEvents
                 topic = event.topic
                 payload = {
-                    'timestamp': event.timestamp,
-                    'uuid': str(event.sender),
-                    'sid': event.sid,
-                    'value': event.value,
-                    'unit': event.unit
+                    "timestamp": event.timestamp,
+                    "uuid": str(event.sender),
+                    "sid": event.sid,
+                    "value": event.value,
+                    "unit": event.unit,
                 }
-            except Exception:   # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 self.__logger.exception("Malformed data received. Dropping data: %s", event)
             else:
                 output_queue.put_nowait((topic, payload))
 
     async def consumer(
-            self,
-            input_queue: asyncio.Queue[(str, dict[str, str | float | int])],
-            reconnect_interval: int = 5
+        self, input_queue: asyncio.Queue[(str, dict[str, str | float | int])], reconnect_interval: int = 5
     ) -> None:
         """
         Pushes the data from the input queue to the MQTT broker. It will make sure,
@@ -94,12 +93,12 @@ class MqttManager:
                             payload = json.dumps(payload, use_decimal=True)
                         except TypeError:
                             self.__logger.error("Error while serializing DataEvent: %s", payload)
-                            event = None    # Drop the event
+                            event = None  # Drop the event
                             # await asyncio.sleep(0.01)
                         else:
-                            #self.__logger.info("Going to publish: %s to %s", payload, topic)
+                            # self.__logger.info("Going to publish: %s to %s", payload, topic)
                             await mqtt_client.publish(topic, payload=payload, qos=2)
-                            event = None    # Get a new event to publish
+                            event = None  # Get a new event to publish
                             has_error = False
             except asyncio_mqtt.error.MqttError as exc:
                 # Only log an error once
@@ -107,7 +106,7 @@ class MqttManager:
                     self.__logger.error("MQTT error: %s. Retrying.", exc)
                 await asyncio.sleep(reconnect_interval)
                 has_error = True
-            except Exception:   # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 # Catch all exceptions, log them, then try to restart the worker.
                 self.__logger.exception("Error while publishing data to MQTT broker. Reconnecting.")
                 await asyncio.sleep(reconnect_interval)
@@ -123,7 +122,7 @@ class MqttManager:
         """
         try:
             await cancel_all_tasks(tasks)
-        except Exception:   # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             self.__logger.exception("Error during shutdown of the MQTT manager")
 
     async def run(self) -> None:
@@ -160,7 +159,7 @@ class DatabaseManager:
         """
         try:
             await cancel_all_tasks(tasks)
-        except Exception:   # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             self.__logger.exception(f"Error during shutdown of the {type(self).__name__}")
 
     async def run(self) -> None:
@@ -186,7 +185,7 @@ class DatabaseManager:
                         tasks.add(task)
 
                     await asyncio.gather(*tasks)
-            except Exception:   # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 # Catch all exceptions, log them, then try to restart the worker.
                 self.__logger.exception("Error while processing database.")
                 await asyncio.sleep(5)
@@ -214,31 +213,27 @@ class HostManager:
     def _is_config_valid(node_id, config: dict[str, Any]) -> bool:
         return (
             config is not None
-            and config['enabled']
-            and (config['node_id'] is None or node_id is None or config['node_id'] == node_id)
+            and config["enabled"]
+            and (config["node_id"] is None or node_id is None or config["node_id"] == node_id)
         )
 
     async def start_stream(self) -> None:
         # Generate the UUIDs of new sensors
-        sensor_stream = (
-            stream.chain(
-                stream.iterate(iterate_safely(f"{self.__topic}/get", f"{self.__topic}/status_update")),
-                stream.iterate(event_bus.subscribe(f"{self.__topic}/add_host"))
+        sensor_stream = stream.chain(
+            stream.iterate(iterate_safely(f"{self.__topic}/get", f"{self.__topic}/status_update")),
+            stream.iterate(event_bus.subscribe(f"{self.__topic}/add_host")),
+        ) | pipe.flatmap(
+            lambda item: stream.chain(
+                (stream.call(event_bus.call, f"{self.__topic}/get_config", item) | catch.pipe(TopicNotRegisteredError)),
+                stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{item}/update")),
             )
-            | pipe.flatmap(
-                lambda item: stream.chain(
-                    (stream.call(event_bus.call, f"{self.__topic}/get_config", item)
-                        | catch.pipe(TopicNotRegisteredError)),
-                    stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{item}/update"))
-                )
-                | pipe.until(lambda config: config is None)
-                | pipe.map(lambda config: config if self._is_config_valid(self.__node_id, config) else None)
-                | pipe.map(lambda config: self._create_transport(config))
-                | pipe.switchmap(
-                    lambda transport: stream.empty() if transport is None else stream.iterate(transport.stream_data())
-                )
-                | pipe.action(lambda data: event_bus.publish("wamp/publish", data))
+            | pipe.until(lambda config: config is None)
+            | pipe.map(lambda config: config if self._is_config_valid(self.__node_id, config) else None)
+            | pipe.map(lambda config: self._create_transport(config))
+            | pipe.switchmap(
+                lambda transport: stream.empty() if transport is None else stream.iterate(transport.stream_data())
             )
+            | pipe.action(lambda data: event_bus.publish("wamp/publish", data))
         )
 
         await sensor_stream

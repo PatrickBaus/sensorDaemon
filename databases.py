@@ -8,27 +8,36 @@ import asyncio
 import logging
 from types import TracebackType
 from typing import Any, AsyncGenerator, Type
+
 try:
     from typing import Self  # Python >=3.11
 except ImportError:
     from typing_extensions import Self
+
 from uuid import UUID
 
 import beanie
-from beanie import init_beanie
 import motor.motor_asyncio
 import pymongo  # to access the error classes
+from beanie import init_beanie
 
 from async_event_bus import event_bus
 from data_types import ChangeType, UpdateChangeEvent
-from database.models import BaseDocument, DeviceDocument, GenericSensorModel, TinkerforgeSensorModel, SensorHostModel, \
-    LabnodeSensorModel
+from database.models import (
+    BaseDocument,
+    DeviceDocument,
+    GenericSensorModel,
+    LabnodeSensorModel,
+    SensorHostModel,
+    TinkerforgeSensorModel,
+)
 
 
 class MongoDb:
     """
     The Mongo DB abstraction for the settings database.
     """
+
     def __init__(self, hostname: str = None, port: int = None) -> None:
         self.__hostname = hostname
         self.__port = port
@@ -40,10 +49,7 @@ class MongoDb:
         return self
 
     async def __aexit__(
-            self,
-            exc_type: Type[BaseException] | None,
-            exc: BaseException | None,
-            traceback: TracebackType | None
+        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         pass
 
@@ -52,21 +58,18 @@ class MongoDb:
         Connect to the database. Retries if not successful.
         """
         connection_attempt = 1
-        timeout = 0.5   # in s TODO: Make configurable
+        timeout = 0.5  # in s TODO: Make configurable
         while "database not connected":
             hostname_string = self.__hostname if self.__port is None else f"{self.__hostname}:{self.__port}"
             if connection_attempt == 1:
-                self.__logger.info("Connecting to MongoDB (%s).", hostname_string[hostname_string.find('@')+1:])
+                self.__logger.info("Connecting to MongoDB (%s).", hostname_string[hostname_string.find("@") + 1 :])
             if self.__port is not None:
                 self.__client = motor.motor_asyncio.AsyncIOMotorClient(
-                    self.__hostname,
-                    self.__port,
-                    serverSelectionTimeoutMS=timeout*1000
+                    self.__hostname, self.__port, serverSelectionTimeoutMS=timeout * 1000
                 )
             else:
                 self.__client = motor.motor_asyncio.AsyncIOMotorClient(
-                    self.__hostname,
-                    serverSelectionTimeoutMS=timeout*1000
+                    self.__hostname, serverSelectionTimeoutMS=timeout * 1000
                 )
 
             database = self.__client.sensor_config
@@ -74,10 +77,14 @@ class MongoDb:
                 await init_beanie(
                     database=database,
                     document_models=[
-                        BaseDocument, SensorHostModel, TinkerforgeSensorModel, LabnodeSensorModel, GenericSensorModel
-                    ]
+                        BaseDocument,
+                        SensorHostModel,
+                        TinkerforgeSensorModel,
+                        LabnodeSensorModel,
+                        GenericSensorModel,
+                    ],
                 )
-                self.__logger.info("MongoDB (%s) connected.", hostname_string[hostname_string.find('@')+1:])
+                self.__logger.info("MongoDB (%s) connected.", hostname_string[hostname_string.find("@") + 1 :])
             except pymongo.errors.ServerSelectionTimeoutError as exc:
                 if connection_attempt == 1:
                     # Only log the error once
@@ -85,7 +92,7 @@ class MongoDb:
                         "Cannot connect to config database at %s. Error: %s. Retrying in %f s.",
                         hostname_string,
                         exc,
-                        timeout
+                        timeout,
                     )
                 await asyncio.sleep(timeout)
                 continue
@@ -94,10 +101,11 @@ class MongoDb:
             break
 
 
-class Context:    # pylint: disable=too-few-public-methods
+class Context:  # pylint: disable=too-few-public-methods
     """
     The database context used by all config databases.
     """
+
     @property
     def topic(self) -> str:
         return self.__topic
@@ -107,9 +115,7 @@ class Context:    # pylint: disable=too-few-public-methods
         self.__logger = logging.getLogger(__name__)
 
     async def _monitor_database(
-            self,
-            database_model: Type[DeviceDocument],
-            timeout: float
+        self, database_model: Type[DeviceDocument], timeout: float
     ) -> AsyncGenerator[tuple[ChangeType, UUID | beanie.Document], None]:
         """
         Monitor all changes made to a certain database table.
@@ -136,18 +142,16 @@ class Context:    # pylint: disable=too-few-public-methods
         while "loop not cancelled":
             try:
                 async with database_model.get_motor_collection().watch(
-                        pipeline,
-                        full_document="updateLookup",
-                        resume_after=resume_token
+                    pipeline, full_document="updateLookup", resume_after=resume_token
                 ) as change_stream:
                     async for change in change_stream:
                         # TODO: catch parser errors!
-                        if change['operationType'] == 'delete':
-                            yield ChangeType.REMOVE, change['documentKey']['_id']
-                        elif change['operationType'] == "update" or change['operationType'] == "replace":
-                            yield ChangeType.UPDATE, database_model.parse_obj(change['fullDocument'])
-                        elif change['operationType'] == "insert":
-                            yield ChangeType.ADD, database_model.parse_obj(change['fullDocument'])
+                        if change["operationType"] == "delete":
+                            yield ChangeType.REMOVE, change["documentKey"]["_id"]
+                        elif change["operationType"] == "update" or change["operationType"] == "replace":
+                            yield ChangeType.UPDATE, database_model.parse_obj(change["fullDocument"])
+                        elif change["operationType"] == "insert":
+                            yield ChangeType.ADD, database_model.parse_obj(change["fullDocument"])
 
                     resume_token = change_stream.resume_token
             except pymongo.errors.ServerSelectionTimeoutError as exc:
@@ -174,6 +178,7 @@ class LabnodeContext(Context):
     to the database and publishes them onto the event bus. It also provides an
     endpoint to query for sensor configs via the event bus.
     """
+
     def __init__(self):
         super().__init__(topic="db_labnode_sensors")
         self.__logger = logging.getLogger(__name__)
@@ -184,10 +189,7 @@ class LabnodeContext(Context):
         return self
 
     async def __aexit__(
-            self,
-            exc_type: Type[BaseException] | None,
-            exc: BaseException | None,
-            traceback: TracebackType | None
+        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get_config")
 
@@ -218,7 +220,7 @@ class LabnodeContext(Context):
         device = device.dict()
         # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
         # the back of the dict
-        device['uuid'] = device.pop('id')
+        device["uuid"] = device.pop("id")
 
         return device
 
@@ -229,15 +231,16 @@ class LabnodeContext(Context):
                 change = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
-                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
+                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change['uuid']}/update", change)
             elif change_type == ChangeType.ADD:
                 change = change.dict()
-                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
+                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change['host']}/add", change)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
                 event_bus.publish(f"nodes/by_uuid/{change}/update", None)
+
 
 class GenericSensorContext(Context):
     """
@@ -245,6 +248,7 @@ class GenericSensorContext(Context):
     to the database and publishes them onto the event bus. It also provides an
     endpoint to query for sensor configs via the event bus.
     """
+
     def __init__(self):
         super().__init__(topic="db_generic_sensors")
         self.__logger = logging.getLogger(__name__)
@@ -255,10 +259,7 @@ class GenericSensorContext(Context):
         return self
 
     async def __aexit__(
-            self,
-            exc_type: Type[BaseException] | None,
-            exc: BaseException | None,
-            traceback: TracebackType | None
+        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get_config")
 
@@ -289,7 +290,7 @@ class GenericSensorContext(Context):
         device = device.dict()
         # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
         # the back of the dict
-        device['uuid'] = device.pop('id')
+        device["uuid"] = device.pop("id")
 
         return device
 
@@ -303,11 +304,11 @@ class GenericSensorContext(Context):
                 change = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
-                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
+                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change['uuid']}/update", change)
             elif change_type == ChangeType.ADD:
                 change = change.dict()
-                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
+                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change['host']}/add", change)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
@@ -320,6 +321,7 @@ class HostContext(Context):
     to the database and publishes them onto the event bus. It also provides an
     endpoint to query for sensor configs via the event bus.
     """
+
     def __init__(self):
         super().__init__(topic="db_autodiscovery_sensors")
         self.__logger = logging.getLogger(__name__)
@@ -331,10 +333,7 @@ class HostContext(Context):
         return self
 
     async def __aexit__(
-            self,
-            exc_type: Type[BaseException] | None,
-            exc: BaseException | None,
-            traceback: TracebackType | None
+        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get")
         event_bus.unregister(self.topic + "/get_config")
@@ -378,7 +377,7 @@ class HostContext(Context):
         device = device.dict()
         # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
         # the back of the dict
-        device['uuid'] = device.pop('id')
+        device["uuid"] = device.pop("id")
 
         return device
 
@@ -393,12 +392,12 @@ class HostContext(Context):
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
                 change_dict = change.dict()
-                change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
+                change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
                 change_dict = change.dict()
-                change_dict['uuid'] = change_dict.pop('id')   # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"{self.topic}/add_host", change_dict['uuid'])
+                change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"{self.topic}/add_host", change_dict["uuid"])
 
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
@@ -411,6 +410,7 @@ class TinkerforgeContext(Context):
     to the database and publishes them onto the event bus. It also provides an
     endpoint to query for sensor configs via the event bus.
     """
+
     def __init__(self):
         super().__init__(topic="db_tinkerforge_sensors")
         self.__logger = logging.getLogger(__name__)
@@ -421,10 +421,7 @@ class TinkerforgeContext(Context):
         return self
 
     async def __aexit__(
-            self,
-            exc_type: Type[BaseException] | None,
-            exc: BaseException | None,
-            traceback: TracebackType | None
+        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get_config")
 
@@ -455,7 +452,7 @@ class TinkerforgeContext(Context):
         device = device.dict()
         # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
         # the back of the dict
-        device['uuid'] = device.pop('id')
+        device["uuid"] = device.pop("id")
 
         return device
 
@@ -469,12 +466,12 @@ class TinkerforgeContext(Context):
                 change = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
-                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
+                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change['uuid']}/remove", None)
                 event_bus.publish(f"nodes/tinkerforge/{change['uid']}/update", change)
             elif change_type == ChangeType.ADD:
                 change = change.dict()
-                change['uuid'] = change.pop('id')   # Note uuid will be moved to the end of the dict.
+                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change['uuid']}/remove", None)
                 event_bus.publish(f"nodes/tinkerforge/{change['uid']}/update", change)
             elif change_type == ChangeType.REMOVE:

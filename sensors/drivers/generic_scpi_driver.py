@@ -34,8 +34,8 @@ class GenericScpiDriver:
         self.__device_name = name
 
     def __init__(
-            self,
-            connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport,
+        self,
+        connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport,
     ) -> None:
         self._conn = connection
         self.__device_name = None
@@ -47,7 +47,7 @@ class GenericScpiDriver:
 
     async def wait_for_opc(self, timeout: float | None = None) -> None:
         await self.write("*OPC?")
-        while (await asyncio.wait_for(self.read(), timeout=timeout)) != '1':
+        while (await asyncio.wait_for(self.read(), timeout=timeout)) != "1":
             await asyncio.sleep(0.1)
 
     async def get_id(self) -> tuple[str, str, str, str]:
@@ -87,8 +87,8 @@ class GenericScpiDriver:
 
         data = await self._conn.read(*args, **kwargs)
         # Strip the terminator if we are using one and the last bytes match the terminator
-        if scpi_terminator and data[-len(scpi_terminator):] == scpi_terminator:
-            data = data[:-len(scpi_terminator)]
+        if scpi_terminator and data[-len(scpi_terminator) :] == scpi_terminator:
+            data = data[: -len(scpi_terminator)]
         try:
             return data.decode("utf-8")
         except UnicodeDecodeError:
@@ -116,13 +116,13 @@ class GenericScpiDriver:
         # Treat special SCPI values
         # Not A Number
         if result.lower() == "9.91e37":
-            return Decimal('NaN')
+            return Decimal("NaN")
         # Positive infinity
         elif result.lower() == "9.9e37":
-            return Decimal('Infinity')
+            return Decimal("Infinity")
         # Negative infinity
         elif result.lower() == "-9.9e37":
-            return Decimal('-Infinity')
+            return Decimal("-Infinity")
         return Decimal(result)
 
     async def query_number(self, cmd: str, length: int | None = None, scpi_terminator: str | None = None) -> Decimal:
@@ -132,6 +132,7 @@ class GenericScpiDriver:
 
 class GenericScpiSensor(GenericDriver, GenericScpiDriver):
     """This class extends the SCPI driver with catch-all arguments in the constructor"""
+
     @classmethod
     @property
     def driver(cls) -> str:
@@ -144,11 +145,7 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
         return "generic_scpi2"
 
     def __init__(
-            self,
-            uuid,
-            connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport,
-            *_args,
-            **_kwargs
+        self, uuid, connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport, *_args, **_kwargs
     ) -> None:
         super().__init__(uuid, connection)
 
@@ -171,11 +168,7 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
             logging.getLogger(__name__).warning("Could not query '*IDN?' of device: %s", self)
 
     def stream_data(self, config):
-        return (
-            stream.chain(
-                stream.just(self)
-                    | pipe.action(async_(lambda sensor: sensor.enumerate()))
-                    | pipe.filter(lambda x: False)
-                , super().stream_data(config)
-            )
+        return stream.chain(
+            stream.just(self) | pipe.action(async_(lambda sensor: sensor.enumerate())) | pipe.filter(lambda x: False),
+            super().stream_data(config),
         )

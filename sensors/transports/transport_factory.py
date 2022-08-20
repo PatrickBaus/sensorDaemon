@@ -5,6 +5,7 @@ sensor hosts.
 from typing import Any, Type
 
 from errors import UnknownDriverError
+
 from .ethernet import EthernetTransport
 from .labnode import LabnodeTransport
 from .linux_gpib import LinuxGpibTransport
@@ -16,6 +17,7 @@ class TransportFactory:
     """
     A transport factory to select the correct driver for given database config.
     """
+
     def __init__(self):
         self.__available_drivers: dict[str, Type[Any]] = {}
 

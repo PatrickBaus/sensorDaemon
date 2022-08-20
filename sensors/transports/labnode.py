@@ -20,6 +20,7 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
     """
     The transport wrapper for the generic ethernet connection
     """
+
     @classmethod
     @property
     def driver(cls) -> str:
@@ -42,16 +43,16 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
         return f"{self.hostname}:{self.port}"
 
     def __init__(
-            self,
-            hostname: str,
-            port: int,
-            pad: int,
-            sad: int,
-            reconnect_interval: float | None,
-            uuid: UUID,
-            label: str,
-            *_args: Any,
-            **_kwargs: Any
+        self,
+        hostname: str,
+        port: int,
+        pad: int,
+        sad: int,
+        reconnect_interval: float | None,
+        uuid: UUID,
+        label: str,
+        *_args: Any,
+        **_kwargs: Any,
     ) -> None:
         super().__init__(
             uuid=uuid,
@@ -65,13 +66,17 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
 
     def _stream_data(self, transport):
         config_stream = (
-            with_context(transport, on_exit=lambda: logging.getLogger(__name__).info(
+            with_context(
+                transport,
+                on_exit=lambda: logging.getLogger(__name__).info(
                     "Disconnected from APQ Labnode at %s (%s).", transport.uri, transport.label
+                ),
+            )
+            | pipe.action(
+                lambda _: logging.getLogger(__name__).info(
+                    "Connected to APQ Labnode at %s (%s).", transport.uri, transport.label
                 )
             )
-            | pipe.action(lambda _: logging.getLogger(__name__).info(
-                "Connected to APQ Labnode at %s (%s).", transport.uri, transport.label
-            ))
             | pipe.map(LabnodeSensor)
             | pipe.action(async_(lambda sensor: sensor.enumerate()))
             | pipe.switchmap(lambda sensor: sensor.stream_data())

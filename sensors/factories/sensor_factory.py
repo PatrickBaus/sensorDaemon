@@ -14,6 +14,7 @@ class SensorFactory:
     A sensor factory to select the correct driver for given database
     config.
     """
+
     def __init__(self):
         self.__available_drivers = {}
 

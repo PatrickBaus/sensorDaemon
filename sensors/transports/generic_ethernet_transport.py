@@ -16,6 +16,7 @@ class GenericEthernetTransport(GenericTransport):
     """
     The transport base class for a generic ethernet connection.
     """
+
     def stream_data(self):
         """
         Discover all Tinkerforge devices connected via this transport.
