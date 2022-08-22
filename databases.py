@@ -22,7 +22,7 @@ import pymongo  # to access the error classes
 from beanie import init_beanie
 
 from async_event_bus import event_bus
-from data_types import ChangeType, UpdateChangeEvent
+from data_types import ChangeType
 from database.models import (
     BaseDocument,
     DeviceDocument,

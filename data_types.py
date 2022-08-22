@@ -30,22 +30,6 @@ class ChangeEvent:  # pylint: disable=too-few-public-methods
         self.__change = change
 
 
-class UpdateChangeEvent(ChangeEvent):  # pylint: disable=too-few-public-methods
-    """
-    An update to a configuration.
-    """
-
-    @property
-    def change(self) -> dict[str, Any]:
-        """
-        Returns
-        -------
-        dict
-            A dict with the changed configuration
-        """
-        return super().change
-
-
 @dataclass(frozen=True)
 class DataEvent:
     """
