@@ -1,10 +1,12 @@
 """
 A collection of helper functions used in Kraken.
 """
+from __future__ import annotations
+
 import asyncio
 import inspect
 from functools import partial
-from typing import Any, AsyncGenerator, Union
+from typing import Any, AsyncGenerator
 
 from aiostream import operator, stream, streamcontext
 
@@ -138,10 +140,9 @@ async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any):
             continue
         else:
             return result
-        break
 
 
-def create_device_function(device: Any, func_call: dict[str, Union[str, tuple[Any, ...], dict[str, Any]]]) -> partial:
+def create_device_function(device: Any, func_call: dict[str, str | tuple[Any, ...] | dict[str, Any]]) -> partial:
     """
     Creates a partial function from the function call with the parameters given and returns it
     Parameters

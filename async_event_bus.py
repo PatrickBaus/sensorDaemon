@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from inspect import isasyncgen
-from typing import Any, AsyncGenerator, Callable, Coroutine, Union, cast
+from typing import Any, AsyncGenerator, Callable, Coroutine, cast
 
 
 class EventRegisteredError(ValueError):
@@ -29,7 +29,7 @@ class AsyncEventBus:
 
     def __init__(self) -> None:
         self.__subscribers: dict[str, set[asyncio.Queue[Any]]] = {}
-        self.__registered_calls: dict[str, Union[Callable[[Any], Coroutine], Callable[[Any], AsyncGenerator]]] = {}
+        self.__registered_calls: dict[str, Callable[[Any], Coroutine] | Callable[[Any], AsyncGenerator]] = {}
 
     async def subscribe(self, event_name: str) -> AsyncGenerator[Any, None]:
         """
@@ -77,7 +77,7 @@ class AsyncEventBus:
             queue.put_nowait(event)
 
     def register(
-        self, event_name: str, function: Union[Callable[[Any], Coroutine], Callable[[Any], AsyncGenerator]]
+        self, event_name: str, function: Callable[[Any], Coroutine] | Callable[[Any], AsyncGenerator]
     ) -> None:
         """
         Register a function to be called via `call()`.

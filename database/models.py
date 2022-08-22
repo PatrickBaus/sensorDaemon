@@ -5,7 +5,7 @@ hosts/nodes or sensors.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from uuid import UUID, uuid4
 
 import pymongo
@@ -44,7 +44,7 @@ class HostBaseModel(BaseModel):
     hostname: int | str
     port: conint(ge=1, le=65535)
     pad: Optional[conint(ge=0, le=30)]
-    sad: Optional[Union[conint(ge=0x60, le=0x7E), conint(ge=0, le=0)]]
+    sad: Optional[conint(ge=0x60, le=0x7E) | conint(ge=0, le=0)]
     driver: str
     node_id: Optional[UUID] = UUID("{00000000-0000-0000-0000-000000000000}")
     reconnect_interval: confloat(ge=0) | None
@@ -115,7 +115,7 @@ class TinkerforgeSensorModel(DeviceDocument):
     # pylint: disable=too-few-public-methods
     uid: Indexed(int, unique=True)
     config: Dict[str, TinkforgeSensorConfigModel]  # bson does not allow int keys
-    on_connect: Union[List[FunctionCall], List[None]] = []
+    on_connect: List[FunctionCall] | List[None] = []
 
     class Settings:
         name = "TinkerforgeSensor"
@@ -137,7 +137,7 @@ class LabnodeSensorConfigModel(BaseModel):
 class LabnodeSensorModel(DeviceDocument):
     uid: Indexed(int, unique=True)
     config: Dict[str, LabnodeSensorConfigModel]  # bson does not allow int keys
-    on_connect: Union[List[FunctionCall], List[None]] = []
+    on_connect: List[FunctionCall] | List[None] = []
 
     class Settings:
         name = "LabnodeSensor"
@@ -147,10 +147,10 @@ class GenericSensorModel(DeviceDocument):
     host: Indexed(UUID, unique=True)
     driver: str
     interval: confloat(ge=0)
-    on_connect: Union[List[FunctionCall], List[None]] = []
+    on_connect: List[FunctionCall] | List[None] = []
     on_read: FunctionCall
-    on_after_read: Union[List[FunctionCall], List[None]]
-    on_disconnect: Union[List[FunctionCall], List[None]] = []
+    on_after_read: List[FunctionCall] | List[None]
+    on_disconnect: List[FunctionCall] | List[None] = []
     topic: str
     unit: str
 
