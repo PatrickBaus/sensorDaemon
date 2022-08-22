@@ -72,7 +72,7 @@ class GenericIpConnection:
         return f"{self.hostname}:{self.port}"
 
     @property
-    def timeout(self) -> float:
+    def timeout(self) -> float | None:
         """
         Returns
         -------
@@ -81,7 +81,7 @@ class GenericIpConnection:
         """
         return self.__timeout
 
-    def get_connection_timeout(self):
+    def get_connection_timeout(self) -> float | None:
         """
         An alias of the timeout property
 
@@ -96,7 +96,7 @@ class GenericIpConnection:
     def is_connected(self) -> bool:
         return self.__writer is not None and not self.__writer.is_closing()
 
-    def __init__(self, hostname: str, port: int, timeout: int | None = None) -> None:
+    def __init__(self, hostname: str, port: int, timeout: float | None = None) -> None:
         """
         Create new IpConnection. `hostname` and `port` parameters can be None if they are provided when calling
         `connect()`
@@ -177,6 +177,7 @@ class GenericIpConnection:
     ) -> bytes:
         if not self.is_connected:
             raise NotConnectedError("Not connected")
+        assert self.__reader is not None
 
         if length is None:
             coro = self.__reader.readuntil(separator if separator is not None else b"\n")
@@ -225,6 +226,7 @@ class GenericIpConnection:
     async def write(self, cmd: bytes, timeout: float | None = None) -> None:
         if not self.is_connected:
             raise NotConnectedError("Not connected")
+        assert self.__writer is not None
 
         self.__writer.write(cmd)
         # wait_for() blocks until the request is done if timeout is None

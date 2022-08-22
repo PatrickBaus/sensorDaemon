@@ -138,7 +138,7 @@ class Context:  # pylint: disable=too-few-public-methods
         # pipeline = [{'$match': {'operationType': {'$in': ["insert", "update", "delete"]}}}]
         # In a Mongo DB the __id cannot be updated. It can only be removed and recreated. It is therefore safe to link
         # all configs to this uuid.
-        pipeline = []
+        pipeline: list[dict[str, dict[str, str]]] = []
         while "loop not cancelled":
             try:
                 async with database_model.get_motor_collection().watch(

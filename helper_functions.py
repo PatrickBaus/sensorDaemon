@@ -6,7 +6,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 from functools import partial
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Type
 
 from aiostream import operator, stream, streamcontext
 
@@ -51,8 +51,8 @@ async def iterate_safely(topic: str, status_topic: str, *args: Any, **kwargs: An
 
 
 @operator(pipable=True)
-async def retry(source, exc_class: Exception = Exception, interval: float = 0):
-    timeout = 0
+async def retry(source, exc_class: Type[BaseException] = Exception, interval: float = 0):
+    timeout: float = 0
     loop = asyncio.get_event_loop()
     while True:
         try:
@@ -113,7 +113,7 @@ async def finally_action(source, func):
 
 
 @operator(pipable=True)
-async def catch(source, exc_class: Exception, on_exc=None):
+async def catch(source, exc_class: Type[BaseException], on_exc=None):
     try:
         async with streamcontext(source) as streamer:
             async for item in streamer:
@@ -127,7 +127,7 @@ async def catch(source, exc_class: Exception, on_exc=None):
             yield stream.empty()
 
 
-async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any):
+async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any) -> Any:
     while "database not ready":
         try:
             result = await event_bus.call(topic, *args, **kwargs)
