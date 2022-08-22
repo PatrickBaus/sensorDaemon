@@ -6,12 +6,19 @@ from __future__ import annotations
 import asyncio
 import inspect
 from functools import partial
-from typing import Any, AsyncGenerator, Type
+from typing import Any, AsyncGenerator, Type, TypedDict
 
 from aiostream import operator, stream, streamcontext
 
 from async_event_bus import TopicNotRegisteredError, event_bus
 from errors import ConfigurationError
+
+
+class FunctionCallConfig(TypedDict):
+    function: str
+    args: list | tuple
+    kwargs: dict
+    timeout: float
 
 
 async def cancel_all_tasks(tasks: set[asyncio.Task]) -> None:
@@ -142,7 +149,7 @@ async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any) 
             return result
 
 
-def create_device_function(device: Any, func_call: dict[str, str | tuple[Any, ...] | dict[str, Any]]) -> partial:
+def create_device_function(device: Any, func_call: FunctionCallConfig) -> tuple[partial, float]:
     """
     Creates a partial function from the function call with the parameters given and returns it
     Parameters
@@ -158,7 +165,8 @@ def create_device_function(device: Any, func_call: dict[str, str | tuple[Any, ..
     try:
         function = getattr(device, func_call["function"])
         # Create a partial function, that freezes the parameters and can be called later
-        func = partial(function, *func_call.get("args", []), **func_call.get("kwargs", {})), func_call["timeout"]
+        func = partial(function, *func_call.get("args", []), **func_call.get("kwargs", {}))
+        timeout = func_call["timeout"]
     except AttributeError:
         raise ConfigurationError(f"Function '{func_call['function']}' not found") from None
-    return func
+    return func, timeout
