@@ -41,12 +41,11 @@ class GenericDriverMixin:
         on_read, timeout = config["on_read"]
         if inspect.isasyncgenfunction(on_read.func):
             return stream.iterate(on_read()) | pipe.timeout(timeout)
-        else:
-            return (
-                stream.repeat(config["on_read"], interval=config["interval"])
-                | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-                | pipe.concat(task_limit=1)
-            )
+        return (
+            stream.repeat(config["on_read"], interval=config["interval"])
+            | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
+            | pipe.concat(task_limit=1)
+        )
 
     def on_error(self, exc):
         logging.getLogger(__name__).error("Error while while reading %s. Terminating device. Error: %s", self, exc)

@@ -9,7 +9,7 @@ from typing import Any
 
 from aiostream import pipe, stream
 from tinkerforge_async import IPConnectionAsync
-from tinkerforge_async.ip_connection import EnumerationType, NotConnectedError
+from tinkerforge_async.ip_connection import EnumerationType
 
 from async_event_bus import event_bus
 from helper_functions import context, retry
@@ -68,7 +68,6 @@ class TinkerforgeTransport(IPConnectionAsync):
         super().__init__(hostname, port)
         self.__label = label
         self.__reconnect_interval = 1 if reconnect_interval is None else reconnect_interval
-        self.__logger = logging.getLogger(__name__)
 
     @staticmethod
     def _stream_transport(transport: TinkerforgeTransport):

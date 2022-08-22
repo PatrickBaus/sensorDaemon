@@ -147,10 +147,9 @@ class GenericIpConnection:
         except OSError as exc:
             if exc.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH):
                 raise HostUnreachableError(f"Host unreachable ({self.hostname}:{self.port})") from None
-            elif exc.errno == errno.ECONNREFUSED:
+            if exc.errno == errno.ECONNREFUSED:
                 raise HostRefusedError(f"Host refused the connection ({self.hostname}:{self.port})") from None
-            else:
-                raise
+            raise
 
     async def disconnect(self):
         if not self.is_connected:

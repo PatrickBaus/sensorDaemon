@@ -103,7 +103,8 @@ class Kraken:
             for task in done:
                 if task is shutdown_event_task:
                     print("shutting down gracefully")
-                    [task.cancel() for task in pending]
+                    for pending_task in pending:
+                        pending_task.cancel()
                     try:
                         await asyncio.gather(*pending)
                     except asyncio.CancelledError:

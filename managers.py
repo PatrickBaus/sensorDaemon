@@ -160,7 +160,7 @@ class DatabaseManager:
         try:
             await cancel_all_tasks(tasks)
         except Exception:  # pylint: disable=broad-except
-            self.__logger.exception(f"Error during shutdown of the {type(self).__name__}")
+            self.__logger.exception("Error during shutdown of the %s", type(self).__name__)
 
     async def run(self) -> None:
         """
@@ -194,7 +194,6 @@ class DatabaseManager:
 class HostManager:
     def __init__(self, node_id: UUID) -> None:
         self.__node_id = node_id
-        self.__logger = logging.getLogger(__name__)
         self.__topic = "db_autodiscovery_sensors"
 
     @staticmethod
@@ -204,9 +203,9 @@ class HostManager:
         try:
             return transport_factory.get(**config)
         except UnknownDriverError:
-            logging.getLogger(__name__).warning(f"No driver available for transport '{config['driver']}'.")
+            logging.getLogger(__name__).warning("No driver available for transport '%s'.", config["driver"])
         except Exception:
-            logging.getLogger(__name__).exception(f"Error while creating transport '{config['driver']}'.")
+            logging.getLogger(__name__).exception("Error while creating transport '%s'.", config["driver"])
         return None
 
     @staticmethod

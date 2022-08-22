@@ -12,7 +12,7 @@ from uuid import UUID
 from aiostream import pipe, stream
 from async_gpib import AsyncGpib, GpibError
 
-from helper_functions import catch, retry
+from helper_functions import retry
 from sensors.transports.generic_transport import GenericTransport
 
 

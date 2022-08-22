@@ -8,7 +8,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from aiostream import async_, pipe, stream
+from aiostream import async_, pipe
 from labnode_async import IPConnection as LabnodeIPConnection
 
 from helper_functions import with_context

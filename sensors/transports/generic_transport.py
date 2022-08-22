@@ -7,11 +7,6 @@ import logging
 from typing import Any
 from uuid import UUID
 
-try:
-    from typing import Self  # type: ignore # Python 3.11
-except ImportError:
-    from typing_extensions import Self
-
 from aiostream import pipe, stream
 
 from async_event_bus import event_bus
@@ -89,9 +84,9 @@ class GenericTransport:
         try:
             return config, sensor_factory.get(connection=transport, **config)
         except UnknownDriverError:
-            logging.getLogger(__name__).warning(f"No driver available for device '{config['driver']}'")
+            logging.getLogger(__name__).warning("No driver available for device '%s'", config["driver"])
         except Exception:
-            logging.getLogger(__name__).exception("Error while creating device '{config['driver']}'")
+            logging.getLogger(__name__).exception("Error while creating device '%s'", config["driver"])
         return None, None
 
     def _stream_data(self, transport):
