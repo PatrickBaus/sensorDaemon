@@ -34,7 +34,7 @@ class MqttManager:
         self.__port = port
         self.__number_of_workers = number_of_workers
 
-    async def producer(self, output_queue: asyncio.Queue[(str, dict[str, str | float | int])]):
+    async def producer(self, output_queue: asyncio.Queue[tuple[str, dict[str, str | float | int]]]):
         """
         Grabs the output data from the event bus and pushes it to a worker queue,
         so that multiple workers can then publish it via MQTT.
@@ -62,7 +62,7 @@ class MqttManager:
                 output_queue.put_nowait((topic, payload))
 
     async def consumer(
-        self, input_queue: asyncio.Queue[(str, dict[str, str | float | int])], reconnect_interval: int = 5
+        self, input_queue: asyncio.Queue[tuple[str, dict[str, str | float | int]]], reconnect_interval: int = 5
     ) -> None:
         """
         Pushes the data from the input queue to the MQTT broker. It will make sure,
@@ -90,14 +90,14 @@ class MqttManager:
                             topic, payload = event
                             # convert payload to JSON
                             # Typically sensors return data as decimals or ints to preserve the precision
-                            payload = json.dumps(payload, use_decimal=True)
+                            encoded_payload = json.dumps(payload, use_decimal=True)
                         except TypeError:
                             self.__logger.error("Error while serializing DataEvent: %s", payload)
                             event = None  # Drop the event
                             # await asyncio.sleep(0.01)
                         else:
                             # self.__logger.info("Going to publish: %s to %s", payload, topic)
-                            await mqtt_client.publish(topic, payload=payload, qos=2)
+                            await mqtt_client.publish(topic, payload=encoded_payload, qos=2)
                             event = None  # Get a new event to publish
                             has_error = False
             except asyncio_mqtt.error.MqttError as exc:
@@ -130,9 +130,9 @@ class MqttManager:
         The main task, that spawn all workers.
         """
         async with AsyncExitStack() as stack:
-            tasks = set()
+            tasks: set[asyncio.Task] = set()
             stack.push_async_callback(self.cancel_tasks, tasks)
-            event_queue = asyncio.Queue()
+            event_queue: asyncio.Queue[tuple[str, dict]] = asyncio.Queue()
 
             consumers = {asyncio.create_task(self.consumer(event_queue)) for _ in range(self.__number_of_workers)}
             tasks.update(consumers)
@@ -170,7 +170,7 @@ class DatabaseManager:
             # TODO: Notify all hosts/sensors, when the database is connected
             try:
                 async with AsyncExitStack() as stack:
-                    tasks = set()
+                    tasks: set[asyncio.Task] = set()
                     stack.push_async_callback(self.cancel_tasks, tasks)
 
                     database_driver = MongoDb(self.__database_url)

@@ -114,6 +114,14 @@ class Context:  # pylint: disable=too-few-public-methods
         self.__topic = topic
         self.__logger = logging.getLogger(__name__)
 
+    async def __aenter__(self) -> Self:
+        raise NotImplementedError
+
+    async def __aexit__(
+        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+    ) -> None:
+        raise NotImplementedError
+
     async def _monitor_database(
         self, database_model: Type[DeviceDocument], timeout: float
     ) -> AsyncGenerator[tuple[ChangeType, UUID | beanie.Document], None]:

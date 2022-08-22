@@ -76,7 +76,7 @@ class AsyncEventBus:
         for queue in listener_queues:
             queue.put_nowait(event)
 
-    def register(self, event_name: str, function: Callable[[Any], Coroutine] | Callable[[Any], AsyncGenerator]) -> None:
+    def register(self, event_name: str, function: Callable[..., Coroutine] | Callable[..., AsyncGenerator]) -> None:
         """
         Register a function to be called via `call()`.
 
