@@ -131,7 +131,7 @@ class TinkerforgeSensor:
         )
 
     @staticmethod
-    def _parse_callback_configuration(sid: str, config: dict[str, Any]):
+    def _parse_callback_configuration(sid: str | int, config: dict[str, Any]):
         sid = int(sid)
         callback_config = AdvancedCallbackConfiguration(
             period=config["interval"],

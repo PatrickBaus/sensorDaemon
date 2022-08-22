@@ -32,8 +32,7 @@ class TransportFactory:
         """
         self.__available_drivers[transport.driver] = transport
 
-    # TODO: Type hinting
-    def get(self, driver: str, **kwargs: Any):  # pylint: disable=too-many-arguments
+    def get(self, driver: str, **kwargs: Any):
         """
         Look up the driver for a given database entry. Raises a `ValueError` if
         the driver is not registered.

@@ -2,9 +2,11 @@
 A lightweight event bus for the asyncio framework, that relies on asynchronous
 generators to deliver messages.
 """
+from __future__ import annotations
+
 import asyncio
 from inspect import isasyncgen
-from typing import Any, AsyncGenerator, Callable, Coroutine, Union
+from typing import Any, AsyncGenerator, Callable, Coroutine, Union, cast
 
 
 class EventRegisteredError(ValueError):
@@ -26,7 +28,7 @@ class AsyncEventBus:
     """
 
     def __init__(self) -> None:
-        self.__subscribers: dict[str, set[asyncio.Queue]] = {}
+        self.__subscribers: dict[str, set[asyncio.Queue[Any]]] = {}
         self.__registered_calls: dict[str, Union[Callable[[Any], Coroutine], Callable[[Any], AsyncGenerator]]] = {}
 
     async def subscribe(self, event_name: str) -> AsyncGenerator[Any, None]:
@@ -43,7 +45,7 @@ class AsyncEventBus:
         Any
             The events
         """
-        queue = asyncio.Queue()
+        queue: asyncio.Queue[Any] = asyncio.Queue()
         if self.__subscribers.get(event_name, None) is None:
             self.__subscribers[event_name] = {queue}
         else:
@@ -70,7 +72,7 @@ class AsyncEventBus:
         event: any
             The data to be published.
         """
-        listener_queues = self.__subscribers.get(event_name, [])
+        listener_queues: set[asyncio.Queue[Any]] = self.__subscribers.get(event_name, set())
         for queue in listener_queues:
             queue.put_nowait(event)
 
@@ -123,10 +125,10 @@ class AsyncEventBus:
             Raised if the function `event_name` is not registered.
         """
         try:
-            gen_or_func = self.__registered_calls[event_name](*args, **kwargs)
+            gen_or_func: Coroutine | AsyncGenerator = self.__registered_calls[event_name](*args, **kwargs)
             if isasyncgen(gen_or_func):
                 return gen_or_func
-            return await gen_or_func
+            return await cast(Coroutine, gen_or_func)
         except KeyError:
             if not ignore_unregistered:
                 raise TopicNotRegisteredError(f"Function {event_name} is not registered.") from None

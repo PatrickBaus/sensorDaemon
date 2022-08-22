@@ -11,7 +11,7 @@ from types import TracebackType
 from typing import Type
 
 try:
-    from typing import Self  # Python 3.11
+    from typing import Self  # type: ignore # Python 3.11
 except ImportError:
     from typing_extensions import Self
 

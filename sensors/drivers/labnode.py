@@ -12,7 +12,7 @@ from labnode_async.labnode import Labnode
 
 from async_event_bus import event_bus
 from data_types import DataEvent
-from errors import ConfigurationError
+from errors import ConfigurationError, SensorNotReady
 from helper_functions import call_safely, create_device_function
 
 
@@ -78,6 +78,8 @@ class LabnodeSensor:
         return config
 
     def _read_sensor(self, sid: int, interval: float, unit: str, topic: str, timeout: float):
+        if self.__uuid is None:
+            raise SensorNotReady("You must enumerate the sensor before reading.")
         return (
             stream.repeat(stream.call(self._device.get_by_function_id, sid), interval=interval)
             | pipe.concat(task_limit=1)

@@ -9,3 +9,7 @@ class UnknownDriverError(ValueError):
 
 class ConfigurationError(Exception):
     pass
+
+
+class SensorNotReady(Exception):
+    pass

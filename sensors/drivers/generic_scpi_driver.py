@@ -6,11 +6,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from aiostream import async_, pipe, stream
 
-from sensors.drivers.generic_driver import GenericDriver
+from sensors.drivers.generic_driver import GenericDriverMixin
 
 if TYPE_CHECKING:
     from sensors.transports.ethernet import EthernetTransport
@@ -22,7 +22,9 @@ class ScpiIoError(ValueError):
     pass
 
 
-class GenericScpiDriver:
+class GenericScpiMixin:
+    """A mixin to add basic SCPI commands and capabilities to a driver."""
+
     TERMINATOR = "\n"  # The default message terminator (will be encoded to bytes later)
 
     @property
@@ -31,16 +33,18 @@ class GenericScpiDriver:
 
     @device_name.setter
     def device_name(self, name: str):
-        self.__device_name = name
+        self.__device_name: str | None = name
 
     def __init__(
-        self,
-        connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport,
+        self, connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport, *args: Any, **kwargs: Any
     ) -> None:
         self._conn = connection
         self.__device_name = None
 
         self.__logger = logging.getLogger(__name__)
+        # Call the base class constructor, because this is just a mixin, that comes before the base class in the MRO,
+        # so there *might* be a base class.
+        super().__init__(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.device_name} at {str(self._conn)}"
@@ -55,14 +59,14 @@ class GenericScpiDriver:
         Returns a tuple with 4 elements, that contain the manufacturer name, model number, serial number and revision
         :return:
         """
-        result: str = await self.query("*IDN?")
-        result: tuple[str, ...] = tuple(result.split(","))
-        if len(result) != 4:
-            raise ValueError(f"Device returned invalid ID: {result!r}")
-        result: tuple[str, str, str, str]
-        return result
+        idn: str = await self.query("*IDN?")
+        try:
+            company_name, model, serial, firmware = idn.split(",")
+        except ValueError:
+            raise ValueError(f"Device returned invalid ID: {idn!r}") from None
+        return company_name, model, serial, firmware
 
-    async def read(self, scpi_terminator: str | None = None, *args, **kwargs) -> str:
+    async def read(self, scpi_terminator: str | None = None, *args: Any, **kwargs: Any) -> str:
         """
         Read a single value from the device. If `length' is given, read `length` bytes, else
         read until a line break.
@@ -80,15 +84,15 @@ class GenericScpiDriver:
         """
         # use the default terminator if none is given
         try:
-            scpi_terminator = self.TERMINATOR.encode() if scpi_terminator is None else scpi_terminator.encode()
+            terminator = self.TERMINATOR.encode() if scpi_terminator is None else scpi_terminator.encode()
         except UnicodeEncodeError:
             self.__logger.warning("Invalid terminator '%r', using default: '%r'", scpi_terminator, self.TERMINATOR)
-            scpi_terminator = self.TERMINATOR.encode()
+            terminator = self.TERMINATOR.encode()
 
         data = await self._conn.read(*args, **kwargs)
         # Strip the terminator if we are using one and the last bytes match the terminator
-        if scpi_terminator and data[-len(scpi_terminator) :] == scpi_terminator:
-            data = data[: -len(scpi_terminator)]
+        if data[-len(terminator) :] == terminator:
+            data = data[: -len(terminator)]
         try:
             return data.decode("utf-8")
         except UnicodeDecodeError:
@@ -107,12 +111,12 @@ class GenericScpiDriver:
             self.__logger.error("Cannot write invalid command '%r'. Use ASCII or UTF-8 strings only.", cmd)
             raise ScpiIoError("Cannot write illegal command %s to device %s", self)
 
-    async def query(self, cmd: str, scpi_terminator: str | None = None, *args, **kwargs) -> str:
+    async def query(self, cmd: str, scpi_terminator: str | None = None, *args: Any, **kwargs: Any) -> str:
         await self.write(cmd, scpi_terminator)
         return await self.read(scpi_terminator, *args, **kwargs)
 
-    async def read_number(self, length: int | None = None, separator: str | None = None) -> Decimal:
-        result = await self.read(length, separator)
+    async def read_number(self, separator: str | None = None, *args: Any, **kwargs: Any) -> Decimal:
+        result = await self.read(separator, *args, **kwargs)
         # Treat special SCPI values
         # Not A Number
         if result.lower() == "9.91e37":
@@ -125,13 +129,13 @@ class GenericScpiDriver:
             return Decimal("-Infinity")
         return Decimal(result)
 
-    async def query_number(self, cmd: str, length: int | None = None, scpi_terminator: str | None = None) -> Decimal:
+    async def query_number(self, cmd: str, scpi_terminator: str | None = None) -> Decimal:
         await self.write(cmd, scpi_terminator)
-        return await self.read_number(length, scpi_terminator)
+        return await self.read_number(scpi_terminator)
 
 
-class GenericScpiSensor(GenericDriver, GenericScpiDriver):
-    """This class extends the SCPI driver with catch-all arguments in the constructor"""
+class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
+    """This is a basic generic SCPI driver, that implements the streaming interface and SCPI functionality."""
 
     @classmethod
     @property
@@ -145,7 +149,11 @@ class GenericScpiSensor(GenericDriver, GenericScpiDriver):
         return "generic_scpi2"
 
     def __init__(
-        self, uuid, connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport, *_args, **_kwargs
+        self,
+        uuid,
+        connection: EthernetTransport | LinuxGpibTransport | PrologixEthernetTransport,
+        *_args: Any,
+        **_kwargs: Any,
     ) -> None:
         super().__init__(uuid, connection)
 

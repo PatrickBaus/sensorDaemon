@@ -7,6 +7,7 @@ import asyncio
 import inspect
 import logging
 from functools import partial
+from typing import Any
 
 from aiostream import pipe, stream
 
@@ -16,12 +17,14 @@ from errors import ConfigurationError
 from helper_functions import catch, create_device_function, finally_action
 
 
-class GenericDriver:
-    """This class extends a driver with catch-all arguments in the constructor"""
+class GenericDriverMixin:
+    """This mixin adds the streaming interface to a driver class."""
 
-    def __init__(self, uuid, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, uuid, *args: Any, **kwargs: Any) -> None:
         self.__uuid = uuid
+        # Call the base class constructor, because this is just a mixin, that comes before the base class in the MRO,
+        # so there *might* be a base class.
+        super().__init__(*args, **kwargs)
 
     async def _clean_up(self, funcs):
         results = await asyncio.gather(

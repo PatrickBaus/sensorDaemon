@@ -5,7 +5,7 @@ available special GPIB device drivers.
 from typing import Any
 
 from errors import UnknownDriverError
-from sensors.drivers.generic_scpi_driver import GenericScpiSensor
+from sensors.drivers.generic_scpi_driver import GenericScpiDriver
 from sensors.drivers.hp3478a_driver import Hp3478ADriver
 
 
@@ -67,5 +67,5 @@ class SensorFactory:
 
 
 sensor_factory = SensorFactory()
-sensor_factory.register(cls=GenericScpiSensor)
+sensor_factory.register(cls=GenericScpiDriver)
 sensor_factory.register(cls=Hp3478ADriver)
