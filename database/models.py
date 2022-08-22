@@ -9,8 +9,8 @@ from typing import Dict, List, Optional
 from uuid import UUID, uuid4
 
 import pymongo
-from beanie import Document, Indexed, PydanticObjectId
-from pydantic import BaseModel, Field, confloat, conint  # pylint: disable=no-name-in-module
+from beanie import Document, PydanticObjectId
+from pydantic import BaseModel, Field, conint, validator  # pylint: disable=no-name-in-module
 
 
 class FunctionCall(BaseModel):
@@ -22,7 +22,7 @@ class FunctionCall(BaseModel):
     function: str
     args: Optional[list] = []
     kwargs: Optional[dict] = {}
-    timeout: Optional[confloat(ge=0)]
+    timeout: Optional[float] = Field(ge=0)
 
     def execute(self, sensor) -> None:
         """
@@ -42,12 +42,19 @@ class HostBaseModel(BaseModel):
 
     # pylint: disable=too-few-public-methods
     hostname: int | str
-    port: conint(ge=1, le=65535)
-    pad: Optional[conint(ge=0, le=30)]
-    sad: Optional[conint(ge=0x60, le=0x7E) | conint(ge=0, le=0)]
+    port: int = Field(ge=1, le=65535)
+    pad: Optional[int] = Field(ge=0, le=30)
+    sad: int  # Validator below
     driver: str
     node_id: Optional[UUID] = UUID("{00000000-0000-0000-0000-000000000000}")
-    reconnect_interval: confloat(ge=0) | None
+    reconnect_interval: float | None = Field(ge=0)
+
+    @validator("sad")
+    @staticmethod
+    def validate_all_fields_one_by_one(field_value):
+        if field_value == 0 or 0x60 <= field_value <= 0x7E:
+            return field_value
+        raise ValueError("Invalid secondary address. Address must either be 0 or in the range (0x60, 0x7E)")
 
     class Settings:
         """
@@ -100,7 +107,7 @@ class TinkforgeSensorConfigModel(BaseModel):
     """
 
     # pylint: disable=too-few-public-methods
-    interval: conint(ge=0, le=2**32 - 1)
+    interval: int = Field(ge=0, le=2**32 - 1)
     trigger_only_on_change: Optional[bool] = True
     description: Optional[str] = ""
     topic: str
@@ -113,12 +120,18 @@ class TinkerforgeSensorModel(DeviceDocument):
     """
 
     # pylint: disable=too-few-public-methods
-    uid: Indexed(int, unique=True)
+    uid: int
     config: Dict[str, TinkforgeSensorConfigModel]  # bson does not allow int keys
     on_connect: List[FunctionCall] | List[None] = []
 
     class Settings:
         name = "TinkerforgeSensor"
+        indexes = [
+            pymongo.IndexModel(
+                ("uid", pymongo.ASCENDING),
+                unique=True,
+            )
+        ]
 
 
 class LabnodeSensorConfigModel(BaseModel):
@@ -127,26 +140,32 @@ class LabnodeSensorConfigModel(BaseModel):
     """
 
     # pylint: disable=too-few-public-methods
-    interval: conint(ge=0, le=2**32 - 1)
+    interval: int = Field(ge=0, le=2**32 - 1)
     description: Optional[str] = ""
     topic: str
     unit: PydanticObjectId | str
-    timeout: Optional[confloat(ge=0)]
+    timeout: Optional[float] = Field(ge=0)
 
 
 class LabnodeSensorModel(DeviceDocument):
-    uid: Indexed(int, unique=True)
+    uid: int
     config: Dict[str, LabnodeSensorConfigModel]  # bson does not allow int keys
     on_connect: List[FunctionCall] | List[None] = []
 
     class Settings:
         name = "LabnodeSensor"
+        indexes = [
+            pymongo.IndexModel(
+                ("uid", pymongo.ASCENDING),
+                unique=True,
+            )
+        ]
 
 
 class GenericSensorModel(DeviceDocument):
-    host: Indexed(UUID, unique=True)
+    host: UUID
     driver: str
-    interval: confloat(ge=0)
+    interval: float = Field(ge=0)
     on_connect: List[FunctionCall] | List[None] = []
     on_read: FunctionCall
     on_after_read: List[FunctionCall] | List[None]
@@ -156,3 +175,9 @@ class GenericSensorModel(DeviceDocument):
 
     class Settings:
         name = "GenericSensor"
+        indexes = [
+            pymongo.IndexModel(
+                ("host", pymongo.ASCENDING),
+                unique=True,
+            )
+        ]
