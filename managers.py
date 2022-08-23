@@ -28,6 +28,8 @@ MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 
 
 class MqttManager:
+    """This manager will take the sensor data from the event_bus backend and publish them onto the MQTT network"""
+
     def __init__(self, host: str, port: int, number_of_workers: int = 5) -> None:
         self.__logger = logging.getLogger(__name__)
         self.__host = host
@@ -127,7 +129,7 @@ class MqttManager:
 
     async def run(self) -> None:
         """
-        The main task, that spawn all workers.
+        The main task, that spawns all workers.
         """
         async with AsyncExitStack() as stack:
             tasks: set[asyncio.Task] = set()
@@ -144,6 +146,8 @@ class MqttManager:
 
 
 class DatabaseManager:
+    """This manager reads the configuration data from the database and publishes it on the event_bus network."""
+
     def __init__(self, database_url: str) -> None:
         self.__logger = logging.getLogger(__name__)
         self.__database_url = database_url
@@ -191,7 +195,9 @@ class DatabaseManager:
                 await asyncio.sleep(5)
 
 
-class HostManager:
+class HostManager:  # pylint: disable=too-few-public-methods
+    """This manager creates the sensor objects and reads data from them to publish it onto the event_bus."""
+
     def __init__(self, node_id: UUID) -> None:
         self.__node_id = node_id
         self.__topic = "db_autodiscovery_sensors"
@@ -204,7 +210,8 @@ class HostManager:
             return transport_factory.get(**config)
         except UnknownDriverError:
             logging.getLogger(__name__).warning("No driver available for transport '%s'.", config["driver"])
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
+            # catch all exceptions here, because a faulty driver should not bring down the daemon
             logging.getLogger(__name__).exception("Error while creating transport '%s'.", config["driver"])
         return None
 
@@ -216,7 +223,10 @@ class HostManager:
             and (config["node_id"] is None or node_id is None or config["node_id"] == node_id)
         )
 
-    async def start_stream(self) -> None:
+    async def run(self) -> None:
+        """
+        The main task, that reads data from the sensors and pushes it onto the event_bus.
+        """
         # Generate the UUIDs of new sensors
         sensor_stream = stream.chain(
             stream.iterate(iterate_safely(f"{self.__topic}/get", f"{self.__topic}/status_update")),
@@ -228,7 +238,7 @@ class HostManager:
             )
             | pipe.until(lambda config: config is None)
             | pipe.map(lambda config: config if self._is_config_valid(self.__node_id, config) else None)
-            | pipe.map(lambda config: self._create_transport(config))
+            | pipe.map(self._create_transport)
             | pipe.switchmap(
                 lambda transport: stream.empty() if transport is None else stream.iterate(transport.stream_data())
             )
@@ -236,6 +246,3 @@ class HostManager:
         )
 
         await sensor_stream
-
-    async def run(self) -> None:
-        await self.start_stream()
