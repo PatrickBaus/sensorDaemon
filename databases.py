@@ -108,6 +108,12 @@ class Context:  # pylint: disable=too-few-public-methods
 
     @property
     def topic(self) -> str:
+        """
+        Returns
+        -------
+        str
+            The event_bus topic the context is registered to.
+        """
         return self.__topic
 
     def __init__(self, topic: str) -> None:
@@ -232,22 +238,31 @@ class LabnodeContext(Context):
 
         return device
 
-    async def monitor_changes(self, timeout):
+    async def monitor_changes(self, timeout: float) -> None:
+        """
+        Push changes from the database onto the event_bus.
+
+        Parameters
+        ----------
+        timeout: float
+            The timeout in seconds to wait after a connection error.
+        """
+        change: beanie.Document
         async for change_type, change in self._monitor_database(LabnodeSensorModel, timeout):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
-                change = change.dict()
+                change_dict = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
-                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"nodes/by_uuid/{change['uuid']}/update", change)
+                change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
-                change = change.dict()
-                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"nodes/by_uuid/{change['host']}/add", change)
+                change_dict = change.dict()
+                change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change_dict['host']}/add", change_dict)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
-                event_bus.publish(f"nodes/by_uuid/{change}/update", None)
+                event_bus.publish(f"nodes/by_uuid/{change_dict}/update", None)
 
 
 class GenericSensorContext(Context):
@@ -304,23 +319,28 @@ class GenericSensorContext(Context):
 
     async def monitor_changes(self, timeout):
         """
-        Adds the driver string to the output of the iterator.
+        Push changes from the database onto the event_bus.
+
+        Parameters
+        ----------
+        timeout: float
+            The timeout in seconds to wait after a connection error.
         """
         async for change_type, change in self._monitor_database(GenericSensorModel, timeout):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
-                change = change.dict()
+                change_dict = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
-                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"nodes/by_uuid/{change['uuid']}/update", change)
+                change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
-                change = change.dict()
-                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"nodes/by_uuid/{change['host']}/add", change)
+                change_dict = change.dict()
+                change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change_dict['host']}/add", change_dict)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
-                event_bus.publish(f"nodes/by_uuid/{change}/update", None)
+                event_bus.publish(f"nodes/by_uuid/{change_dict}/update", None)
 
 
 class HostContext(Context):
@@ -346,7 +366,8 @@ class HostContext(Context):
         event_bus.unregister(self.topic + "/get")
         event_bus.unregister(self.topic + "/get_config")
 
-    async def __get_sensors(self) -> AsyncGenerator[UUID, None]:
+    @staticmethod
+    async def __get_sensors() -> AsyncGenerator[UUID, None]:
         """
         Get all gpib device ids from the database.
 
@@ -391,7 +412,12 @@ class HostContext(Context):
 
     async def monitor_changes(self, timeout):
         """
-        Adds the driver string to the output of the iterator.
+        Push changes from the database onto the event_bus.
+
+        Parameters
+        ----------
+        timeout: float
+            The timeout in seconds to wait after a connection error.
         """
         change: SensorHostModel
         async for change_type, change in self._monitor_database(SensorHostModel, timeout):
@@ -466,25 +492,30 @@ class TinkerforgeContext(Context):
 
     async def monitor_changes(self, timeout):
         """
-        Adds the driver string to the output of the iterator.
+        Push changes from the database onto the event_bus.
+
+        Parameters
+        ----------
+        timeout: float
+            The timeout in seconds to wait after a connection error.
         """
         async for change_type, change in self._monitor_database(TinkerforgeSensorModel, timeout):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
-                change = change.dict()
+                change_dict = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
-                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"nodes/by_uuid/{change['uuid']}/remove", None)
-                event_bus.publish(f"nodes/tinkerforge/{change['uid']}/update", change)
+                change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/remove", None)
+                event_bus.publish(f"nodes/tinkerforge/{change_dict['uid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
-                change = change.dict()
-                change["uuid"] = change.pop("id")  # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"nodes/by_uuid/{change['uuid']}/remove", None)
-                event_bus.publish(f"nodes/tinkerforge/{change['uid']}/update", change)
+                change_dict = change.dict()
+                change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
+                event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/remove", None)
+                event_bus.publish(f"nodes/tinkerforge/{change_dict['uid']}/update", change_dict)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
-                event_bus.publish(f"nodes/by_uuid/{change}/remove", None)
+                event_bus.publish(f"nodes/by_uuid/{change_dict}/remove", None)
 
 
 CONTEXTS = {
