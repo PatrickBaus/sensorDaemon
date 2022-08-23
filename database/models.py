@@ -51,7 +51,8 @@ class HostBaseModel(BaseModel):
 
     @validator("sad")
     @staticmethod
-    def validate_all_fields_one_by_one(field_value):
+    def validate_sad(field_value):
+        """Make sure that the secondary address is either 0 or between 96 and 126. 0 means disabled."""
         if field_value == 0 or 0x60 <= field_value <= 0x7E:
             return field_value
         raise ValueError("Invalid secondary address. Address must either be 0 or in the range (0x60, 0x7E)")
@@ -70,6 +71,8 @@ class HostBaseModel(BaseModel):
 
 
 class BaseDocument(Document):
+    """The base mode used by all database entries. It makes sure that the id is a universally/globally unique id"""
+
     id: UUID = Field(default_factory=uuid4)
 
 
@@ -85,12 +88,14 @@ class TimeStampedDocument(BaseDocument):
 
 
 class DeviceDocument(TimeStampedDocument):
+    """The database base model used by device drivers."""
+
     enabled: bool = True
     label: str | None
     description: Optional[str] = ""
 
 
-class SensorHostModel(DeviceDocument, HostBaseModel):
+class SensorHostModel(DeviceDocument, HostBaseModel):  # pylint: disable=too-many-ancestors
     """
     An ethernet connected sensor host (inherited from the HostBaseModel).
     """
@@ -98,6 +103,8 @@ class SensorHostModel(DeviceDocument, HostBaseModel):
     # pylint: disable=too-few-public-methods
 
     class Settings:
+        """Defines the database 'table' name."""
+
         name = "SensorHost"
 
 
@@ -114,7 +121,7 @@ class TinkforgeSensorConfigModel(BaseModel):
     unit: PydanticObjectId | str
 
 
-class TinkerforgeSensorModel(DeviceDocument):
+class TinkerforgeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancestors
     """
     The configuration of a sensor node, which is called a stack by Tinkerforge.
     """
@@ -124,7 +131,9 @@ class TinkerforgeSensorModel(DeviceDocument):
     config: Dict[str, TinkforgeSensorConfigModel]  # bson does not allow int keys
     on_connect: List[FunctionCall] | List[None] = []
 
-    class Settings:
+    class Settings:  # pylint: disable=too-few-public-methods
+        """Sets the index used. Also defines the database 'table' name."""
+
         name = "TinkerforgeSensor"
         indexes = [
             pymongo.IndexModel(
@@ -147,12 +156,16 @@ class LabnodeSensorConfigModel(BaseModel):
     timeout: Optional[float] = Field(ge=0)
 
 
-class LabnodeSensorModel(DeviceDocument):
+class LabnodeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancestors
+    """Labnode driver config"""
+
     uid: int
     config: Dict[str, LabnodeSensorConfigModel]  # bson does not allow int keys
     on_connect: List[FunctionCall] | List[None] = []
 
-    class Settings:
+    class Settings:  # pylint: disable=too-few-public-methods
+        """Sets the index used. Also defines the database 'table' name."""
+
         name = "LabnodeSensor"
         indexes = [
             pymongo.IndexModel(
@@ -162,7 +175,9 @@ class LabnodeSensorModel(DeviceDocument):
         ]
 
 
-class GenericSensorModel(DeviceDocument):
+class GenericSensorModel(DeviceDocument):  # pylint: disable=too-many-ancestors
+    """Generic driver config. Used by the GPIB/SCPI devices."""
+
     host: UUID
     driver: str
     interval: float = Field(ge=0)
@@ -173,7 +188,9 @@ class GenericSensorModel(DeviceDocument):
     topic: str
     unit: str
 
-    class Settings:
+    class Settings:  # pylint: disable=too-few-public-methods
+        """Sets the index used. Also defines the database 'table' name."""
+
         name = "GenericSensor"
         indexes = [
             pymongo.IndexModel(
