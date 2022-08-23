@@ -7,7 +7,7 @@ import asyncio
 import inspect
 import logging
 from functools import partial
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from aiostream import pipe, stream
 
@@ -47,7 +47,20 @@ class GenericDriverMixin:
             | pipe.concat(task_limit=1)
         )
 
-    def on_error(self, exc):
+    def on_error(self, exc: BaseException) -> AsyncGenerator[None, None]:
+        """
+        The function to call in case of an execution during streaming.
+
+        Parameters
+        ----------
+        exc: BaseException
+            The exception, that was raised
+
+        Returns
+        -------
+        AsyncGenerator
+            Am empty stream, that terminates without generating a value.
+        """
         logging.getLogger(__name__).error("Error while while reading %s. Terminating device. Error: %s", self, exc)
         return stream.empty()
 
@@ -71,7 +84,19 @@ class GenericDriverMixin:
         ) | catch.pipe(TypeError, on_exc=self.on_error)
         return config_stream
 
-    def _parse_config(self, config):
+    def _parse_config(self, config: dict[str, Any]) -> dict[str, Any] | None:
+        """
+        Takes a config and parses it to function calls. If there are errors, do not return the config.
+        Parameters
+        ----------
+        config: dict
+            The config to be parsed
+
+        Returns
+        -------
+        dict or None
+            Either returns the parsed config or None if there were errors.
+        """
         if config is None:
             return None
         try:
@@ -84,17 +109,29 @@ class GenericDriverMixin:
                 create_device_function(self, func_call) for func_call in config["on_after_read"]
             )
         except ConfigurationError:
-            config = None
+            return None
 
         return config
 
-    def stream_data(self, config):
+    def stream_data(self, config: dict[str, Any]) -> AsyncGenerator[Any, None]:
+        """
+        Stream the data from the sensor.
+        Parameters
+        ----------
+        config: dict
+            A dictionary containing the sensor configuration.
+
+        Returns
+        -------
+        AsyncGenerator
+            The asynchronous stream.
+        """
         data_stream = (
             stream.chain(
                 stream.just(config), stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{self.__uuid}/update"))
             )
             | pipe.action(
-                lambda config: logging.getLogger(__name__).info("Got new configuration for: %s", self)
+                lambda _: logging.getLogger(__name__).info("Got new configuration for: %s", self)
                 if config is not None
                 else logging.getLogger(__name__).info("Removed configuration for: %s", self)
             )
