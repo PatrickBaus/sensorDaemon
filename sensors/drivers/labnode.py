@@ -5,7 +5,7 @@ This is a wrapper for Labnode devices.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, AsyncGenerator
 from uuid import UUID
 
 from aiostream import pipe, stream
@@ -36,10 +36,19 @@ class LabnodeSensor:
         self.__uuid: UUID | None = None
         self._logger = logging.getLogger(__name__)
 
-    async def enumerate(self):
+    async def enumerate(self) -> None:
+        """Query the device for its UUID. This function must be called before streaming data."""
         self.__uuid = await self._device.get_uuid()
 
-    def stream_data(self):
+    def stream_data(self) -> AsyncGenerator[DataEvent, None]:
+        """
+        Generate the initial configuration of the sensor, configure it, and finally stream the data from the sensor.
+        If there is a configuration update, reconfigure the sensor and start streaming again.
+        Returns
+        -------
+        AsyncGenerator of DataEvent
+            The data from the device
+        """
         # Generates the first configuration
         # Query the database and if it does not have a config for the sensor, wait until there is one
 
@@ -67,7 +76,7 @@ class LabnodeSensor:
 
         return data_stream
 
-    def _create_config(self, config):
+    def _create_config(self, config: dict[str, Any] | None) -> dict[str, Any] | None:
         if config is None:
             return None
         try:
@@ -78,7 +87,9 @@ class LabnodeSensor:
 
         return config
 
-    def _read_sensor(self, sid: int, interval: float, unit: str, topic: str, timeout: float):
+    def _read_sensor(  # pylint: disable=too-many-arguments
+        self, sid: int, interval: float, unit: str, topic: str, timeout: float
+    ) -> AsyncGenerator[DataEvent, None]:
         if self.__uuid is None:
             raise SensorNotReady("You must enumerate the sensor before reading.")
         return (
@@ -92,7 +103,7 @@ class LabnodeSensor:
     def _parse_configuration(sid: str, config: dict[str, Any]):
         return int(sid), config["interval"], config["unit"], config["topic"], config["timeout"]
 
-    def _configure_and_stream(self, config):
+    def _configure_and_stream(self, config: dict[str, Any] | None) -> AsyncGenerator[DataEvent, None]:
         if config is None:
             return stream.empty()
         try:
@@ -111,5 +122,5 @@ class LabnodeSensor:
             )
             return config_stream
         except Exception:
-            self._logger.exception("This should not happen")
+            self._logger.exception("This should not happen.")
             raise

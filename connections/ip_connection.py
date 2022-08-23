@@ -41,6 +41,11 @@ class HostRefusedError(ConnectionError):
 
 
 class GenericIpConnection:
+    """
+    A generic ip connection, that wraps the asyncio stream reader/writer and creates a context manager for connecting and
+    disconnecting the ip connection.
+    """
+
     @property
     def hostname(self) -> str:
         """
@@ -94,6 +99,12 @@ class GenericIpConnection:
 
     @property
     def is_connected(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True if the connection is up.
+        """
         return self.__writer is not None and not self.__writer.is_closing()
 
     def __init__(self, hostname: str, port: int, timeout: float | None = None) -> None:
@@ -108,7 +119,7 @@ class GenericIpConnection:
         port: int
             port on the host
         timeout int or None
-            The timeout used during initial connection. The read timeout must be given separately to the `read()` call.
+            The timeout used during initial connection. The read timeout can be given separately to the `read()` call.
         """
         self.__hostname, self.__port = hostname, port
         self.__timeout = timeout
@@ -132,6 +143,19 @@ class GenericIpConnection:
         await self.disconnect()
 
     async def connect(self, hostname: str | None = None, port: int | None = None, timeout: float | None = None) -> None:
+        """
+        Connect to the host. It is better to use the context manager, which ensures that the ip connection is properly
+        disconnected.
+
+        Parameters
+        ----------
+        hostname: str
+            The hostname of the remote host
+        port: int
+            The port of the remote host
+        timeout: float, optional
+            The timeout in seconds. If the value is not passed, use the value given to the constructor.
+        """
         if self.is_connected:
             return
 
@@ -152,6 +176,9 @@ class GenericIpConnection:
             raise
 
     async def disconnect(self):
+        """
+        Disconnect the ip connection and flush the caches.
+        """
         if not self.is_connected:
             return
         # Flush data
@@ -217,12 +244,47 @@ class GenericIpConnection:
             raise
 
     async def read(
-        self, length: int | None = None, character: bytes | None = None, timeout: int | None = None
+        self, length: int | None = None, character: bytes | None = None, timeout: float | None = None
     ) -> bytes:
+        """
+        Read from the ip connection.
+        Parameters
+        ----------
+        length: int, optional
+            If given, read only `length` number of bytes.
+        character: bytes, optional
+            Read until the separator. The separator will be returned.
+        timeout: float, optional
+            The timeout in seconds. If the value is not passed, use the value given to the constructor.
+
+        Returns
+        -------
+        bytes:
+            The string read from the ip connection
+
+        Raises
+        ------
+        NotConnectedError
+            If the ip connection is not connected.
+        """
         async with self.__read_lock:
             return await self.__read(length=length, separator=character, timeout=timeout)
 
     async def write(self, cmd: bytes, timeout: float | None = None) -> None:
+        """
+        Write to the ip connection
+        Parameters
+        ----------
+        cmd: bytes
+            The string to be written
+        timeout: float or None
+            The number of seconds to wait when draining the write-cache. Use None to wait indefinitely
+
+        Raises
+        ------
+        NotConnectedError
+            If the ip connection is not connected.
+        """
         if not self.is_connected:
             raise NotConnectedError("Not connected")
         assert self.__writer is not None
@@ -234,6 +296,25 @@ class GenericIpConnection:
     async def query(
         self, cmd: bytes, length: int | None = None, separator: bytes | None = None, timeout: float | None = None
     ) -> bytes:
+        """
+        Write to the connection and read back the result.
+        Parameters
+        ----------
+        cmd: bytes
+            The command to write
+        length: int, optional
+            If given, read only `length` number of bytes.
+        separator: bytes, optional
+            Read until the separator. The separator will be returned.
+        timeout: float, optional
+            The timeout in seconds. If the value is not passed, use the value given to the constructor for reading and
+            an indefinite timeout for writing.
+
+        Returns
+        -------
+        bytes
+            The string read from the ip connection
+        """
         if not self.is_connected:
             raise NotConnectedError("Not connected")
 

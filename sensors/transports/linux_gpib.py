@@ -2,6 +2,7 @@
 This is a wrapper for the Prologix Ethernet controller used by other generic devices like the SCPI driver. It wraps
 the Prologix library and adds the stream interface via GenericTransport.
 """
+# pylint: disable=duplicate-code
 from __future__ import annotations
 
 import asyncio
@@ -42,7 +43,7 @@ class LinuxGpibTransport(GenericTransport, AsyncGpib):
         """
         return str(self.id)
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments  # The parameters are coming from a (relational) database
         self,
         hostname: int | str,
         pad: int,

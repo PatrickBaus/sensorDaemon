@@ -5,7 +5,6 @@ This is a wrapper for Tinkerforge devices.
 from __future__ import annotations
 
 import logging
-from decimal import Decimal
 from typing import Any, AsyncGenerator
 from uuid import UUID
 
@@ -56,9 +55,11 @@ class TinkerforgeSensor:
         ----------
         sensor: TinkerforgeSensor
             The brick or bricklet for which to fetch a config from the database
+
         Returns
         -------
-        stream
+        AsyncGenerator of dict
+            A dict containing the configuration of the device
         """
         return stream.chain(
             stream.call(
@@ -71,13 +72,14 @@ class TinkerforgeSensor:
             stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{sensor.device.uid}/update")),
         )
 
-    def stream_data(self) -> AsyncGenerator[Decimal, None]:
+    def stream_data(self) -> AsyncGenerator[DataEvent, None]:
         """
         Generate the initial configuration of the sensor, configure it, and finally stream the data from the sensor.
         If there is a configuration update, reconfigure the sensor and start streaming again.
         Returns
         -------
-        AsyncGe
+        AsyncGenerator of DataEvent
+            The data from the device
         """
         # Generates the first configuration
         # Query the database and if it does not have a config for the sensor, wait until there is one
@@ -115,7 +117,7 @@ class TinkerforgeSensor:
 
         return data_stream
 
-    def _create_config(self, config: dict[str, Any]) -> dict[str, Any] | None:
+    def _create_config(self, config: dict[str, Any] | None) -> dict[str, Any] | None:
         if config is None:
             return None
         try:
@@ -128,7 +130,7 @@ class TinkerforgeSensor:
 
     def _read_sensor(  # pylint: disable=too-many-arguments
         self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: AdvancedCallbackConfiguration
-    ) -> AsyncGenerator[Decimal, None]:
+    ) -> AsyncGenerator[DataEvent, None]:
         monitor_stream = (
             stream.repeat(self.device, interval=1)
             | pipe.map(async_(lambda sensor: sensor.get_callback_configuration(sid)))
@@ -181,7 +183,7 @@ class TinkerforgeSensor:
             return stream.empty()
         return stream.just((sid, unit, topic, remote_callback_config))
 
-    def _configure_and_stream(self, config):
+    def _configure_and_stream(self, config: dict[str, Any] | None) -> AsyncGenerator[DataEvent, None]:
         if config is None:
             return stream.empty()
         try:
@@ -205,5 +207,5 @@ class TinkerforgeSensor:
             # Do not log it
             raise
         except Exception:
-            self._logger.exception("This should not happen")
+            self._logger.exception("This should not happen.")
             raise

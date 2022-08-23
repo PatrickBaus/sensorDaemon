@@ -1,6 +1,7 @@
 """
 This is a generic transport driver implementing error handling for an ethernet streamer.
 """
+# pylint: disable=duplicate-code
 from __future__ import annotations
 
 import asyncio

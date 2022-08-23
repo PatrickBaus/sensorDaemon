@@ -42,7 +42,7 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
         """
         return f"{self.hostname}:{self.port}"
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments  # The parameters are coming from a (relational) database
         self,
         hostname: str,
         port: int,
