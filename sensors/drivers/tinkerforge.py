@@ -1,14 +1,16 @@
 """
 This is a wrapper for Tinkerforge devices.
 """
+# pylint: disable=duplicate-code
 from __future__ import annotations
 
 import logging
-from typing import Any
+from decimal import Decimal
+from typing import Any, AsyncGenerator
 from uuid import UUID
 
 from aiostream import async_, pipe, stream
-from tinkerforge_async.devices import AdvancedCallbackConfiguration, ThresholdOption
+from tinkerforge_async.devices import AdvancedCallbackConfiguration, Device, ThresholdOption
 from tinkerforge_async.ip_connection import NotConnectedError
 
 from async_event_bus import event_bus
@@ -31,12 +33,22 @@ class TinkerforgeSensor:
         """
         return "tinkerforge2"
 
-    def __init__(self, device) -> None:
-        self._device = device
+    @property
+    def device(self) -> Device:
+        """
+        Returns
+        -------
+        Device
+            The raw Tinkerforge sensor device
+        """
+        return self.__device
+
+    def __init__(self, device: Device) -> None:
+        self.__device = device
         self._logger = logging.getLogger(__name__)
 
     @staticmethod
-    def _stream_config_updates(sensor: TinkerforgeSensor) -> stream:
+    def _stream_config_updates(sensor: TinkerforgeSensor) -> AsyncGenerator[dict[str, Any], None]:
         """
         Tries to fetch a config from the database. It also listens to 'nodes/tinkerforge/$UID/update' for new configs
         from the database.
@@ -53,19 +65,26 @@ class TinkerforgeSensor:
                 call_safely,
                 "db_tinkerforge_sensors/get_config",
                 "db_tinkerforge_sensors/status_update",
-                sensor._device.uid,
+                sensor.device.uid,
             )
             | pipe.takewhile(lambda config: config is not None),
-            stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{sensor._device.uid}/update")),
+            stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{sensor.device.uid}/update")),
         )
 
-    def stream_data(self):
+    def stream_data(self) -> AsyncGenerator[Decimal, None]:
+        """
+        Generate the initial configuration of the sensor, configure it, and finally stream the data from the sensor.
+        If there is a configuration update, reconfigure the sensor and start streaming again.
+        Returns
+        -------
+        AsyncGe
+        """
         # Generates the first configuration
         # Query the database and if it does not have a config for the sensor, wait until there is one
 
         data_stream = stream.chain(
             stream.just(self),
-            stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{self._device.uid}/remove"))[:1]
+            stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{self.device.uid}/remove"))[:1]
             | pipe.map(lambda x: None),
         ) | pipe.switchmap(
             lambda sensor: stream.empty()
@@ -82,7 +101,7 @@ class TinkerforgeSensor:
                 | pipe.action(
                     lambda config: logging.getLogger(__name__).info(
                         "Got new configuration for: %s",
-                        sensor._device,
+                        sensor.device,
                     )
                 )
                 | pipe.map(self._create_config)
@@ -96,24 +115,24 @@ class TinkerforgeSensor:
 
         return data_stream
 
-    def _create_config(self, config):
+    def _create_config(self, config: dict[str, Any]) -> dict[str, Any] | None:
         if config is None:
             return None
         try:
-            on_connect = tuple(create_device_function(self._device, func_call) for func_call in config["on_connect"])
+            on_connect = tuple(create_device_function(self.device, func_call) for func_call in config["on_connect"])
             config["on_connect"] = on_connect
         except ConfigurationError:
-            config = None
+            return None
 
         return config
 
-    def _read_sensor(
+    def _read_sensor(  # pylint: disable=too-many-arguments
         self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: AdvancedCallbackConfiguration
-    ):
+    ) -> AsyncGenerator[Decimal, None]:
         monitor_stream = (
-            stream.repeat(self._device, interval=1)
+            stream.repeat(self.device, interval=1)
             | pipe.map(async_(lambda sensor: sensor.get_callback_configuration(sid)))
-            | pipe.map(lambda current_config: None if current_config == callback_config else self._device)
+            | pipe.map(lambda current_config: None if current_config == callback_config else self.device)
             | pipe.filter(lambda sensor: sensor is not None)
             | pipe.action(lambda sensor: logging.getLogger(__name__).info("Resetting callback config for %s", sensor))
             | pipe.action(async_(lambda sensor: sensor.set_callback_configuration(sid, *callback_config)))
@@ -122,7 +141,7 @@ class TinkerforgeSensor:
 
         return stream.merge(
             stream.just(monitor_stream),
-            stream.iterate(self._device.read_events(sids=(sid,)))
+            stream.iterate(self.device.read_events(sids=(sid,)))
             | pipe.map(
                 lambda item: DataEvent(
                     sender=source_uuid, topic=topic, value=item.payload, sid=item.sid, unit=str(unit)
@@ -131,7 +150,9 @@ class TinkerforgeSensor:
         )
 
     @staticmethod
-    def _parse_callback_configuration(sid: str | int, config: dict[str, Any]):
+    def _parse_callback_configuration(
+        sid: str | int, config: dict[str, Any]
+    ) -> tuple[int, str, str, AdvancedCallbackConfiguration]:
         sid = int(sid)
         callback_config = AdvancedCallbackConfiguration(
             period=config["interval"],
@@ -144,16 +165,16 @@ class TinkerforgeSensor:
 
     async def _set_callback_configuration(self, sid: int, unit: str, topic: str, config: AdvancedCallbackConfiguration):
         try:
-            await self._device.set_callback_configuration(sid, *config)
+            await self.device.set_callback_configuration(sid, *config)
         except AssertionError:
-            self._logger.error("Invalid configuration for %s: sid=%i, config=%s", self._device, sid, config)
+            self._logger.error("Invalid configuration for %s: sid=%i, config=%s", self.device, sid, config)
             return stream.empty()
         remote_callback_config: AdvancedCallbackConfiguration
-        remote_callback_config = await self._device.get_callback_configuration(sid)
+        remote_callback_config = await self.device.get_callback_configuration(sid)
         if remote_callback_config.period == 0:
             self._logger.warning(
                 "Callback configuration configuration for %s: sid=%i, config=%s failed. Source disabled.",
-                self._device,
+                self.device,
                 sid,
                 config,
             )
