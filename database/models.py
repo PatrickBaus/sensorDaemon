@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, Field, validator  # pylint: disable=no-name-in-module  # <-- BaseMode
+from pydantic import BaseModel, Field, validator  # pylint: disable=no-name-in-module  # <-- BaseModel
 
 
 class FunctionCall(BaseModel):

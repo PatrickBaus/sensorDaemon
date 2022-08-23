@@ -35,7 +35,7 @@ class GenericDriverMixin:
                 logging.getLogger(__name__).error("Error during shutdown of: %s", self, exc_info=result)
 
     @staticmethod
-    def _read_device(config):
+    def _read_device(config: dict[str, Any]) -> AsyncGenerator[Any, None]:
         on_read: partial
         timeout: float
         on_read, timeout = config["on_read"]
@@ -64,7 +64,7 @@ class GenericDriverMixin:
         logging.getLogger(__name__).error("Error while while reading %s. Terminating device. Error: %s", self, exc)
         return stream.empty()
 
-    def _configure_and_stream(self, config):
+    def _configure_and_stream(self, config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
         if config is None:
             return stream.empty()
         # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is nothing to
@@ -113,7 +113,7 @@ class GenericDriverMixin:
 
         return config
 
-    def stream_data(self, config: dict[str, Any]) -> AsyncGenerator[Any, None]:
+    def stream_data(self, config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
         """
         Stream the data from the sensor.
         Parameters

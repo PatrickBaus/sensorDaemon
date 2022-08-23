@@ -6,10 +6,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, AsyncGenerator
 
 from aiostream import async_, pipe, stream
 
+from data_types import DataEvent
 from sensors.drivers.generic_driver import GenericDriverMixin
 
 if TYPE_CHECKING:
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class ScpiIoError(ValueError):
-    pass
+    """Raised if either invalid data is sent by device or if invalid data is requested to be written to the device"""
 
 
 class GenericScpiMixin:
@@ -29,6 +30,12 @@ class GenericScpiMixin:
 
     @property
     def device_name(self) -> str:
+        """
+        Returns
+        -------
+        str
+            The device name as defined by the manufacturer, obtained through the *IDN? command.
+        """
         return "Generic SCPI device" if self.__device_name is None else self.__device_name
 
     @device_name.setter
@@ -50,6 +57,14 @@ class GenericScpiMixin:
         return f"{self.device_name} at {str(self._conn)}"
 
     async def wait_for_opc(self, timeout: float | None = None) -> None:
+        """
+        Wait for the device to signal completion of all currently queued commands.
+
+        Parameters
+        ----------
+        timeout: float or None
+            Read timeout in seconds. Use None for an infinite timeout.
+        """
         await self.write("*OPC?")
         while (await asyncio.wait_for(self.read(), timeout=timeout)) != "1":
             await asyncio.sleep(0.1)
@@ -73,14 +88,18 @@ class GenericScpiMixin:
 
         Parameters
         ----------
-        scpi_terminator: str, default=None
+        scpi_terminator: str, optional
             One or more characters, that terminate SCPI replies. If not set, the default terminator '\n' will be used.
             The terminator will be stripped from the end of the data.
+        *args: Any
+            The arguments passed on to the connection object.
+        **kwargs: Any
+            The keyword arguments passed on to the connection object.
 
         Returns
         ----------
-        Decimal or bytes
-            Either a value or a number of bytes as defined by `length`.
+        str
+            The data from the device
         """
         # use the default terminator if none is given
         try:
@@ -101,6 +120,16 @@ class GenericScpiMixin:
             raise ScpiIoError(f"Received invalid data from device {self}") from None
 
     async def write(self, cmd: str, scpi_terminator: str | None = None) -> None:
+        """
+        Write a command to the device.
+
+        Parameters
+        ----------
+        cmd: str
+            The command to be written.
+        scpi_terminator: str, optional
+            The line terminator of the SCPI device. Omit to use the default "\n".
+        """
         if scpi_terminator is None:
             cmd += self.TERMINATOR
         else:
@@ -114,11 +143,47 @@ class GenericScpiMixin:
             ) from None
 
     async def query(self, cmd: str, scpi_terminator: str | None = None, *args: Any, **kwargs: Any) -> str:
+        """
+        Send a command and read back the response.
+
+        Parameters
+        ----------
+        cmd: str
+            The command to be sent.
+        scpi_terminator: str, optional
+            The line terminator used for sending and receiving. Omit to use the default "\n".
+        *args: Any
+            The arguments passed on to the connection object.
+        **kwargs: Any
+            The keyword arguments passed on to the connection object.
+
+        Returns
+        -------
+        str
+            The result of the query
+        """
         await self.write(cmd, scpi_terminator)
         return await self.read(scpi_terminator, *args, **kwargs)
 
-    async def read_number(self, separator: str | None = None, *args: Any, **kwargs: Any) -> Decimal:
-        result = await self.read(separator, *args, **kwargs)
+    async def read_number(self, scpi_terminator: str | None = None, *args: Any, **kwargs: Any) -> Decimal:
+        """
+        Read a number from the device.
+
+        Parameters
+        ----------
+        scpi_terminator: str, optional
+            The line terminator. Omit to use the default "\n".
+        *args: Any
+            The arguments passed on to the connection object.
+        **kwargs: Any
+            The keyword arguments passed on to the connection object.
+
+        Returns
+        -------
+        Decimal
+            The number read from the device. This might also be NaN, Infinity, or -Infinity.
+        """
+        result = await self.read(scpi_terminator, *args, **kwargs)
         # Treat special SCPI values
         # Not A Number
         if result.lower() == "9.91e37":
@@ -132,6 +197,21 @@ class GenericScpiMixin:
         return Decimal(result)
 
     async def query_number(self, cmd: str, scpi_terminator: str | None = None) -> Decimal:
+        """
+        Send a command and read back a number.
+
+        Parameters
+        ----------
+        cmd: str
+            The command to be sent
+        scpi_terminator: str, optional
+            The line terminator. Omit to use the default "\n".
+
+        Returns
+        -------
+        Decimal
+            The number read from the device. This might also be NaN, Infinity, or -Infinity.
+        """
         await self.write(cmd, scpi_terminator)
         return await self.read_number(scpi_terminator)
 
@@ -159,7 +239,8 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
     ) -> None:
         super().__init__(uuid, connection)
 
-    async def enumerate(self):
+    async def enumerate(self) -> None:
+        """Query the device for its ID using the *IDN? command"""
         maximum_tries = 2
         manufacturer = None
         while maximum_tries:
@@ -182,7 +263,20 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
         if manufacturer is None:
             logging.getLogger(__name__).warning("Could not query '*IDN?' of device: %s", self)
 
-    def stream_data(self, config):
+    def stream_data(self, config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
+        """
+        Enumerate the device, then read data from it.
+
+        Parameters
+        ----------
+        config: dict
+            A dict containing the configuration for the device
+
+        Yields
+        -------
+        DataEvent
+            The data from the device
+        """
         return stream.chain(
             stream.just(self) | pipe.action(async_(lambda sensor: sensor.enumerate())) | pipe.filter(lambda x: False),
             super().stream_data(config),
