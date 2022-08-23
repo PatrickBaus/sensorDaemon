@@ -50,7 +50,7 @@ class Kraken:
         self.__logger = logging.getLogger(__name__)
         self.__shutdown_event = asyncio.Event()
 
-    async def run(self):
+    async def run(self):  # pylint: disable=too-many-locals
         """
         Start the daemon and keep it running through the while (True)
         loop. Execute shutdown() to kill it.

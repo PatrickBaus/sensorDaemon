@@ -4,3 +4,6 @@ init-hook="from pylint.config import find_pylintrc; import os, sys; sys.path.app
 
 [MESSAGES CONTROL]
 disable=line-too-long
+
+[MISCELLANEOUS]
+notes = ["FIXME", "XXX",]

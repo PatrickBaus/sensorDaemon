@@ -81,7 +81,7 @@ class GenericScpiMixin:
             raise ValueError(f"Device returned invalid ID: {idn!r}") from None
         return company_name, model, serial, firmware
 
-    async def read(self, scpi_terminator: str | None = None, *args: Any, **kwargs: Any) -> str:
+    async def read(self, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> str:
         """
         Read a single value from the device. If `length' is given, read `length` bytes, else
         read until a line break.
@@ -142,7 +142,7 @@ class GenericScpiMixin:
                 f"Cannot write illegal command %s to device {self}",
             ) from None
 
-    async def query(self, cmd: str, scpi_terminator: str | None = None, *args: Any, **kwargs: Any) -> str:
+    async def query(self, cmd: str, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> str:
         """
         Send a command and read back the response.
 
@@ -165,7 +165,7 @@ class GenericScpiMixin:
         await self.write(cmd, scpi_terminator)
         return await self.read(scpi_terminator, *args, **kwargs)
 
-    async def read_number(self, scpi_terminator: str | None = None, *args: Any, **kwargs: Any) -> Decimal:
+    async def read_number(self, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> Decimal:
         """
         Read a number from the device.
 
