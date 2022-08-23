@@ -60,7 +60,7 @@ class GenericTransport:
         """
         return self.__label
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments  # The parameters are coming from a (relational) database
         self,
         uuid: UUID,
         database_topic: str,
@@ -70,11 +70,30 @@ class GenericTransport:
         *args: Any,
         **kwargs: Any,
     ) -> None:
+        """
+
+        Parameters
+        ----------
+        uuid: UUID
+            The globally unique id of the transport as used by the database
+        database_topic: str
+            The database topic as used by the database driver to serve database queries
+        transport_name: str
+            The name or type of transport
+        reconnect_interval: float or None
+            The time in seconds between reconnection attempts. Use None if you want to use the default of 1 second.
+        label: str
+            A user defined label to distinguish the transport
+        *args: Any
+            Will be ignored
+        **kwargs: Any
+            Will be ignored
+        """
         super().__init__(*args, **kwargs)
         self.__uuid = uuid
         self.__database_topic = database_topic
         self.__name = transport_name
-        self.__reconnect_interval = 1 if reconnect_interval is None else reconnect_interval
+        self.__reconnect_interval = reconnect_interval if reconnect_interval is not None else 1
         self.__label = label
 
     @staticmethod
@@ -85,7 +104,10 @@ class GenericTransport:
             return config, sensor_factory.get(connection=transport, **config)
         except UnknownDriverError:
             logging.getLogger(__name__).warning("No driver available for device '%s'", config["driver"])
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
+            # This is the catch all in case there is a problem with the driver. We catch it here, because we do not want
+            # The whole driver instance to blow up, because maybe it is a wrong settings, so we keep listening to
+            # database updates.
             logging.getLogger(__name__).exception("Error while creating device '%s'", config["driver"])
         return None, None
 

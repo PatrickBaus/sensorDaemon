@@ -46,8 +46,6 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
         self,
         hostname: str,
         port: int,
-        pad: int,
-        sad: int,
         reconnect_interval: float | None,
         uuid: UUID,
         label: str,

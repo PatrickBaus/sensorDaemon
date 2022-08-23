@@ -98,7 +98,7 @@ class GenericScpiMixin:
         except UnicodeDecodeError:
             # drop it. It is not SCPI compliant
             self.__logger.error("Invalid data read '%r'. This driver requires ASCII or UTF-8 data", data)
-            raise ScpiIoError("Received invalid data from device %s", self)
+            raise ScpiIoError(f"Received invalid data from device {self}") from None
 
     async def write(self, cmd: str, scpi_terminator: str | None = None) -> None:
         if scpi_terminator is None:
@@ -109,7 +109,9 @@ class GenericScpiMixin:
             await self._conn.write(cmd.encode())
         except UnicodeEncodeError:
             self.__logger.error("Cannot write invalid command '%r'. Use ASCII or UTF-8 strings only.", cmd)
-            raise ScpiIoError("Cannot write illegal command %s to device %s", self)
+            raise ScpiIoError(
+                f"Cannot write illegal command %s to device {self}",
+            ) from None
 
     async def query(self, cmd: str, scpi_terminator: str | None = None, *args: Any, **kwargs: Any) -> str:
         await self.write(cmd, scpi_terminator)
@@ -122,10 +124,10 @@ class GenericScpiMixin:
         if result.lower() == "9.91e37":
             return Decimal("NaN")
         # Positive infinity
-        elif result.lower() == "9.9e37":
+        if result.lower() == "9.9e37":
             return Decimal("Infinity")
         # Negative infinity
-        elif result.lower() == "-9.9e37":
+        if result.lower() == "-9.9e37":
             return Decimal("-Infinity")
         return Decimal(result)
 
@@ -162,7 +164,12 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
         manufacturer = None
         while maximum_tries:
             try:
-                manufacturer, model_number, serial_number, revision = await self.get_id()
+                (
+                    manufacturer,
+                    model_number,
+                    serial_number,
+                    revision,  # pylint: disable=unused-variable  # For documentation purposes
+                ) = await self.get_id()
                 self.device_name = f"{manufacturer} {model_number} ({serial_number})"
             except ValueError:
                 continue  # silently retry it once more

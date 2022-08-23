@@ -212,7 +212,7 @@ class GenericIpConnection:
                 raise ConnectionLostError(
                     f"IP connection error. The host '{self.__hostname}:{self.__port}' did not reply"
                 ) from None
-        except asyncio.LimitOverrunError:
+        except asyncio.LimitOverrunError:  # pylint: disable=try-except-raise
             # TODO: catch asyncio.LimitOverrunError?
             raise
 

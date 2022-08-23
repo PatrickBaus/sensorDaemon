@@ -15,6 +15,7 @@ from errors import ConfigurationError
 
 
 class FunctionCallConfig(TypedDict):
+    """This is the datatype for a function call on a device as it is stored in the database."""
     function: str
     args: list | tuple
     kwargs: dict
@@ -77,8 +78,8 @@ async def retry(source, exc_class: Type[BaseException] = Exception, interval: fl
 
 
 @operator(pipable=True)
-async def context(source, cm, on_enter=None, on_exit=None):
-    async with cm:
+async def context(source, context_manager, on_enter=None, on_exit=None):
+    async with context_manager:
         try:
             if on_enter is not None:
                 on_enter()
