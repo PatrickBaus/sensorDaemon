@@ -44,14 +44,13 @@ class HostBaseModel(BaseModel):
     hostname: int | str
     port: int = Field(ge=1, le=65535)
     pad: Optional[int] = Field(ge=0, le=30)
-    sad: int  # Validator below
+    sad: Optional[int]  # Validator below
     driver: str
     node_id: Optional[UUID] = UUID("{00000000-0000-0000-0000-000000000000}")
     reconnect_interval: float | None = Field(ge=0)
 
     @validator("sad")
-    @staticmethod
-    def validate_sad(field_value):
+    def validate_sad(cls, field_value):
         """Make sure that the secondary address is either 0 or between 96 and 126. 0 means disabled."""
         if field_value == 0 or 0x60 <= field_value <= 0x7E:
             return field_value
@@ -137,7 +136,7 @@ class TinkerforgeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancest
         name = "TinkerforgeSensor"
         indexes = [
             pymongo.IndexModel(
-                ("uid", pymongo.ASCENDING),
+                [("uid", pymongo.ASCENDING),],
                 unique=True,
             )
         ]
@@ -169,7 +168,7 @@ class LabnodeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancestors
         name = "LabnodeSensor"
         indexes = [
             pymongo.IndexModel(
-                ("uid", pymongo.ASCENDING),
+                [("uid", pymongo.ASCENDING),],
                 unique=True,
             )
         ]
@@ -194,7 +193,7 @@ class GenericSensorModel(DeviceDocument):  # pylint: disable=too-many-ancestors
         name = "GenericSensor"
         indexes = [
             pymongo.IndexModel(
-                ("host", pymongo.ASCENDING),
+                [("host", pymongo.ASCENDING),],
                 unique=True,
             )
         ]
