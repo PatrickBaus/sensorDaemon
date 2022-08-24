@@ -4,7 +4,6 @@ beanie==1.11.9
 gpib-ctypes>=0.3.0
 prologix-gpib-async~=1.4.10
 pydantic~=1.9.2
-pymongo==3.12.3
 python-decouple~=3.6
 simplejson~=3.17.6
 async_gpib~=2.1.1
