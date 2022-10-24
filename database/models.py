@@ -5,7 +5,7 @@ hosts/nodes or sensors.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 from uuid import UUID, uuid4
 
 import pymongo
@@ -20,9 +20,9 @@ class FunctionCall(BaseModel):
 
     # pylint: disable=too-few-public-methods
     function: str
-    args: Optional[list] = []
-    kwargs: Optional[dict] = {}
-    timeout: Optional[float] = Field(ge=0)
+    args: list | None = []
+    kwargs: dict | None = {}
+    timeout: float | None = Field(ge=0)
 
     def execute(self, sensor) -> None:
         """
@@ -43,16 +43,17 @@ class HostBaseModel(BaseModel):
     # pylint: disable=too-few-public-methods
     hostname: int | str
     port: int = Field(ge=1, le=65535)
-    pad: Optional[int] = Field(ge=0, le=30)
-    sad: Optional[int] = None  # Validator below
+    pad: int | None = Field(ge=0, le=30)
+    sad: int | None = None  # Validator below
     driver: str
-    node_id: Optional[UUID] = UUID("{00000000-0000-0000-0000-000000000000}")
+    node_id: UUID | None = UUID("{00000000-0000-0000-0000-000000000000}")
     reconnect_interval: float | None = Field(ge=0)
 
     @validator("sad")
     def validate_sad(cls, field_value):
         """Make sure, that the secondary address is either 0 or between 96 and 126. 0 means disabled."""
-        if field_value == 0 or 0x60 <= field_value <= 0x7E:
+        if field_value is None or field_value == 0 or 0x60 <= field_value <= 0x7E:
+            # TODO: Move to UnionDoc
             return field_value
         raise ValueError("Invalid secondary address. Address must either be 0 or in the range (0x60, 0x7E)")
 
@@ -91,7 +92,7 @@ class DeviceDocument(TimeStampedDocument):
 
     enabled: bool = True
     label: str | None
-    description: Optional[str] = ""
+    description: str | None = ""
 
 
 class SensorHostModel(DeviceDocument, HostBaseModel):  # pylint: disable=too-many-ancestors
@@ -114,8 +115,8 @@ class TinkforgeSensorConfigModel(BaseModel):
 
     # pylint: disable=too-few-public-methods
     interval: int = Field(ge=0, le=2**32 - 1)
-    trigger_only_on_change: Optional[bool] = True
-    description: Optional[str] = ""
+    trigger_only_on_change: bool | None = True
+    description: str | None = ""
     topic: str
     unit: PydanticObjectId | str
 
@@ -151,10 +152,10 @@ class LabnodeSensorConfigModel(BaseModel):
 
     # pylint: disable=too-few-public-methods
     interval: int = Field(ge=0, le=2**32 - 1)
-    description: Optional[str] = ""
+    description: str | None = ""
     topic: str
     unit: PydanticObjectId | str
-    timeout: Optional[float] = Field(ge=0)
+    timeout: float | None = Field(ge=0)
 
 
 class LabnodeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancestors
