@@ -1,6 +1,6 @@
 aiostream~=0.4.4
 asyncio-mqtt~=0.12.1
-beanie==1.11.9
+beanie==1.11.2
 gpib-ctypes>=0.3.0
 prologix-gpib-async~=1.4.10
 pydantic~=1.9.2

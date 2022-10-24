@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, auto
-from typing import Any
+from typing import Any, TypedDict
 from uuid import UUID
 
 
@@ -28,7 +28,6 @@ class ChangeEvent:  # pylint: disable=too-few-public-methods
 
     def __init__(self, change: dict[str, Any] | UUID | None) -> None:
         self.__change = change
-
 
 @dataclass(frozen=True)
 class DataEvent:

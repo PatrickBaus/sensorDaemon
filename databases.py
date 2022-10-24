@@ -69,7 +69,7 @@ class MongoDb:
                 )
             else:
                 self.__client = motor.motor_asyncio.AsyncIOMotorClient(
-                    self.__hostname, serverSelectionTimeoutMS=timeout * 1000
+                    self.__hostname, serverSelectionTimeoutMS=timeout * 1000,
                 )
 
             database = self.__client.sensor_config
