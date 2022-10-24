@@ -1,12 +1,12 @@
-aiostream~=0.4.4
-asyncio-mqtt~=0.12.1
+aiostream~=0.4.5
+asyncio-mqtt~=0.13.0
 beanie==1.11.2
 gpib-ctypes>=0.3.0
 prologix-gpib-async~=1.4.10
-pydantic~=1.9.2
+pydantic~=1.10.2
 python-decouple~=3.6
 simplejson~=3.17.6
 async_gpib~=2.1.1
 hp3478a_async~=1.4.1
 tinkerforge_async~=1.4.2
-labnode_async~=0.15.2
+labnode_async~=0.16.1
