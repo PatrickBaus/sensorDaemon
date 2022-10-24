@@ -43,18 +43,11 @@ class HostBaseModel(BaseModel):
     # pylint: disable=too-few-public-methods
     hostname: int | str
     port: int = Field(ge=1, le=65535)
-    pad: Optional[int]  # Validator below
-    sad: Optional[int]  # Validator below
+    pad: Optional[int] = Field(ge=0, le=30)
+    sad: Optional[int] = None  # Validator below
     driver: str
     node_id: Optional[UUID] = UUID("{00000000-0000-0000-0000-000000000000}")
     reconnect_interval: float | None = Field(ge=0)
-
-    @validator("pad")
-    def validate_pad(cls, field_value):
-        """Make sure, that the primary address is between 0 and 30"""
-        if 0x00 <= field_value <= 0x1E:
-            return field_value
-        raise ValueError("Invalid primary address. Address must be in the range (0x0, 0x1E)")
 
     @validator("sad")
     def validate_sad(cls, field_value):
