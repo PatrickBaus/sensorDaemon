@@ -305,7 +305,7 @@ class GenericSensorContext(Context):
             device = await GenericSensorModel.find_one(GenericSensorModel.host == uuid)
         except ValueError as exc:
             # If the pydantic validation fails, we get a ValueError
-            self.__logger.error("Error while getting configuration for ethernet device %s: %s", uuid, exc)
+            self.__logger.error("Invalid configuration for device %s. Ignoring configuration. Error: %s", uuid, exc)
             device = None
 
         if device is None:
