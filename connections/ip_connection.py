@@ -42,8 +42,8 @@ class HostRefusedError(ConnectionError):
 
 class GenericIpConnection:
     """
-    A generic ip connection, that wraps the asyncio stream reader/writer and creates a context manager for connecting and
-    disconnecting the ip connection.
+    A generic ip connection, that wraps the asyncio stream reader/writer and creates a context manager for connecting
+    and disconnecting the ip connection.
     """
 
     @property

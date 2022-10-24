@@ -69,7 +69,8 @@ class MongoDb:
                 )
             else:
                 self.__client = motor.motor_asyncio.AsyncIOMotorClient(
-                    self.__hostname, serverSelectionTimeoutMS=timeout * 1000,
+                    self.__hostname,
+                    serverSelectionTimeoutMS=timeout * 1000,
                 )
 
             database = self.__client.sensor_config
@@ -199,7 +200,7 @@ class LabnodeContext(Context):
 
     async def __aenter__(self) -> Self:
         event_bus.register(self.topic + "/get_config", self.__get_sensor_config)
-        event_bus.publish(self.topic + "/status_update", True)  # FIXME: use a proper event
+        event_bus.publish(self.topic + "/status_update", True)  # TODO: use a proper event
         return self
 
     async def __aexit__(
@@ -278,7 +279,7 @@ class GenericSensorContext(Context):
 
     async def __aenter__(self) -> Self:
         event_bus.register(self.topic + "/get_config", self.__get_sensor_config)
-        event_bus.publish(self.topic + "/status_update", True)  # FIXME: use a proper event
+        event_bus.publish(self.topic + "/status_update", True)  # TODO: use a proper event
         return self
 
     async def __aexit__(
@@ -357,7 +358,7 @@ class HostContext(Context):
     async def __aenter__(self) -> Self:
         event_bus.register(self.topic + "/get", self.__get_sensors)
         event_bus.register(self.topic + "/get_config", self.__get_sensor_config)
-        event_bus.publish(self.topic + "/status_update", True)  # FIXME: use a proper event
+        event_bus.publish(self.topic + "/status_update", True)  # TODO: use a proper event
         return self
 
     async def __aexit__(
@@ -376,7 +377,7 @@ class HostContext(Context):
         UUID
             The unique id of the device
         """
-        async for sensor in SensorHostModel.find_all(projection_model=BaseDocument):
+        async for sensor in SensorHostModel.find_all(projection_model=BaseDocument):  # pylint: disable=not-an-iterable
             yield sensor.id
 
     async def __get_sensor_config(self, uuid: UUID) -> dict[str, Any] | None:
@@ -451,7 +452,7 @@ class TinkerforgeContext(Context):
 
     async def __aenter__(self) -> Self:
         event_bus.register(self.topic + "/get_config", self.__get_sensor_config)
-        event_bus.publish(self.topic + "/status_update", True)  # FIXME: use a proper event
+        event_bus.publish(self.topic + "/status_update", True)  # TODO: use a proper event
         return self
 
     async def __aexit__(
