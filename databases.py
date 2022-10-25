@@ -516,7 +516,7 @@ class TinkerforgeContext(Context):
                 event_bus.publish(f"nodes/tinkerforge/{change_dict['uid']}/update", change_dict)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
-                event_bus.publish(f"nodes/by_uuid/{change_dict}/remove", None)
+                event_bus.publish(f"nodes/by_uuid/{change}/remove", None)
 
 
 CONTEXTS = {
