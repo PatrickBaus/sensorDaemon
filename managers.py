@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from contextlib import AsyncExitStack
 from typing import Any, Set
 from uuid import UUID
@@ -63,6 +64,22 @@ class MqttManager:
             else:
                 output_queue.put_nowait((topic, payload))
 
+    @staticmethod
+    def _calculate_timeout(last_reconnect_attempt: float, reconnect_interval: float) -> float:
+        """
+        Calculates the time to wait between reconnect attempts.
+        Parameters
+        ----------
+        last_reconnect_attempt: A timestamp in seconds
+        reconnect_interval: The reconnect interval in seconds
+
+        Returns
+        -------
+        float
+            The number of seconds to wait. This is a number greater than 0.
+        """
+        return max(0.0, reconnect_interval - (asyncio.get_running_loop().time() - last_reconnect_attempt))
+
     async def consumer(
         self, input_queue: asyncio.Queue[tuple[str, dict[str, str | float | int]]], reconnect_interval: int = 5
     ) -> None:
@@ -77,17 +94,23 @@ class MqttManager:
         reconnect_interval: int, default=5
             The time in seconds to wait between connection attempts.
         """
-        has_error = False
-        self.__logger.info("Connecting worker to MQTT broker (%s:%i).", self.__host, self.__port)
+        error_code = 0  # 0 = success
         event = None
-        while "loop not cancelled":
+        last_reconnect_attempt = asyncio.get_running_loop().time() - reconnect_interval
+        while "not connected":
+            # Wait for at least reconnect_interval before connecting again
+            timeout = self._calculate_timeout(last_reconnect_attempt, reconnect_interval)
+            if timeout > 0:
+                self.__logger.info("Delaying reconnect by %.0f s.", timeout)
+            await asyncio.sleep(timeout)
+            last_reconnect_attempt = asyncio.get_running_loop().time()
             try:
+                self.__logger.info("Connecting worker to MQTT broker (%s:%i).", self.__host, self.__port)
                 async with asyncio_mqtt.Client(hostname=self.__host, port=self.__port) as mqtt_client:
                     while "loop not cancelled":
                         if event is None:
                             # only get new data if we have pushed everything to the broker
                             event = await input_queue.get()
-                            input_queue.task_done()
                         try:
                             topic, payload = event
                             # convert payload to JSON
@@ -96,22 +119,47 @@ class MqttManager:
                         except TypeError:
                             self.__logger.error("Error while serializing DataEvent: %s", payload)
                             event = None  # Drop the event
-                            # await asyncio.sleep(0.01)
+                            input_queue.task_done()
                         else:
                             # self.__logger.info("Going to publish: %s to %s", payload, topic)
                             await mqtt_client.publish(topic, payload=encoded_payload, qos=2)
                             event = None  # Get a new event to publish
-                            has_error = False
-            except asyncio_mqtt.error.MqttError as exc:
+                            input_queue.task_done()
+                            error_code = 0  # 0 = success
+            except asyncio_mqtt.error.MqttCodeError as exc:
                 # Only log an error once
-                if not has_error:
+                if error_code != exc.rc:
+                    error_code = exc.rc
                     self.__logger.error("MQTT error: %s. Retrying.", exc)
-                await asyncio.sleep(reconnect_interval)
-                has_error = True
+            except ConnectionRefusedError:
+                self.__logger.error(
+                    "Connection refused by MQTT server (%s:%i). Retrying.",
+                    self.__host,
+                    self.__port,
+                )
+            except asyncio_mqtt.error.MqttError as exc:
+                error = re.search(r"^\[Errno (\d+)\]", str(exc))
+                if error is not None:
+                    error_code = int(error.group(1))
+                    if error_code == 111:
+                        self.__logger.error(
+                            "Connection refused by MQTT server (%s:%i). Retrying.",
+                            self.__host,
+                            self.__port,
+                        )
+                    elif error_code == -3:
+                        self.__logger.error(
+                            "Temporary failure in name resolution of MQTT server (%s:%i). Retrying.",
+                            self.__host,
+                            self.__port,
+                        )
+                    else:
+                        self.__logger.exception("MQTT Connection error. Retrying.")
+                else:
+                    self.__logger.error("MQTT Connection error. Retrying.")
             except Exception:  # pylint: disable=broad-except
                 # Catch all exceptions, log them, then try to restart the worker.
                 self.__logger.exception("Error while publishing data to MQTT broker. Reconnecting.")
-                await asyncio.sleep(reconnect_interval)
 
     async def cancel_tasks(self, tasks: Set[asyncio.Task]):
         """

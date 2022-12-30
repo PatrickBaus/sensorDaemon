@@ -166,7 +166,7 @@ async def context(
     source: AsyncIterable
     context_manager: AsyncContextManager
         The asynchronous context manager that needs to be entered
-    on_enter; Callable
+    on_enter: Callable
         A function to be called once the context has been entered
     on_exit: Callable
         A function to be called once the context is left.
@@ -177,15 +177,15 @@ async def context(
         The results from the data stream
     """
     async with context_manager:
-        try:
-            if on_enter is not None:
-                on_enter()
-            async with streamcontext(source) as streamer:
-                async for item in streamer:
-                    yield item
-        finally:
-            if on_exit is not None:
-                on_exit()
+        async with streamcontext(source) as streamer:
+            try:
+                if on_enter is not None:
+                    on_enter()
+                    async for item in streamer:
+                        yield item
+            finally:
+                if on_exit is not None:
+                    on_exit()
 
 
 @operator
