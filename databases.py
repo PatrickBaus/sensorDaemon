@@ -174,13 +174,22 @@ class Context:  # pylint: disable=too-few-public-methods
                     "Connection error while monitoring config database. Error: %s. Reconnecting in %f s.", exc, timeout
                 )
                 await asyncio.sleep(timeout)
+            except pymongo.errors.OperationFailure as exc:
+                if exc.code == 211:
+                    # Code 211 means, that the DB has no knowledge of our resume token.
+                    resume_token = None
+                else:
+                    self.__logger.error(
+                        "Connection error while monitoring config database. Error: %s. Reconnecting in %f s.", exc,
+                        timeout
+                    )
             except pymongo.errors.PyMongoError:
                 # The ChangeStream encountered an unrecoverable error or the
                 # resume attempt failed to recreate the cursor.
                 if resume_token is None:
                     # There is no usable resume token because there was a
                     # failure during ChangeStream initialization.
-                    self.__logger.exception(
+                    self.__logger.error(
                         "Cannot resume Mongo DB change stream, there is no token. Starting from scratch."
                     )
 
