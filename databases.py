@@ -224,9 +224,9 @@ class LabnodeContext(Context):
         """
         try:
             device = await LabnodeSensorModel.find_one(LabnodeSensorModel.id == uuid)
-        except ValueError as exc:
+        except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
             # If the pydantic validation fails, we get a ValueError
-            self.__logger.error("Error while getting configuration for labnode device %s: %s", uuid, exc)
+            self.__logger.error("Error while getting configuration for Labnode device %s: %s", uuid, exc)
             device = None
 
         if device is None:
@@ -303,7 +303,7 @@ class GenericSensorContext(Context):
         """
         try:
             device = await GenericSensorModel.find_one(GenericSensorModel.host == uuid)
-        except ValueError as exc:
+        except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
             # If the pydantic validation fails, we get a ValueError
             self.__logger.error("Invalid configuration for device %s. Ignoring configuration. Error: %s", uuid, exc)
             device = None
@@ -377,6 +377,7 @@ class HostContext(Context):
         UUID
             The unique id of the device
         """
+        # TODO: Handle database errors
         async for sensor in SensorHostModel.find_all(projection_model=BaseDocument):  # pylint: disable=not-an-iterable
             yield sensor.id
 
@@ -396,7 +397,7 @@ class HostContext(Context):
         """
         try:
             device = await SensorHostModel.find_one(SensorHostModel.id == uuid)
-        except ValueError as exc:
+        except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
             # If the pydantic validation fails, we get a ValueError
             self.__logger.error("Error while getting configuration for ethernet device %s: %s", uuid, exc)
             device = None
@@ -476,7 +477,7 @@ class TinkerforgeContext(Context):
         """
         try:
             device = await TinkerforgeSensorModel.find_one(TinkerforgeSensorModel.uid == uid)
-        except ValueError as exc:
+        except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
             # If the pydantic validation fails, we get a ValueError
             self.__logger.error("Error while getting configuration for tinkerforge device %s: %s", uid, exc)
             device = None

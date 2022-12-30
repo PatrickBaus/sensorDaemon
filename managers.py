@@ -154,7 +154,7 @@ class MqttManager:
                             self.__port,
                         )
                     else:
-                        self.__logger.exception("MQTT connection error. Retrying.")
+                        self.__logger.exception("MQTT connection error (code: %i). Retrying.", error_code)
                 else:
                     self.__logger.error("MQTT connection error. Retrying.")
             except Exception:  # pylint: disable=broad-except
