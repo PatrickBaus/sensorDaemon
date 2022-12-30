@@ -175,8 +175,9 @@ class Context:  # pylint: disable=too-few-public-methods
                 )
                 await asyncio.sleep(timeout)
             except pymongo.errors.OperationFailure as exc:
-                if exc.code == 211:
-                    # Code 211 means, that the DB has no knowledge of our resume token.
+                if resume_token is not None:
+                    # Retry without resuming. The mongo DB does not return a valid exc.code in case it does not
+                    # recognize the resume token.
                     resume_token = None
                 else:
                     self.__logger.error(
