@@ -154,9 +154,9 @@ class MqttManager:
                             self.__port,
                         )
                     else:
-                        self.__logger.exception("MQTT Connection error. Retrying.")
+                        self.__logger.exception("MQTT connection error. Retrying.")
                 else:
-                    self.__logger.error("MQTT Connection error. Retrying.")
+                    self.__logger.error("MQTT connection error. Retrying.")
             except Exception:  # pylint: disable=broad-except
                 # Catch all exceptions, log them, then try to restart the worker.
                 self.__logger.exception("Error while publishing data to MQTT broker. Reconnecting.")
