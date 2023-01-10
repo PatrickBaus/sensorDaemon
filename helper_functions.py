@@ -143,7 +143,6 @@ async def retry(
                 async for item in streamer:
                     yield item
         except exc_class as exc:
-            print(f"caught exception of type {type(exc)}")
             delay = timeout - loop.time()
             await asyncio.sleep(delay)
             timeout = loop.time() + interval
