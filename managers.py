@@ -262,7 +262,7 @@ class DatabaseManager:
 class HostManager:  # pylint: disable=too-few-public-methods
     """This manager creates the sensor objects and reads data from them to publish it onto the event_bus."""
 
-    def __init__(self, node_id: UUID) -> None:
+    def __init__(self, node_id: UUID | None) -> None:
         self.__node_id = node_id
         self.__topic = "db_autodiscovery_sensors"
 
@@ -280,7 +280,22 @@ class HostManager:  # pylint: disable=too-few-public-methods
         return None
 
     @staticmethod
-    def _is_config_valid(node_id, config: dict[str, Any]) -> bool:
+    def _is_config_valid(node_id: UUID | None, config: dict[str, Any]) -> bool:
+        """
+        A config is valid, if it is enabled and assigned to this logger node. The latter is the case if either this node
+        has no uuid, the config has no node id (served by loggers) or the config matches this node id.
+        Parameters
+        ----------
+        node_id: UUID
+            The uuid of this logger node
+        config: dict
+            The configuration dictionary
+
+        Returns
+        -------
+        bool
+            True if the configuration is valid and served by this node.
+        """
         return (
             config is not None
             and config["enabled"]

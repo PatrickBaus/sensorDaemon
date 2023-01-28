@@ -142,7 +142,7 @@ async def retry(
             async with streamcontext(source) as streamer:
                 async for item in streamer:
                     yield item
-        except exc_class as exc:
+        except exc_class:
             delay = timeout - loop.time()
             await asyncio.sleep(delay)
             timeout = loop.time() + interval
