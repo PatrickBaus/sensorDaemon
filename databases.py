@@ -260,10 +260,10 @@ class LabnodeContext(Context):
             elif change_type == ChangeType.ADD:
                 change_dict = change.dict()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
-                event_bus.publish(f"nodes/by_uuid/{change_dict['host']}/add", change_dict)
+                event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/add", change_dict)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
-                event_bus.publish(f"nodes/by_uuid/{change_dict}/update", None)
+                event_bus.publish(f"nodes/by_uuid/{change}/update", None)
 
 
 class GenericSensorContext(Context):
@@ -478,6 +478,7 @@ class TinkerforgeContext(Context):
         try:
             device = await TinkerforgeSensorModel.find_one(TinkerforgeSensorModel.uid == uid)
         except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
+            # TODO: Handle the timeout and retry getting the config, otherwise a sensor might end up unconfigured...
             # If the pydantic validation fails, we get a ValueError
             self.__logger.error("Error while getting configuration for tinkerforge device %s: %s", uid, exc)
             device = None
