@@ -84,7 +84,7 @@ class Kraken:
         else:
             self.__logger.warning("This is the node with id: %s", node_id)
 
-        mqtt_manager = MqttManager(host=mqtt_host, port=mqtt_port)
+        mqtt_manager = MqttManager(node_id=node_id, host=mqtt_host, port=mqtt_port)
         database_manager = DatabaseManager(database_url=database_url)
         host_manager = HostManager(node_id=node_id)
 

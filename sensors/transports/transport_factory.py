@@ -30,7 +30,7 @@ class TransportFactory:
         transport: Any
             The transport driver to register.
         """
-        self.__available_drivers[transport.driver] = transport
+        self.__available_drivers[transport.driver()] = transport
 
     def get(self, driver: str, **kwargs: Any):
         """

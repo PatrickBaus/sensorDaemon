@@ -31,7 +31,8 @@ MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 class MqttManager:
     """This manager will take the sensor data from the event_bus backend and publish them onto the MQTT network"""
 
-    def __init__(self, host: str, port: int, number_of_workers: int = 5) -> None:
+    def __init__(self, node_id: UUID | None, host: str, port: int, number_of_workers: int = 5) -> None:
+        self.__node_id = node_id
         self.__logger = logging.getLogger(__name__)
         self.__host = host
         self.__port = port
@@ -159,7 +160,9 @@ class MqttManager:
                 self.__logger.info(
                     "Connecting worker (%s) to MQTT broker (%s:%i).", worker_name, self.__host, self.__port
                 )
-                async with asyncio_mqtt.Client(hostname=self.__host, port=self.__port) as mqtt_client:
+                async with asyncio_mqtt.Client(
+                    hostname=self.__host, port=self.__port, client_id=f"Labkraken-{self.__node_id}_worker-{worker_name}"
+                ) as mqtt_client:
                     while "loop not cancelled":
                         if event is None:
                             # only get new data if we have pushed everything to the broker

@@ -220,13 +220,12 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
     """This is a basic generic SCPI driver, that implements the streaming interface and SCPI functionality."""
 
     @classmethod
-    @property
     def driver(cls) -> str:
         """
         Returns
         -------
         str
-            The driver that identifies it to the sensor factory
+            The driver name that identifies it to the sensor factory
         """
         return "generic_scpi2"
 

@@ -38,7 +38,7 @@ class MongoDb:
     The Mongo DB abstraction for the settings database.
     """
 
-    def __init__(self, hostname: str = None, port: int = None) -> None:
+    def __init__(self, hostname: str | None = None, port: int | None = None) -> None:
         self.__hostname = hostname
         self.__port = port
         self.__client = None

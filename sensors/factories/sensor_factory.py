@@ -27,7 +27,7 @@ class SensorFactory:
         cls: Any
             The driver class to register.
         """
-        self.__available_drivers[cls.driver] = cls
+        self.__available_drivers[cls.driver()] = cls
 
     def has(self, driver: str):
         """Returns true if the driver has been registered

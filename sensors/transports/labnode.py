@@ -22,13 +22,12 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
     """
 
     @classmethod
-    @property
     def driver(cls) -> str:
         """
         Returns
         -------
         str
-            The driver that identifies it to the host factory
+            The driver name that identifies it to the transport factory
         """
         return "labnode"
 

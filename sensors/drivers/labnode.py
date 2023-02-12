@@ -21,13 +21,12 @@ class LabnodeSensor:
     """This class extends the driver with catch-all arguments in the constructor"""
 
     @classmethod
-    @property
     def driver(cls) -> str:
         """
         Returns
         -------
         str
-            The driver that identifies it to the sensor factory
+            The driver name that identifies it to the sensor factory
         """
         return "labnode"
 

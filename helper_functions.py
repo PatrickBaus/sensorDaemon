@@ -155,8 +155,8 @@ async def retry(
 async def context(
     source: AsyncIterable[Any],
     context_manager: AsyncContextManager,
-    on_enter: Callable[[], Any] = None,
-    on_exit: Callable[[], Any] = None,
+    on_enter: Callable[[], Any] | None = None,
+    on_exit: Callable[[], Any] | None = None,
 ) -> AsyncGenerator[Any, None]:
     """
     Iterate a stream within a context. The on_enter and on_exit callbacks can be used to log the status of the stream.
@@ -189,7 +189,7 @@ async def context(
 
 @operator
 async def with_context(
-    context_manager: AsyncContextManager, on_exit: Callable[[], Any] = None
+    context_manager: AsyncContextManager, on_exit: Callable[[], Any] | None = None
 ) -> AsyncGenerator[Any, None]:
     """
     Enters the context and yields the context.
@@ -197,7 +197,7 @@ async def with_context(
     ----------
     context_manager: AsyncContextManager
         The context manager to enter
-    on_exit; Callable
+    on_exit: Callable
         A callback function to call, when exiting the context
 
     Yields
@@ -249,7 +249,7 @@ async def finally_action(
 
 @operator(pipable=True)
 async def catch(
-    source: AsyncIterable[Any], exc_class: Type[BaseException], on_exc: Callable[[BaseException], Stream] = None
+    source: AsyncIterable[Any], exc_class: Type[BaseException], on_exc: Callable[[BaseException], Stream] | None = None
 ) -> AsyncGenerator[Any, None]:
     """
     Catch an exception and then switch to the next stream `on_exc` or gracefully terminate, when no stream is given.

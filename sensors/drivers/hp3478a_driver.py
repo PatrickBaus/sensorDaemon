@@ -18,13 +18,12 @@ class Hp3478ADriver(GenericDriverMixin, HP_3478A):
     """This class extends the HP 3478A driver with catch-all arguments in the constructor"""
 
     @classmethod
-    @property
     def driver(cls) -> str:
         """
         Returns
         -------
         str
-            The driver that identifies it to the sensor factory
+            The driver name that identifies it to the sensor factory
         """
         return "hp3478a2"
 
