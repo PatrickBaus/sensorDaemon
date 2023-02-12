@@ -37,7 +37,7 @@ class MqttManager:
         self.__port = port
         self.__number_of_workers = number_of_workers
 
-    async def producer(self, output_queue: asyncio.Queue[tuple[str, dict[str, str | float | int]]]):
+    async def producer(self, output_queue: asyncio.Queue[tuple[str, dict[str, str | float | int]]]) -> None:
         """
         Grabs the output data from the event bus and pushes it to a worker queue,
         so that multiple workers can then publish it via MQTT.
@@ -80,29 +80,51 @@ class MqttManager:
         """
         return max(0.0, reconnect_interval - (asyncio.get_running_loop().time() - last_reconnect_attempt))
 
-    def _log_mqtt_error_code(self, error_code, previous_error):
-        if error_code == previous_error:
+    def _log_mqtt_error_code(self, worker_name: str, error_code: int | None, previous_error_code: int) -> None:
+        """
+        Log the MQTT error codes as human-readable errors to the logger (error log level). If the code is unknown, log
+        it as an exception for debugging. Suppresses errors, if they are repeated.
+        Parameters
+        ----------
+        worker_name: str
+            The name of the worker, prepended to the message
+        error_code: int
+            The current error code
+        previous_error_code: int or None
+            The error code of the previous error or None if there was none.
+        """
+        if error_code == previous_error_code:
             return  # Only log an error once
         if error_code == 111:
             self.__logger.error(
-                "Connection refused by MQTT server (%s:%i). Retrying.",
+                "Worker (%s): Connection refused by MQTT server (%s:%i). Retrying.",
+                worker_name,
                 self.__host,
                 self.__port,
             )
         elif error_code == 113:
             self.__logger.error(
-                "MQTT server unreachable (%s:%i). Retrying.",
+                "Worker (%s): MQTT server (%s:%i) is unreachable. Retrying.",
+                worker_name,
+                self.__host,
+                self.__port,
+            )
+        elif error_code == 7:
+            self.__logger.error(
+                "Worker (%s): The connection to MQTT server (%s:%i) was lost. Retrying.",
+                worker_name,
                 self.__host,
                 self.__port,
             )
         elif error_code == -3:
             self.__logger.error(
-                "Temporary failure in name resolution of MQTT server (%s:%i). Retrying.",
+                "Worker (%s): Temporary failure in name resolution of MQTT server (%s:%i). Retrying.",
+                worker_name,
                 self.__host,
                 self.__port,
             )
         else:
-            self.__logger.exception("MQTT connection error (code: %i). Retrying.", error_code)
+            self.__logger.exception("Worker (%s): MQTT connection error (code: %i). Retrying.", worker_name, error_code)
 
     async def consumer(
         self,
@@ -158,15 +180,17 @@ class MqttManager:
                         input_queue.task_done()
                         error_code = 0  # 0 = success
             except asyncio_mqtt.error.MqttCodeError as exc:
-                self._log_mqtt_error_code(exc.rc, previous_error=error_code)
+                self._log_mqtt_error_code(worker_name, exc.rc, previous_error_code=error_code)
                 error_code = exc.rc
             except ConnectionRefusedError:
-                self._log_mqtt_error_code(111, previous_error=error_code)  # Connection refused is code 111
+                self._log_mqtt_error_code(
+                    worker_name, 111, previous_error_code=error_code
+                )  # Connection refused is code 111
                 error_code = 111
             except asyncio_mqtt.error.MqttError as exc:
                 error = re.search(r"^\[Errno (\d+)\]", str(exc))
                 if error is not None:
-                    self._log_mqtt_error_code(int(error.group(1)), previous_error=error_code)
+                    self._log_mqtt_error_code(worker_name, int(error.group(1)), previous_error_code=error_code)
                     error_code = int(error.group(1))
                 else:  # no match found
                     self.__logger.error("MQTT connection error. Retrying.")
@@ -174,7 +198,7 @@ class MqttManager:
                 # Catch all exceptions, log them, then try to restart the worker.
                 self.__logger.exception("Error while publishing data to MQTT broker. Reconnecting.")
 
-    async def cancel_tasks(self, tasks: Set[asyncio.Task]):
+    async def cancel_tasks(self, tasks: Set[asyncio.Task]) -> None:
         """
         Cancel all tasks and log any exceptions raised.
 

@@ -102,7 +102,7 @@ class Kraken:
             done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             for task in done:
                 if task is shutdown_event_task:
-                    print("shutting down gracefully")
+                    self.__logger.warning("Received shutdown request. Stopping workers.")
                     for pending_task in pending:
                         pending_task.cancel()
                     try:
