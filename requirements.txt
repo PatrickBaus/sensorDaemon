@@ -4,8 +4,8 @@ beanie==1.11.2
 gpib-ctypes>=0.3.0
 prologix-gpib-async~=1.4.10
 pydantic==1.10.4
-python-decouple~=3.6
-simplejson==3.18.0
+python-decouple==3.7
+simplejson==3.18.3
 async_gpib~=2.1.1
 hp3478a_async~=1.4.1
 tinkerforge_async~=1.4.2
