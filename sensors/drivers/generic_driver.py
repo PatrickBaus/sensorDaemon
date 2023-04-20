@@ -113,13 +113,22 @@ class GenericDriverMixin:
 
         return config
 
-    def stream_data(self, config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
+    def _log_config_progress(self, config: dict[str, Any] | None):
+        if config is None:
+            logging.getLogger(__name__).info("Invalid configuration for: %s.", self)
+        else:
+            if config["enabled"]:
+                logging.getLogger(__name__).info("Enabling device: %s.", self)
+            else:
+                logging.getLogger(__name__).info("Disabling device: %s.", self)
+
+    def stream_data(self, initial_config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
         """
         Stream the data from the sensor.
         Parameters
         ----------
-        config: dict
-            A dictionary containing the sensor configuration.
+        initial_config: dict
+            A dictionary containing the initial sensor configuration.
 
         Returns
         -------
@@ -128,18 +137,19 @@ class GenericDriverMixin:
         """
         data_stream = (
             stream.chain(
-                stream.just(config), stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{self.__uuid}/update"))
+                stream.just(initial_config), stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{self.__uuid}/update"))
             )
             | pipe.action(
-                lambda _: logging.getLogger(__name__).info("Got new configuration for: %s", self)
+                lambda config: logging.getLogger(__name__).info("Got new configuration for: %s.", self)
                 if config is not None
-                else logging.getLogger(__name__).info("Removed configuration for: %s", self)
+                else logging.getLogger(__name__).info("Removed configuration for: %s.", self)
             )
             | pipe.map(self._parse_config)
+            | pipe.action(self._log_config_progress)
             | pipe.switchmap(
-                lambda conf: stream.empty()
-                if conf is None or not conf["enabled"]
-                else (self._configure_and_stream(conf))
+                lambda config: stream.empty()
+                if config is None or not config["enabled"]
+                else (self._configure_and_stream(config))
             )
         )
 

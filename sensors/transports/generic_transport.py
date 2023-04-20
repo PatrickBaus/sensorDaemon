@@ -130,10 +130,13 @@ class GenericTransport:
                 on_enter=lambda: logging.getLogger(__name__).info(
                     "Connected to %s at %s (%s).", transport.name, transport.uri, transport.label
                 ),
-                on_exit=lambda: logging.getLogger(__name__).info(
-                    "Disconnected from %s at %s (%s).", transport.name, transport.uri, transport.label
+                on_exit=lambda exit_code: logging.getLogger(__name__).info(
+                    "Disconnected from %s at %s (%s). Reason: %s.",
+                    transport.name,
+                    transport.uri,
+                    transport.label,
+                    exit_code,
                 ),
             )
         )
-
         return config_stream

@@ -112,7 +112,7 @@ class LabnodeSensor:
             return stream.empty()
         try:
             # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is
-            # nothing to compare them to (filter => false), then read all sensors of the bicklet and process them in
+            # nothing to compare them to (filter => false), then read all sensors of the node and process them in
             # parallel (flatten).
             config_stream = stream.chain(
                 stream.iterate(config["on_connect"])
