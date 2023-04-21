@@ -14,7 +14,7 @@ repos:
         args: [--fix=lf]
     -   id: check-executables-have-shebangs
 -   repo: https://github.com/psf/black
-    rev: 23.1.0
+    rev: 23.3.0
     hooks:
     -   id: black
         args: ['.']
@@ -37,7 +37,7 @@ repos:
         require_serial: true
         args: [--generated-members=pipe.*]
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.0.0'
+    rev: 'v1.2.0'
     hooks:
     -   id: mypy
         additional_dependencies: [types-simplejson]
