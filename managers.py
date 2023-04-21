@@ -127,7 +127,7 @@ class MqttManager:
         else:
             self.__logger.exception("Worker (%s): MQTT connection error (code: %i). Retrying.", worker_name, error_code)
 
-    async def consumer(
+    async def consumer(  # pylint: disable=too-many-branches
         self,
         input_queue: asyncio.Queue[tuple[str, dict[str, str | float | int]]],
         worker_name,
@@ -152,17 +152,31 @@ class MqttManager:
         while "not connected":
             # Wait for at least reconnect_interval before connecting again
             timeout = self._calculate_timeout(last_reconnect_attempt, reconnect_interval)
-            if round(timeout) > 0:  # Do not print '0 s' as this is confusing, Waiting for less than a second is OK.
-                self.__logger.info("Delaying reconnect of %s by %.0f s.", worker_name, timeout)
+            if round(timeout) > 0:
+                # Do not print '0 s' as this is confusing.
+                self.__logger.info(
+                    "Worker (%s): Connecting to MQTT broker (%s:%i) in %.0f s due to rate limiting.",
+                    worker_name,
+                    timeout,
+                    self.__host,
+                    self.__port,
+                )
+            else:
+                self.__logger.info(
+                    "Worker (%s): Connecting to MQTT broker (%s:%i).", worker_name, self.__host, self.__port
+                )
             await asyncio.sleep(timeout)
             last_reconnect_attempt = asyncio.get_running_loop().time()
             try:
-                self.__logger.info(
-                    "Connecting worker (%s) to MQTT broker (%s:%i).", worker_name, self.__host, self.__port
-                )
                 async with asyncio_mqtt.Client(
                     hostname=self.__host, port=self.__port, client_id=f"Labkraken-{self.__node_id}_worker-{worker_name}"
                 ) as mqtt_client:
+                    self.__logger.info(
+                        "Worker (%s): Successfully connected to MQTT broker (%s:%i).",
+                        worker_name,
+                        self.__host,
+                        self.__port,
+                    )
                     while "loop not cancelled":
                         if event is None:
                             # only get new data if we have pushed everything to the broker
@@ -173,7 +187,11 @@ class MqttManager:
                             # Typically sensors return data as decimals or ints to preserve the precision
                             encoded_payload = json.dumps(payload, use_decimal=True)
                         except TypeError:
-                            self.__logger.error("Error while serializing DataEvent: %s", payload)
+                            self.__logger.error(
+                                "Worker (%s): Error while serializing DataEvent: %s. Dropping event.",
+                                worker_name,
+                                payload,
+                            )
                         else:
                             # self.__logger.info("Going to publish: %s to %s", payload, topic)
                             await mqtt_client.publish(topic, payload=encoded_payload, qos=2)
@@ -183,23 +201,35 @@ class MqttManager:
                         input_queue.task_done()
                         error_code = 0  # 0 = success
             except asyncio_mqtt.error.MqttCodeError as exc:
-                self._log_mqtt_error_code(worker_name, exc.rc, previous_error_code=error_code)
+                self._log_mqtt_error_code(worker_name, error_code=exc.rc, previous_error_code=error_code)
                 error_code = exc.rc
             except ConnectionRefusedError:
                 self._log_mqtt_error_code(
-                    worker_name, 111, previous_error_code=error_code
+                    worker_name, error_code=111, previous_error_code=error_code
                 )  # Connection refused is code 111
                 error_code = 111
             except asyncio_mqtt.error.MqttError as exc:
                 error = re.search(r"^\[Errno (\d+)\]", str(exc))
                 if error is not None:
-                    self._log_mqtt_error_code(worker_name, int(error.group(1)), previous_error_code=error_code)
+                    self._log_mqtt_error_code(
+                        worker_name, error_code=int(error.group(1)), previous_error_code=error_code
+                    )
                     error_code = int(error.group(1))
                 else:  # no match found
-                    self.__logger.error("MQTT connection error. Retrying.")
+                    self.__logger.error(
+                        "Worker (%s): Connection error of to MQTT broker (%s:%i). Retrying.",
+                        worker_name,
+                        self.__host,
+                        self.__port,
+                    )
             except Exception:  # pylint: disable=broad-except
                 # Catch all exceptions, log them, then try to restart the worker.
-                self.__logger.exception("Error while publishing data to MQTT broker. Reconnecting.")
+                self.__logger.exception(
+                    "Worker (%s): Error while publishing data to MQTT broker (%s:%i). Reconnecting.",
+                    worker_name,
+                    self.__host,
+                    self.__port,
+                )
 
     async def cancel_tasks(self, tasks: Set[asyncio.Task]) -> None:
         """
