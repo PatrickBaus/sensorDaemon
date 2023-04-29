@@ -157,9 +157,9 @@ class MqttManager:
                 self.__logger.info(
                     "Worker (%s): Connecting to MQTT broker (%s:%i) in %.0f s due to rate limiting.",
                     worker_name,
-                    timeout,
                     self.__host,
                     self.__port,
+                    timeout,
                 )
             else:
                 self.__logger.info(
