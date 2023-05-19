@@ -1,5 +1,5 @@
 """
-This is a wrapper for Labnode devices.
+This is a wrapper for LabNode devices.
 """
 # pylint: disable=duplicate-code
 from __future__ import annotations

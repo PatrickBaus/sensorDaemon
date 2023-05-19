@@ -54,7 +54,7 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
         super().__init__(
             uuid=uuid,
             database_topic="db_labnode",
-            transport_name="APQ Labnode",
+            transport_name="APQ LabNode",
             reconnect_interval=reconnect_interval,
             label=label,
             hostname=hostname,
@@ -66,12 +66,12 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
             with_context(
                 transport,
                 on_exit=lambda: logging.getLogger(__name__).info(
-                    "Disconnected from APQ Labnode at %s (%s).", transport.uri, transport.label
+                    "Disconnected from APQ LabNode at %s (%s).", transport.uri, transport.label
                 ),
             )
             | pipe.action(
                 lambda _: logging.getLogger(__name__).info(
-                    "Connected to APQ Labnode at %s (%s).", transport.uri, transport.label
+                    "Connected to APQ LabNode at %s (%s).", transport.uri, transport.label
                 )
             )
             | pipe.map(LabnodeSensor)

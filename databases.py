@@ -85,7 +85,7 @@ class MongoDb:
                     ],
                 )
                 self.__logger.info("MongoDB (%s) connected.", hostname_string[hostname_string.find("@") + 1 :])
-            except pymongo.errors.ServerSelectionTimeoutError as exc:
+            except (pymongo.errors.ServerSelectionTimeoutError, pymongo.errors.NotPrimaryError) as exc:
                 if connection_attempt == 1:
                     # Only log the error once
                     self.__logger.error(
@@ -233,16 +233,29 @@ class LabnodeContext(Context):
                 device = await LabnodeSensorModel.find_one(LabnodeSensorModel.id == uuid)
             except ValueError as exc:
                 # If the pydantic validation fails, we get a ValueError
-                self.__logger.error("Error while getting configuration for Labnode device %s: %s", uuid, exc)
+                self.__logger.error("Error while getting configuration for LabNode device %s: %s", uuid, exc)
                 device = None
             except pymongo.errors.ServerSelectionTimeoutError:
                 # TODO: Do not query again. Wait for a message from the database
                 if connection_attempt == 1:
                     self.__logger.info(
-                        "Waiting for Labnode database to come back online. Query for device %s on hold.", uuid
+                        "Waiting for LabNode database to come back online. Query for device %s on hold.", uuid
                     )
                 await asyncio.sleep(0.5)
                 continue
+            except pymongo.errors.OperationFailure as exc:
+                if exc.code == 211:  # Cache Reader No keys found for HMAC that is valid for time
+                    if connection_attempt == 1:
+                        self.__logger.info(
+                            "Waiting for LabNode database to come back online. Query for device %s on hold.", uuid
+                        )
+                    await asyncio.sleep(0.5)
+                    continue
+                self.__logger.exception("Error while querying LabNode database.")
+                device = None
+            except pymongo.errors.PyMongoError:
+                self.__logger.exception("Error while querying LabNode database.")
+                device = None
 
             if device is None:
                 return device
@@ -338,6 +351,20 @@ class GenericSensorContext(Context):
                     )
                 await asyncio.sleep(0.5)
                 continue
+            except pymongo.errors.OperationFailure as exc:
+                if exc.code == 211:  # Cache Reader No keys found for HMAC that is valid for time
+                    if connection_attempt == 1:
+                        self.__logger.info(
+                            "Waiting for generic device database to come back online. Query for device %s on hold.",
+                            uuid,
+                        )
+                    await asyncio.sleep(0.5)
+                    continue
+                self.__logger.exception("Error while querying generic device database.")
+                device = None
+            except pymongo.errors.PyMongoError:
+                self.__logger.exception("Error while querying generic device database.")
+                device = None
 
             if device is None:
                 return device
@@ -447,6 +474,19 @@ class HostContext(Context):
                     )
                 await asyncio.sleep(0.5)
                 continue
+            except pymongo.errors.OperationFailure as exc:
+                if exc.code == 211:  # Cache Reader No keys found for HMAC that is valid for time
+                    if connection_attempt == 1:
+                        self.__logger.info(
+                            "Waiting for host database to come back online. Query for host %s on hold.", uuid
+                        )
+                    await asyncio.sleep(0.5)
+                    continue
+                self.__logger.exception("Error while querying host database.")
+                device = None
+            except pymongo.errors.PyMongoError:
+                self.__logger.exception("Error while querying host database.")
+                device = None
 
             if device is None:
                 return device
@@ -541,6 +581,19 @@ class TinkerforgeContext(Context):
                     )
                 await asyncio.sleep(0.5)
                 continue
+            except pymongo.errors.OperationFailure as exc:
+                if exc.code == 211:  # Cache Reader No keys found for HMAC that is valid for time
+                    if connection_attempt == 1:
+                        self.__logger.info(
+                            "Waiting for Tinkerforge database to come back online. Query for device %s on hold.", uid
+                        )
+                    await asyncio.sleep(0.5)
+                    continue
+                self.__logger.exception("Error while querying Tinkerforge database.")
+                device = None
+            except pymongo.errors.PyMongoError:
+                self.__logger.exception("Error while querying Tinkerforge database.")
+                device = None
 
             if device is None:
                 return device
