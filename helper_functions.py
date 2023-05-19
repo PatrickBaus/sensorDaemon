@@ -156,7 +156,7 @@ async def context(
     source: AsyncIterable[Any],
     context_manager: AsyncContextManager,
     on_enter: Callable[[], Any] | None = None,
-    on_exit: Callable[[int], Any] | None = None,
+    on_exit: Callable[[Exception | None], Any] | None = None,
 ) -> AsyncGenerator[Any, None]:
     """
     Iterate a stream within a context. The on_enter and on_exit callbacks can be used to log the status of the stream.
@@ -177,14 +177,14 @@ async def context(
     """
     async with context_manager:
         async with streamcontext(source) as streamer:
-            exit_code = 0
+            exit_code = None
             try:
                 if on_enter is not None:
                     on_enter()
                     async for item in streamer:
                         yield item
-            except Exception:
-                exit_code = 1
+            except Exception as exc:
+                exit_code = exc
                 raise
             finally:
                 if on_exit is not None:
