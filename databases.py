@@ -16,10 +16,9 @@ except ImportError:
 
 from uuid import UUID
 
-import beanie
 import motor.motor_asyncio
 import pymongo  # to access the error classes
-from beanie import init_beanie
+from beanie import Document, init_beanie
 
 from async_event_bus import event_bus
 from data_types import ChangeType
@@ -131,7 +130,7 @@ class Context:  # pylint: disable=too-few-public-methods
 
     async def _monitor_database(
         self, database_model: Type[DeviceDocument], timeout: float
-    ) -> AsyncGenerator[tuple[ChangeType, UUID | beanie.Document], None]:
+    ) -> AsyncGenerator[tuple[ChangeType, UUID | Document], None]:
         """
         Monitor all changes made to a certain database table.
 
@@ -144,7 +143,7 @@ class Context:  # pylint: disable=too-few-public-methods
 
         Yields
         -------
-        tuple of ChangeType and UUID or beanie.Document
+        tuple of ChangeType and UUID or Document
             An iterator that yields the type of change and either the new DeviceDocument or the UUID of the deleted
             device
         """
@@ -227,22 +226,34 @@ class LabnodeContext(Context):
         dict
             A dictionary, that contains the configuration of the sensor.
         """
-        try:
-            device = await LabnodeSensorModel.find_one(LabnodeSensorModel.id == uuid)
-        except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
-            # If the pydantic validation fails, we get a ValueError
-            self.__logger.error("Error while getting configuration for Labnode device %s: %s", uuid, exc)
-            device = None
+        connection_attempt = 0
+        while "not connected":
+            connection_attempt += 1
+            try:
+                device = await LabnodeSensorModel.find_one(LabnodeSensorModel.id == uuid)
+            except ValueError as exc:
+                # If the pydantic validation fails, we get a ValueError
+                self.__logger.error("Error while getting configuration for Labnode device %s: %s", uuid, exc)
+                device = None
+            except pymongo.errors.ServerSelectionTimeoutError:
+                # TODO: Do not query again. Wait for a message from the database
+                if connection_attempt == 1:
+                    self.__logger.info(
+                        "Waiting for Labnode database to come back online. Query for device %s on hold.", uuid
+                    )
+                await asyncio.sleep(0.5)
+                continue
 
-        if device is None:
+            if device is None:
+                return device
+
+            device = device.dict()
+            # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
+            # to the back of the dict
+            device["uuid"] = device.pop("id")
+
             return device
-
-        device = device.dict()
-        # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
-        # the back of the dict
-        device["uuid"] = device.pop("id")
-
-        return device
+        assert False, "unreachable"
 
     async def monitor_changes(self, timeout: float) -> None:
         """
@@ -253,21 +264,23 @@ class LabnodeContext(Context):
         timeout: float
             The timeout in seconds to wait after a connection error.
         """
-        change: beanie.Document
         async for change_type, change in self._monitor_database(LabnodeSensorModel, timeout):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
+                assert isinstance(change, LabnodeSensorModel)
                 change_dict = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
+                assert isinstance(change, LabnodeSensorModel)
                 change_dict = change.dict()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/add", change_dict)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
+                assert isinstance(change, UUID)
                 event_bus.publish(f"nodes/by_uuid/{change}/update", None)
 
 
@@ -306,26 +319,38 @@ class GenericSensorContext(Context):
         dict
             A dictionary, that contains the configuration of the sensor.
         """
-        try:
-            device = await GenericSensorModel.find_one(GenericSensorModel.host == uuid)
-        except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
-            # If the pydantic validation fails, we get a ValueError
-            self.__logger.error(
-                "Invalid configuration for generic device %s. Ignoring configuration. Error: %s", uuid, exc
-            )
-            device = None
+        connection_attempt = 0
+        while "not connected":
+            connection_attempt += 1
+            try:
+                device = await GenericSensorModel.find_one(GenericSensorModel.host == uuid)
+            except ValueError as exc:
+                # If the pydantic validation fails, we get a ValueError
+                self.__logger.error(
+                    "Invalid configuration for generic device %s. Ignoring configuration. Error: %s", uuid, exc
+                )
+                device = None
+            except pymongo.errors.ServerSelectionTimeoutError:
+                # TODO: Do not query again. Wait for a message from the database
+                if connection_attempt == 1:
+                    self.__logger.info(
+                        "Waiting for generic device database to come back online. Query for host %s on hold.", uuid
+                    )
+                await asyncio.sleep(0.5)
+                continue
 
-        if device is None:
+            if device is None:
+                return device
+
+            device = device.dict()
+            # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
+            # to the back of the dict
+            device["uuid"] = device.pop("id")
+
             return device
+        assert False, "unreachable"
 
-        device = device.dict()
-        # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
-        # the back of the dict
-        device["uuid"] = device.pop("id")
-
-        return device
-
-    async def monitor_changes(self, timeout):
+    async def monitor_changes(self, timeout: float) -> None:
         """
         Push changes from the database onto the event_bus.
 
@@ -337,18 +362,21 @@ class GenericSensorContext(Context):
         async for change_type, change in self._monitor_database(GenericSensorModel, timeout):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
+                assert isinstance(change, GenericSensorModel)
                 change_dict = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
+                assert isinstance(change, GenericSensorModel)
                 change_dict = change.dict()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['host']}/add", change_dict)
             elif change_type == ChangeType.REMOVE:
+                assert isinstance(change, UUID)
                 # When removing sensors, the DB only returns the uuid
-                event_bus.publish(f"nodes/by_uuid/{change_dict}/update", None)
+                event_bus.publish(f"nodes/by_uuid/{change}/update", None)
 
 
 class HostContext(Context):
@@ -402,24 +430,36 @@ class HostContext(Context):
         dict
             A dictionary, that contains the configuration of the sensor.
         """
-        try:
-            device = await SensorHostModel.find_one(SensorHostModel.id == uuid)
-        except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
-            # If the pydantic validation fails, we get a ValueError
-            self.__logger.error("Error while getting configuration for host %s: %s", uuid, exc)
-            device = None
+        connection_attempt = 0
+        while "not connected":
+            connection_attempt += 1
+            try:
+                device = await SensorHostModel.find_one(SensorHostModel.id == uuid)
+            except ValueError as exc:
+                # If the pydantic validation fails, we get a ValueError
+                self.__logger.error("Error while getting configuration for host %s: %s", uuid, exc)
+                device = None
+            except pymongo.errors.ServerSelectionTimeoutError:
+                # TODO: Do not query again. Wait for a message from the database
+                if connection_attempt == 1:
+                    self.__logger.info(
+                        "Waiting for the host database to come back online. Query for host %s on hold.", uuid
+                    )
+                await asyncio.sleep(0.5)
+                continue
 
-        if device is None:
+            if device is None:
+                return device
+
+            device = device.dict()
+            # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
+            # to the back of the dict
+            device["uuid"] = device.pop("id")
+
             return device
+        assert False, "unreachable"
 
-        device = device.dict()
-        # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
-        # the back of the dict
-        device["uuid"] = device.pop("id")
-
-        return device
-
-    async def monitor_changes(self, timeout):
+    async def monitor_changes(self, timeout: float) -> None:
         """
         Push changes from the database onto the event_bus.
 
@@ -428,22 +468,23 @@ class HostContext(Context):
         timeout: float
             The timeout in seconds to wait after a connection error.
         """
-        change: SensorHostModel
         async for change_type, change in self._monitor_database(SensorHostModel, timeout):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
+                assert isinstance(change, SensorHostModel)
                 change_dict = change.dict()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
+                assert isinstance(change, SensorHostModel)
                 change_dict = change.dict()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"{self.topic}/add_host", change_dict["uuid"])
-
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
+                assert isinstance(change, UUID)
                 event_bus.publish(f"nodes/by_uuid/{change}/update", None)
 
 
@@ -482,25 +523,37 @@ class TinkerforgeContext(Context):
         dict
             A dictionary, that contains the configuration of the sensor.
         """
-        try:
-            device = await TinkerforgeSensorModel.find_one(TinkerforgeSensorModel.uid == uid)
-        except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
-            # TODO: Handle the timeout and retry getting the config, otherwise a sensor might end up unconfigured...
-            # If the pydantic validation fails, we get a ValueError
-            self.__logger.error("Error while getting configuration for Tinkerforge device %s: %s", uid, exc)
-            device = None
+        connection_attempt = 0
+        while "not connected":
+            connection_attempt += 1
+            try:
+                device = await TinkerforgeSensorModel.find_one(TinkerforgeSensorModel.uid == uid)
+            except ValueError as exc:
+                # TODO: Handle the timeout and retry getting the config, otherwise a sensor might end up unconfigured...
+                # If the pydantic validation fails, we get a ValueError
+                self.__logger.error("Error while getting configuration for Tinkerforge device %s: %s", uid, exc)
+                device = None
+            except pymongo.errors.ServerSelectionTimeoutError:
+                # TODO: Do not query again. Wait for a message from the database
+                if connection_attempt == 1:
+                    self.__logger.info(
+                        "Waiting for Tinkerforge database to come back online. Query for device %s on hold.", uid
+                    )
+                await asyncio.sleep(0.5)
+                continue
 
-        if device is None:
+            if device is None:
+                return device
+
+            device = device.dict()
+            # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
+            # to the back of the dict
+            device["uuid"] = device.pop("id")
+
             return device
+        assert False, "unreachable"
 
-        device = device.dict()
-        # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field to
-        # the back of the dict
-        device["uuid"] = device.pop("id")
-
-        return device
-
-    async def monitor_changes(self, timeout):
+    async def monitor_changes(self, timeout: float) -> None:
         """
         Push changes from the database onto the event_bus.
 
@@ -512,6 +565,7 @@ class TinkerforgeContext(Context):
         async for change_type, change in self._monitor_database(TinkerforgeSensorModel, timeout):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
+                assert isinstance(change, TinkerforgeSensorModel)
                 change_dict = change.dict()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
@@ -519,12 +573,14 @@ class TinkerforgeContext(Context):
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/remove", None)
                 event_bus.publish(f"nodes/tinkerforge/{change_dict['uid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
+                assert isinstance(change, TinkerforgeSensorModel)
                 change_dict = change.dict()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/remove", None)
                 event_bus.publish(f"nodes/tinkerforge/{change_dict['uid']}/update", change_dict)
             elif change_type == ChangeType.REMOVE:
                 # When removing sensors, the DB only returns the uuid
+                assert isinstance(change, UUID)
                 event_bus.publish(f"nodes/by_uuid/{change}/remove", None)
 
 
