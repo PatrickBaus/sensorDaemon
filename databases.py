@@ -170,8 +170,13 @@ class Context:  # pylint: disable=too-few-public-methods
 
                     resume_token = change_stream.resume_token
             except (pymongo.errors.ServerSelectionTimeoutError, pymongo.errors.OperationFailure) as exc:
+                database_name = None if database_model.get_settings() is None else database_model.get_settings().name
+                database_name = str(database_model) if database_name is None else database_model
                 self.__logger.error(
-                    "Connection error while monitoring config database. Error: %s. Reconnecting in %f s.", exc, timeout
+                    "Connection error while monitoring config database '%s'. Error: %s. Reconnecting in %f s.",
+                    database_name,
+                    exc,
+                    timeout,
                 )
                 await asyncio.sleep(timeout)
             except pymongo.errors.PyMongoError:
@@ -305,7 +310,9 @@ class GenericSensorContext(Context):
             device = await GenericSensorModel.find_one(GenericSensorModel.host == uuid)
         except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
             # If the pydantic validation fails, we get a ValueError
-            self.__logger.error("Invalid configuration for device %s. Ignoring configuration. Error: %s", uuid, exc)
+            self.__logger.error(
+                "Invalid configuration for generic device %s. Ignoring configuration. Error: %s", uuid, exc
+            )
             device = None
 
         if device is None:
@@ -399,7 +406,7 @@ class HostContext(Context):
             device = await SensorHostModel.find_one(SensorHostModel.id == uuid)
         except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
             # If the pydantic validation fails, we get a ValueError
-            self.__logger.error("Error while getting configuration for ethernet device %s: %s", uuid, exc)
+            self.__logger.error("Error while getting configuration for host %s: %s", uuid, exc)
             device = None
 
         if device is None:
@@ -480,7 +487,7 @@ class TinkerforgeContext(Context):
         except (ValueError, pymongo.errors.ServerSelectionTimeoutError) as exc:
             # TODO: Handle the timeout and retry getting the config, otherwise a sensor might end up unconfigured...
             # If the pydantic validation fails, we get a ValueError
-            self.__logger.error("Error while getting configuration for tinkerforge device %s: %s", uid, exc)
+            self.__logger.error("Error while getting configuration for Tinkerforge device %s: %s", uid, exc)
             device = None
 
         if device is None:
