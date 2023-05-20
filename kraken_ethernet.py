@@ -21,6 +21,7 @@
 Kraken is a sensor data aggregation tool for distributed sensors arrays. It uses
 AsyncIO instead of threads to scale and outputs data to a MQTT broker.
 """
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -163,12 +164,34 @@ async def main():
         pass
 
 
+def parse_log_level(log_level: int | str) -> int:
+    """
+    Parse an int or string, then return its standard log level definition.
+    Parameters
+    ----------
+    log_level: int or str
+        The log level. Either a string or a number.
+    Returns
+    -------
+    int
+        The log level as defined by the standard library. Returns logging.INFO as default
+    """
+    try:
+        level = int(log_level)
+    except ValueError:
+        # parse the string
+        level = logging.getLevelName(str(log_level).upper())
+    if isinstance(level, int):
+        return level
+    return logging.INFO  # default log level
+
+
 # Report all mistakes managing asynchronous resources.
 # import warnings
 # warnings.simplefilter('always', ResourceWarning)
 logging.basicConfig(
     format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-    level=config("APPLICATION_LOG_LEVEL", default=logging.INFO, cast=logging.getLevelName),
+    level=config("APPLICATION_LOG_LEVEL", default=logging.INFO, cast=parse_log_level),
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
