@@ -81,7 +81,7 @@ class MqttManager:
         """
         return max(0.0, reconnect_interval - (asyncio.get_running_loop().time() - last_reconnect_attempt))
 
-    def _log_mqtt_error_code(self, worker_name: str, error_code: int | None, previous_error_code: int) -> None:
+    def _log_mqtt_error_code(self, worker_name: str, error_code: str | int, previous_error_code: str | int) -> None:
         """
         Log the MQTT error codes as human-readable errors to the logger (error log level). If the code is unknown, log
         it as an exception for debugging. Suppresses errors, if they are repeated.
@@ -146,8 +146,8 @@ class MqttManager:
         reconnect_interval: int, default=5
             The time in seconds to wait between connection attempts.
         """
-        error_code = 0  # 0 = success
-        event = None
+        error_code: str | int = 0  # 0 = success
+        event: tuple[str, dict[str, str | float | int]] | None = None
         last_reconnect_attempt = asyncio.get_running_loop().time() - reconnect_interval
         while "not connected":
             # Wait for at least reconnect_interval before connecting again
@@ -216,12 +216,8 @@ class MqttManager:
                     )
                     error_code = int(error.group(1))
                 else:  # no match found
-                    self.__logger.error(
-                        "Worker (%s): Connection error of to MQTT broker (%s:%i). Retrying.",
-                        worker_name,
-                        self.__host,
-                        self.__port,
-                    )
+                    self._log_mqtt_error_code(worker_name, error_code=str(exc), previous_error_code=error_code)
+                    error_code = str(exc)
             except Exception:  # pylint: disable=broad-except
                 # Catch all exceptions, log them, then try to restart the worker.
                 self.__logger.exception(

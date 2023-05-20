@@ -86,7 +86,7 @@ class MongoDb:
                     ],
                 )
                 self.__logger.info("MongoDB (%s) connected.", hostname_string[hostname_string.find("@") + 1 :])
-            except (pymongo.errors.ServerSelectionTimeoutError, pymongo.errors.NotPrimaryError) as exc:
+            except pymongo.errors.AutoReconnect as exc:
                 if connection_attempt == 1:
                     # Only log the error once
                     self.__logger.error(
@@ -139,17 +139,23 @@ class Context:  # pylint: disable=too-few-public-methods
         if error_code == previous_error_code:
             return  # Only log an error once
 
-        if error_code == 111:
-            self.__logger.info("Connection refused. Waiting for database to start.")
+        database_name = None if database_model.get_settings() is None else database_model.get_settings().name
+        database_name = str(database_model) if database_name is None else database_name
+
+        if error_code == 104:
+            self.__logger.info("Database worker (%s): Database disconnected. Waiting to restart.", database_name)
+        elif error_code == 111:
+            self.__logger.info("Database worker (%s): Connection refused. Waiting to start.", database_name)
         elif error_code == 211:
-            self.__logger.info("Initialising replica set. Waiting for database to start.")
+            self.__logger.info("Database worker (%s): Initialising replica set. Waiting to start.", database_name)
         elif error_code == "resume_token":
-            self.__logger.error("Cannot resume Mongo DB change stream, there is no token. Starting from scratch.")
-        else:
-            database_name = None if database_model.get_settings() is None else database_model.get_settings().name
-            database_name = str(database_model) if database_name is None else database_name
             self.__logger.error(
-                "Connection error while monitoring config database '%s'. Error: %s. Reconnecting in %f s.",
+                "Database worker (%s): Cannot resume Mongo DB change stream, there is no token. Starting from scratch.",
+                database_name,
+            )
+        else:
+            self.__logger.error(
+                "Database worker (%s): Connection error while monitoring database. Error: %s. Reconnecting in %.2f s.",
                 database_name,
                 error_code,
                 timeout,
@@ -197,8 +203,8 @@ class Context:  # pylint: disable=too-few-public-methods
                             yield ChangeType.ADD, database_model.parse_obj(change["fullDocument"])
 
                     resume_token = change_stream.resume_token
-            except pymongo.errors.ServerSelectionTimeoutError as exc:
-                error = re.search(r"^\[Errno (\d+)\]", str(exc))
+            except pymongo.errors.AutoReconnect as exc:
+                error = re.search(r"\[Errno (\d+)\]", str(exc))
                 error_code: str | int = str(exc) if error is None else int(error.group(1))
                 self._log_database_error(database_model, error_code, previous_error_code, timeout)
                 previous_error_code = error_code
@@ -265,7 +271,7 @@ class LabnodeContext(Context):
                 # If the pydantic validation fails, we get a ValueError
                 self.__logger.error("Error while getting configuration for LabNode device %s: %s", uuid, exc)
                 device = None
-            except pymongo.errors.ServerSelectionTimeoutError:
+            except pymongo.errors.AutoReconnect:
                 # TODO: Do not query again. Wait for a message from the database
                 if connection_attempt == 1:
                     self.__logger.info(
@@ -373,7 +379,7 @@ class GenericSensorContext(Context):
                     "Invalid configuration for generic device %s. Ignoring configuration. Error: %s", uuid, exc
                 )
                 device = None
-            except pymongo.errors.ServerSelectionTimeoutError:
+            except pymongo.errors.AutoReconnect:
                 # TODO: Do not query again. Wait for a message from the database
                 if connection_attempt == 1:
                     self.__logger.info(
@@ -496,7 +502,7 @@ class HostContext(Context):
                 # If the pydantic validation fails, we get a ValueError
                 self.__logger.error("Error while getting configuration for host %s: %s", uuid, exc)
                 device = None
-            except pymongo.errors.ServerSelectionTimeoutError:
+            except pymongo.errors.AutoReconnect:
                 # TODO: Do not query again. Wait for a message from the database
                 if connection_attempt == 1:
                     self.__logger.info(
@@ -603,7 +609,7 @@ class TinkerforgeContext(Context):
                 # If the pydantic validation fails, we get a ValueError
                 self.__logger.error("Error while getting configuration for Tinkerforge device %s: %s", uid, exc)
                 device = None
-            except pymongo.errors.ServerSelectionTimeoutError:
+            except pymongo.errors.AutoReconnect:
                 # TODO: Do not query again. Wait for a message from the database
                 if connection_attempt == 1:
                     self.__logger.info(
