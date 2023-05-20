@@ -5,6 +5,7 @@ generators to deliver messages.
 from __future__ import annotations
 
 import asyncio
+import logging
 from inspect import isasyncgen
 from typing import Any, AsyncGenerator, Callable, Coroutine, cast
 
@@ -30,6 +31,7 @@ class AsyncEventBus:
     def __init__(self) -> None:
         self.__subscribers: dict[str, set[asyncio.Queue[Any]]] = {}
         self.__registered_calls: dict[str, Callable[[Any], Coroutine] | Callable[[Any], AsyncGenerator]] = {}
+        self.__logger = logging.getLogger(__name__)
 
     async def subscribe(self, event_name: str) -> AsyncGenerator[Any, None]:
         """
@@ -45,6 +47,7 @@ class AsyncEventBus:
         Any
             The events
         """
+        self.__logger.debug("Subscribing to topic '%s'", event_name)
         queue: asyncio.Queue[Any] = asyncio.Queue()
         if self.__subscribers.get(event_name, None) is None:
             self.__subscribers[event_name] = {queue}
@@ -60,6 +63,7 @@ class AsyncEventBus:
             self.__subscribers[event_name].remove(queue)
             if len(self.__subscribers[event_name]) == 0:
                 del self.__subscribers[event_name]
+            self.__logger.debug("Unsubscribed from topic '%s'", event_name)
 
     def publish(self, event_name: str, event: Any) -> None:
         """
@@ -72,6 +76,7 @@ class AsyncEventBus:
         event: any
             The data to be published.
         """
+        self.__logger.debug("Publishing to topic '%s': %s", event_name, event)
         listener_queues: set[asyncio.Queue[Any]] = self.__subscribers.get(event_name, set())
         for queue in listener_queues:
             queue.put_nowait(event)
@@ -89,6 +94,7 @@ class AsyncEventBus:
         """
         if event_name in self.__registered_calls:
             raise EventRegisteredError(f"{event_name} is already registered")
+        self.__logger.debug("Registering function as '%s'", event_name)
         self.__registered_calls[event_name] = function
 
     def unregister(self, event_name: str) -> None:
@@ -100,6 +106,7 @@ class AsyncEventBus:
         event_name: Any
             The name of event to be unregistered.
         """
+        self.__logger.debug("Unregistering function call from '%s'", event_name)
         self.__registered_calls.pop(event_name, None)
 
     async def call(self, event_name: str, *args, ignore_unregistered: bool = False, **kwargs) -> Any:
@@ -119,9 +126,10 @@ class AsyncEventBus:
 
         Raises
         ------
-        NameError
+        TopicNotRegisteredError
             Raised if the function `event_name` is not registered.
         """
+        self.__logger.debug("Calling function '%s' with args: %s, kwargs: %s", event_name, args, kwargs)
         try:
             gen_or_func: Coroutine | AsyncGenerator = self.__registered_calls[event_name](*args, **kwargs)
             if isasyncgen(gen_or_func):
