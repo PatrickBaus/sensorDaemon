@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from types import TracebackType
 from typing import Any, AsyncGenerator, Type
 
@@ -128,6 +129,32 @@ class Context:  # pylint: disable=too-few-public-methods
     ) -> None:
         raise NotImplementedError
 
+    def _log_database_error(
+        self,
+        database_model: Type[DeviceDocument],
+        error_code: str | int | None,
+        previous_error_code: str | int | None,
+        timeout: float,
+    ):
+        if error_code == previous_error_code:
+            return  # Only log an error once
+
+        if error_code == 111:
+            self.__logger.info("Connection refused. Waiting for database to start.")
+        elif error_code == 211:
+            self.__logger.info("Initialising replica set. Waiting for database to start.")
+        elif error_code == "resume_token":
+            self.__logger.error("Cannot resume Mongo DB change stream, there is no token. Starting from scratch.")
+        else:
+            database_name = None if database_model.get_settings() is None else database_model.get_settings().name
+            database_name = str(database_model) if database_name is None else database_name
+            self.__logger.error(
+                "Connection error while monitoring config database '%s'. Error: %s. Reconnecting in %f s.",
+                database_name,
+                error_code,
+                timeout,
+            )
+
     async def _monitor_database(
         self, database_model: Type[DeviceDocument], timeout: float
     ) -> AsyncGenerator[tuple[ChangeType, UUID | Document], None]:
@@ -148,6 +175,7 @@ class Context:  # pylint: disable=too-few-public-methods
             device
         """
         resume_token = None
+        previous_error_code: str | int | None = None
         # To watch only for certain events, use:
         # pipeline = [{'$match': {'operationType': {'$in': ["insert", "update", "delete"]}}}]
         # In a Mongo DB the __id cannot be updated. It can only be removed and recreated. It is therefore safe to link
@@ -158,6 +186,7 @@ class Context:  # pylint: disable=too-few-public-methods
                 async with database_model.get_motor_collection().watch(
                     pipeline, full_document="updateLookup", resume_after=resume_token
                 ) as change_stream:
+                    previous_error_code = None
                     async for change in change_stream:
                         # TODO: catch parser errors!
                         if change["operationType"] == "delete":
@@ -168,15 +197,16 @@ class Context:  # pylint: disable=too-few-public-methods
                             yield ChangeType.ADD, database_model.parse_obj(change["fullDocument"])
 
                     resume_token = change_stream.resume_token
-            except (pymongo.errors.ServerSelectionTimeoutError, pymongo.errors.OperationFailure) as exc:
-                database_name = None if database_model.get_settings() is None else database_model.get_settings().name
-                database_name = str(database_model) if database_name is None else database_model
-                self.__logger.error(
-                    "Connection error while monitoring config database '%s'. Error: %s. Reconnecting in %f s.",
-                    database_name,
-                    exc,
-                    timeout,
-                )
+            except pymongo.errors.ServerSelectionTimeoutError as exc:
+                error = re.search(r"^\[Errno (\d+)\]", str(exc))
+                error_code: str | int = str(exc) if error is None else int(error.group(1))
+                self._log_database_error(database_model, error_code, previous_error_code, timeout)
+                previous_error_code = error_code
+                await asyncio.sleep(timeout)
+            except pymongo.errors.OperationFailure as exc:
+                error_code = exc.code if exc.code == 211 else str(exc)
+                self._log_database_error(database_model, error_code, previous_error_code, timeout)
+                previous_error_code = error_code
                 await asyncio.sleep(timeout)
             except pymongo.errors.PyMongoError:
                 # The ChangeStream encountered an unrecoverable error or the
@@ -184,9 +214,9 @@ class Context:  # pylint: disable=too-few-public-methods
                 if resume_token is None:
                     # There is no usable resume token because there was a
                     # failure during ChangeStream initialization.
-                    self.__logger.error(
-                        "Cannot resume Mongo DB change stream, there is no token. Starting from scratch."
-                    )
+                    error_code = "resume_token"
+                    self._log_database_error(database_model, error_code, previous_error_code, timeout)
+                    previous_error_code = error_code
 
                 await asyncio.sleep(timeout)
 
