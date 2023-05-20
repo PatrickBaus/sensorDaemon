@@ -131,7 +131,7 @@ class TinkerforgeSensor:
         self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: AdvancedCallbackConfiguration
     ) -> AsyncGenerator[DataEvent, None]:
         monitor_stream = (
-            stream.repeat(self.device, interval=1)
+            stream.repeat(self.device, interval=1)  # TODO: make interval configurable
             | pipe.map(async_(lambda sensor: sensor.get_callback_configuration(sid)))
             | pipe.map(lambda current_config: None if current_config == callback_config else self.device)
             | pipe.filter(lambda sensor: sensor is not None)

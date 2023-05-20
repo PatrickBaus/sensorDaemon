@@ -71,7 +71,7 @@ class TinkerforgeTransport(IPConnectionAsync):
     @staticmethod
     def _stream_transport(transport: TinkerforgeTransport):
         sensor_stream = stream.chain(
-            stream.call(transport.enumerate) | pipe.filter(lambda x: False),
+            stream.call(transport.enumerate) | pipe.filter(lambda x: False),  # drop the result, because we don't care
             stream.iterate(transport.read_enumeration())
             | pipe.action(lambda enumeration: event_bus.publish(f"nodes/tinkerforge/{enumeration[1].uid}/remove", None))
             | pipe.filter(lambda enumeration: enumeration[0] is not EnumerationType.DISCONNECTED)

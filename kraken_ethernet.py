@@ -168,7 +168,7 @@ async def main():
 # warnings.simplefilter('always', ResourceWarning)
 logging.basicConfig(
     format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-    level=logging.INFO,  # Enable logs from the ip connection. Set to debug for even more info
+    level=config("APPLICATION_LOG_LEVEL", default=logging.INFO, cast=logging.getLevelName),
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
