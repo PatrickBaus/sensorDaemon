@@ -5,7 +5,13 @@ This is a wrapper for Tinkerforge devices.
 from __future__ import annotations
 
 import logging
-from typing import Any, AsyncGenerator
+from types import TracebackType
+
+try:
+    from typing import Self  # type: ignore # Python 3.11
+except ImportError:
+    from typing_extensions import Self
+from typing import Any, AsyncGenerator, Type
 from uuid import UUID
 
 from aiostream import async_, pipe, stream
@@ -15,7 +21,8 @@ from tinkerforge_async.ip_connection import NotConnectedError
 from async_event_bus import event_bus
 from data_types import DataEvent
 from errors import ConfigurationError
-from helper_functions import call_safely, create_device_function
+from helper_functions import call_safely, context, create_device_function
+from sensors.drivers.shared import DeviceStatus
 
 
 class TinkerforgeSensor:
@@ -44,6 +51,26 @@ class TinkerforgeSensor:
     def __init__(self, device: Device) -> None:
         self.__device = device
         self._logger = logging.getLogger(__name__)
+        self.__topic = f"nodes/tinkerforge/{device.uid}"
+
+    async def __aenter__(self) -> Self:
+        event_bus.register(self.__topic + "/status", self.__get_sensor_status)
+        return self
+
+    async def __aexit__(
+        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+    ) -> None:
+        event_bus.unregister(self.__topic + "/status")
+
+    async def __get_sensor_status(self) -> DeviceStatus:
+        """
+        Gather the device status and return it as a dataclass.
+        Returns
+        -------
+        DeviceStatus
+            A dataclass containing the device status
+        """
+        return DeviceStatus()
 
     @staticmethod
     def _stream_config_updates(sensor: TinkerforgeSensor) -> AsyncGenerator[dict[str, Any], None]:
@@ -83,35 +110,39 @@ class TinkerforgeSensor:
         # Generates the first configuration
         # Query the database and if it does not have a config for the sensor, wait until there is one
 
-        data_stream = stream.chain(
-            stream.just(self),
-            stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{self.device.uid}/remove"))[:1]
-            | pipe.map(lambda x: None),
-        ) | pipe.switchmap(
-            lambda sensor: stream.empty()
-            if sensor is None
-            else (
-                self._stream_config_updates(sensor)
-                | pipe.switchmap(
-                    lambda config: stream.chain(
-                        stream.just(config),
-                        stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{config['uuid']}/remove"))[:1]
-                        | pipe.map(lambda x: None),
+        data_stream = (
+            stream.chain(
+                stream.just(self),
+                stream.iterate(event_bus.subscribe(f"nodes/tinkerforge/{self.device.uid}/remove"))[:1]
+                | pipe.map(lambda x: None),
+            )
+            | pipe.switchmap(
+                lambda sensor: stream.empty()
+                if sensor is None
+                else (
+                    self._stream_config_updates(sensor)
+                    | pipe.switchmap(
+                        lambda config: stream.chain(
+                            stream.just(config),
+                            stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{config['uuid']}/remove"))[:1]
+                            | pipe.map(lambda x: None),
+                        )
                     )
-                )
-                | pipe.action(
-                    lambda config: logging.getLogger(__name__).info(
-                        "Got new configuration for: %s",
-                        sensor.device,
+                    | pipe.action(
+                        lambda config: logging.getLogger(__name__).info(
+                            "Got new configuration for: %s",
+                            sensor.device,
+                        )
                     )
-                )
-                | pipe.map(self._create_config)
-                | pipe.switchmap(
-                    lambda config: stream.empty()
-                    if config is None or not config["enabled"]
-                    else (self._configure_and_stream(config))
+                    | pipe.map(self._create_config)
+                    | pipe.switchmap(
+                        lambda config: stream.empty()
+                        if config is None or not config["enabled"]
+                        else (self._configure_and_stream(config))
+                    )
                 )
             )
+            | context.pipe(self)
         )
 
         return data_stream

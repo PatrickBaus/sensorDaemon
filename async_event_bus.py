@@ -118,7 +118,7 @@ class AsyncEventBus:
         event_name: str
             The name of the of event to be called.
         ignore_unregistered: bool
-            Do not raise an error if True and the call is not registered
+            If True, do not raise an error if the event_name has not been registered
         args: List
             The arguments to be passed to the function called.
         kwargs: Dict
