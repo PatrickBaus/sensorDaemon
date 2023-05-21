@@ -142,8 +142,7 @@ class TinkerforgeSensor:
                     )
                 )
             )
-            | context.pipe(self)
-        )
+        ) | context.pipe(self)
 
         return data_stream
 
