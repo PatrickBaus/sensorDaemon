@@ -181,8 +181,8 @@ async def context(
             try:
                 if on_enter is not None:
                     on_enter()
-                    async for item in streamer:
-                        yield item
+                async for item in streamer:
+                    yield item
             except Exception as exc:
                 exit_code = exc
                 raise
