@@ -68,7 +68,7 @@ class MongoDb:
                 )
             if self.__port is not None:
                 self.__client = motor.motor_asyncio.AsyncIOMotorClient(
-                    self.__hostname, self.__port, serverSelectionTimeoutMS=timeout * 1000
+                    self.__hostname, self.__port, serverSelectionTimeoutMS=timeout * 1000, uuidRepresentation="standard"
                 )
             else:
                 self.__client = motor.motor_asyncio.AsyncIOMotorClient(
