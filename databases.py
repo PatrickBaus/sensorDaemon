@@ -62,7 +62,10 @@ class MongoDb:
         while "database not connected":
             hostname_string = self.__hostname if self.__port is None else f"{self.__hostname}:{self.__port}"
             if connection_attempt == 1:
-                self.__logger.info("Connecting to MongoDB (%s).", hostname_string[hostname_string.find("@") + 1 :])
+                self.__logger.info(
+                    "Connecting to MongoDB (%s).",
+                    hostname_string[hostname_string.find("@") + 1 : hostname_string.rfind("/")],
+                )
             if self.__port is not None:
                 self.__client = motor.motor_asyncio.AsyncIOMotorClient(
                     self.__hostname, self.__port, serverSelectionTimeoutMS=timeout * 1000
@@ -85,13 +88,16 @@ class MongoDb:
                         GenericSensorModel,
                     ],
                 )
-                self.__logger.info("MongoDB (%s) connected.", hostname_string[hostname_string.find("@") + 1 :])
+                self.__logger.info(
+                    "MongoDB (%s) connected.",
+                    hostname_string[hostname_string.find("@") + 1 : hostname_string.rfind("/")],
+                )
             except pymongo.errors.AutoReconnect as exc:
                 if connection_attempt == 1:
                     # Only log the error once
                     self.__logger.error(
                         "Cannot connect to config database at %s. Error: %s. Retrying in %f s.",
-                        hostname_string,
+                        hostname_string[hostname_string.find("@") + 1 : hostname_string.rfind("/")],
                         exc,
                         timeout,
                     )
