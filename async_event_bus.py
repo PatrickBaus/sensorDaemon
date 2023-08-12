@@ -1,5 +1,5 @@
 """
-A lightweight event bus for the asyncio framework, that relies on asynchronous
+A lightweight event bus for the asyncio framework that relies on asynchronous
 generators to deliver messages.
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ class TopicNotRegisteredError(NameError):
 
 class AsyncEventBus:
     """
-    An event bus, that is using the async generator syntax for distributing events.
+    An event bus that is using the async generator syntax for distributing events.
     It uses dicts and sets internally to ensure good performance.
     """
 
@@ -35,7 +35,7 @@ class AsyncEventBus:
 
     async def subscribe(self, event_name: str) -> AsyncGenerator[Any, None]:
         """
-        The async generator, that yields events subscribed to `event_name`.
+        The async generator that yields events published for `event_name`.
 
         Parameters
         ----------
