@@ -1,14 +1,17 @@
 FROM alpine:3.18 as builder
 
 ARG BUILD_CORES
+ARG GIT_REPOSITORY
+ARG SSH_DEPLOY_KEY
 
 # Build the
 RUN COLOUR='\e[1;93m' && \
   echo -e "${COLOUR}Installing build dependencies...\e[0m" && \
   apk --no-cache add --virtual=build-dependencies \
-    build-base \
-    py3-pip \
-    git && \
+    openssh-client-common \
+    openssh-client-default \
+    git \
+    py3-pip && \
   echo -e "${COLOUR}Done.\e[0m"
 
 # Define the python virtual environment
@@ -16,18 +19,21 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-ADD https://api.github.com/repos/PatrickBaus/sensorDaemon/git/refs/heads/master version.json
 RUN COLOUR='\e[1;93m' && \
-  echo -e "${COLOUR}Installing Kraken database logger...\e[0m" && \
-  git clone https://github.com/PatrickBaus/sensorDaemon app && \
-  pip install -r /app/requirements.txt && \
+  echo -e "${COLOUR}Installing LabKraken...\e[0m" && \
+  mkdir /root/.ssh/ && \
+  echo "${SSH_DEPLOY_KEY}" > /root/.ssh/id_rsa && \
+  chmod 600 /root/.ssh/id_rsa && \
+  ssh-keyscan github.com >> /root/.ssh/known_hosts && \
+  git clone git@github.com:${GIT_REPOSITORY}.git app && \
+  pip install ./app && \
   echo -e "${COLOUR}Done.\e[0m"
 
 FROM alpine:3.18
 LABEL maintainer="Patrick Baus <patrick.baus@physik.tu-darmstadt.de>"
 LABEL description="Kraken sensor data aggregator."
 
-ARG WORKER_USER_ID=5555
+ARG WORKER_USER_ID=5556
 
 # Upgrade installed packages,
 # add a user called `worker`
