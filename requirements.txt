@@ -3,7 +3,7 @@ aiomqtt~=1.1.0
 beanie==1.21.0
 gpib-ctypes>=0.3.0
 prologix-gpib-async~=1.4.10
-pydantic~=2.1.1
+pydantic==2.3.0
 python-decouple~=3.8
 simplejson~=3.19.1
 async_gpib~=2.1.1
