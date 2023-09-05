@@ -183,18 +183,18 @@ class GenericScpiMixin:
         Decimal
             The number read from the device. This might also be NaN, Infinity, or -Infinity.
         """
-        result = await self.read(scpi_terminator, *args, **kwargs)
+        result = Decimal(await self.read(scpi_terminator, *args, **kwargs))
         # Treat special SCPI values
         # Not A Number
-        if result.lower() == "9.91e37":
+        if result == Decimal("9.91e37"):
             return Decimal("NaN")
         # Positive infinity
-        if result.lower() == "9.9e37":
+        if result == Decimal("9.9e37"):
             return Decimal("Infinity")
         # Negative infinity
-        if result.lower() == "-9.9e37":
+        if result == Decimal("-9.9e37"):
             return Decimal("-Infinity")
-        return Decimal(result)
+        return result
 
     async def query_number(self, cmd: str, scpi_terminator: str | None = None) -> Decimal:
         """
