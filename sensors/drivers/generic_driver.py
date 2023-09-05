@@ -14,7 +14,7 @@ from aiostream import pipe, stream
 from async_event_bus import event_bus
 from data_types import DataEvent
 from errors import ConfigurationError
-from helper_functions import catch, create_device_function, finally_action
+from helper_functions import catch, create_device_function, finally_action, just_iterate
 
 
 class GenericDriverMixin:
@@ -43,9 +43,7 @@ class GenericDriverMixin:
             return stream.iterate(on_read()) | pipe.timeout(timeout)
         return (
             stream.repeat(config["on_read"], interval=config["interval"])
-            | pipe.starmap(
-                lambda func, interval: stream.iterate(func()) | pipe.enumerate() | pipe.timeout(min(interval, timeout))
-            )
+            | pipe.starmap(lambda func, interval: just_iterate(func()) | pipe.timeout(interval))
             | pipe.concat(task_limit=1)
         )
 
