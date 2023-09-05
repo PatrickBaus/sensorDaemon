@@ -74,10 +74,9 @@ class GenericScpiMixin:
         Returns a tuple with 4 elements, that contain the manufacturer name, model number, serial number and revision
         :return:
         """
-        idn: str
-        (idn,) = await self.query("*IDN?")
+        idn = await self.query("*IDN?")
         try:
-            company_name, model, serial, firmware = idn.split(",")
+            company_name, model, serial, firmware = idn
         except ValueError:
             raise ValueError(f"Device returned invalid ID: {idn!r}") from None
         return company_name, model, serial, firmware
