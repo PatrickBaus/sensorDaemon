@@ -41,16 +41,13 @@ class GenericDriverMixin:
         on_read, timeout = config["on_read"]
         if inspect.isasyncgenfunction(on_read.func):
             return stream.iterate(on_read()) | pipe.timeout(timeout)
-        else:
-            return (
-                stream.repeat(config["on_read"], interval=config["interval"])
-                | pipe.starmap(
-                    lambda func, interval: stream.iterate(func())
-                    | pipe.enumerate()
-                    | pipe.timeout(min(interval, timeout))
-                )
-                | pipe.concat(task_limit=1)
+        return (
+            stream.repeat(config["on_read"], interval=config["interval"])
+            | pipe.starmap(
+                lambda func, interval: stream.iterate(func()) | pipe.enumerate() | pipe.timeout(min(interval, timeout))
             )
+            | pipe.concat(task_limit=1)
+        )
 
     def on_error(self, exc: BaseException) -> AsyncGenerator[None, None]:
         """
