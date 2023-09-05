@@ -6,7 +6,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, AsyncGenerator
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Iterable
 
 from aiostream import async_, pipe, stream
 
@@ -74,14 +74,15 @@ class GenericScpiMixin:
         Returns a tuple with 4 elements, that contain the manufacturer name, model number, serial number and revision
         :return:
         """
-        idn: str = await self.query("*IDN?")
+        idn: str
+        (idn,) = await self.query("*IDN?")
         try:
             company_name, model, serial, firmware = idn.split(",")
         except ValueError:
             raise ValueError(f"Device returned invalid ID: {idn!r}") from None
         return company_name, model, serial, firmware
 
-    async def read(self, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> str:
+    async def read(self, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> Iterable[str]:
         """
         Read a single value from the device. If `length' is given, read `length` bytes, else
         read until a line break.
@@ -98,8 +99,8 @@ class GenericScpiMixin:
 
         Returns
         ----------
-        str
-            The data from the device
+        iterable of str
+            The data from the device. The data is split at commas.
         """
         # use the default terminator if none is given
         try:
@@ -113,7 +114,7 @@ class GenericScpiMixin:
         if data[-len(terminator) :] == terminator:
             data = data[: -len(terminator)]
         try:
-            return data.decode("utf-8")
+            return data.decode("utf-8").split(",")
         except UnicodeDecodeError:
             # drop it. It is not SCPI compliant
             self.__logger.error("Invalid data read '%r'. This driver requires ASCII or UTF-8 data", data)
@@ -142,7 +143,7 @@ class GenericScpiMixin:
                 f"Cannot write illegal command %s to device {self}",
             ) from None
 
-    async def query(self, cmd: str, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> str:
+    async def query(self, cmd: str, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> Iterable[str]:
         """
         Send a command and read back the response.
 
@@ -159,13 +160,28 @@ class GenericScpiMixin:
 
         Returns
         -------
-        str
-            The result of the query
+        iterable of str
+            The result of the query. The result return by device is split at commas.
         """
         await self.write(cmd, scpi_terminator)
         return await self.read(scpi_terminator, *args, **kwargs)
 
-    async def read_number(self, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> Decimal:
+    @staticmethod
+    def _map_scpi_number_to_decimal(value: str) -> Decimal:
+        result = Decimal(value)
+        # Treat special SCPI values
+        # Not A Number
+        if result == Decimal("9.91e37"):
+            return Decimal("NaN")
+        # Positive infinity
+        if result == Decimal("9.9e37"):
+            return Decimal("Infinity")
+        # Negative infinity
+        if result == Decimal("-9.9e37"):
+            return Decimal("-Infinity")
+        return result
+
+    async def read_number(self, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> Iterable[Decimal]:
         """
         Read a number from the device.
 
@@ -180,23 +196,12 @@ class GenericScpiMixin:
 
         Returns
         -------
-        Decimal
-            The number read from the device. This might also be NaN, Infinity, or -Infinity.
+        iterable of Decimal
+            The number(s) read from the device. This might also be NaN, Infinity, or -Infinity.
         """
-        result = Decimal(await self.read(scpi_terminator, *args, **kwargs))
-        # Treat special SCPI values
-        # Not A Number
-        if result == Decimal("9.91e37"):
-            return Decimal("NaN")
-        # Positive infinity
-        if result == Decimal("9.9e37"):
-            return Decimal("Infinity")
-        # Negative infinity
-        if result == Decimal("-9.9e37"):
-            return Decimal("-Infinity")
-        return result
+        return map(self._map_scpi_number_to_decimal, await self.read(scpi_terminator, *args, **kwargs))
 
-    async def query_number(self, cmd: str, scpi_terminator: str | None = None) -> Decimal:
+    async def query_number(self, cmd: str, scpi_terminator: str | None = None) -> Iterable[Decimal]:
         """
         Send a command and read back a number.
 
@@ -209,8 +214,8 @@ class GenericScpiMixin:
 
         Returns
         -------
-        Decimal
-            The number read from the device. This might also be NaN, Infinity, or -Infinity.
+        iterable of Decimal
+            The number(s) read from the device. This might also be NaN, Infinity, or -Infinity.
         """
         await self.write(cmd, scpi_terminator)
         return await self.read_number(scpi_terminator)

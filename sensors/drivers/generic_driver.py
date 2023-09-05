@@ -35,17 +35,22 @@ class GenericDriverMixin:
                 logging.getLogger(__name__).error("Error during shutdown of: %s", self, exc_info=result)
 
     @staticmethod
-    def _read_device(config: dict[str, Any]) -> AsyncGenerator[Any, None]:
+    def _read_device(config: dict[str, Any]) -> AsyncGenerator[tuple[int, Any], None]:
         on_read: partial
         timeout: float
         on_read, timeout = config["on_read"]
         if inspect.isasyncgenfunction(on_read.func):
             return stream.iterate(on_read()) | pipe.timeout(timeout)
-        return (
-            stream.repeat(config["on_read"], interval=config["interval"])
-            | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-            | pipe.concat(task_limit=1)
-        )
+        else:
+            return (
+                stream.repeat(config["on_read"], interval=config["interval"])
+                | pipe.starmap(
+                    lambda func, interval: stream.iterate(func())
+                    | pipe.enumerate()
+                    | pipe.timeout(min(interval, timeout))
+                )
+                | pipe.concat(task_limit=1)
+            )
 
     def on_error(self, exc: BaseException) -> AsyncGenerator[None, None]:
         """
@@ -76,8 +81,8 @@ class GenericDriverMixin:
             | pipe.filter(lambda result: False),
             self._read_device(config)
             | pipe.map(
-                lambda item: DataEvent(
-                    sender=config["uuid"], topic=config["topic"], value=item, sid=0, unit=config["unit"]
+                lambda sid, item: DataEvent(
+                    sender=config["uuid"], topic=config["topic"], value=item, sid=sid, unit=config["unit"]
                 )
             )
             | finally_action.pipe(stream.call(self._clean_up, config["on_disconnect"])),
