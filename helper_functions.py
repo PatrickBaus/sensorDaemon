@@ -283,18 +283,6 @@ async def catch(
             yield stream.empty()
 
 
-@operator
-async def just_iterate(value):
-    if inspect.isawaitable(value):
-        it = await value
-    else:
-        it = value
-
-    for item in it:
-        await asyncio.sleep(0)
-        yield item
-
-
 def create_device_function(device: Any, func_call: FunctionCallConfig) -> tuple[partial, float]:
     """
     Creates a partial function from the function call with the parameters given and returns it

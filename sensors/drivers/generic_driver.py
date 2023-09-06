@@ -14,7 +14,7 @@ from aiostream import pipe, stream
 from async_event_bus import event_bus
 from data_types import DataEvent
 from errors import ConfigurationError
-from helper_functions import catch, create_device_function, finally_action, just_iterate
+from helper_functions import catch, create_device_function, finally_action
 
 
 class GenericDriverMixin:
@@ -42,8 +42,13 @@ class GenericDriverMixin:
         if inspect.isasyncgenfunction(on_read.func):
             return stream.iterate(on_read()) | pipe.timeout(timeout)
         return (
-            stream.repeat(config["on_read"], interval=config["interval"])
-            | pipe.starmap(lambda func, interval: just_iterate(func()) | pipe.timeout(interval))
+            stream.repeat(config["on_read"], interval=config["interval"])  # Repeat for every new config
+            | pipe.starmap(
+                lambda func, interval: stream.just(func())  # Get the results of the query (a mapping/list)
+                | pipe.concatmap(stream.iterate)  # iterate the results
+                | pipe.enumerate()  # add the sid for each result in order
+                | pipe.timeout(interval)  # time out if no result is produced within interval
+            )
             | pipe.concat(task_limit=1)
         )
 
@@ -75,7 +80,7 @@ class GenericDriverMixin:
             | pipe.concat(task_limit=1)
             | pipe.filter(lambda result: False),
             self._read_device(config)
-            | pipe.map(
+            | pipe.starmap(
                 lambda sid, item: DataEvent(
                     sender=config["uuid"], topic=config["topic"], value=item, sid=sid, unit=config["unit"]
                 )
