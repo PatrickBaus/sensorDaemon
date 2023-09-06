@@ -40,7 +40,7 @@ class GenericDriverMixin:
         timeout: float
         on_read, timeout = config["on_read"]
         if inspect.isasyncgenfunction(on_read.func):
-            return stream.iterate(on_read()) | pipe.timeout(timeout)
+            return stream.iterate(on_read()) | pipe.map(lambda value: (0, value)) | pipe.timeout(timeout)
         return (
             stream.repeat(config["on_read"], interval=config["interval"])  # Repeat for every new config
             | pipe.starmap(
