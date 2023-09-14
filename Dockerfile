@@ -8,8 +8,7 @@ ARG SSH_DEPLOY_KEY
 RUN COLOUR='\e[1;93m' && \
   echo -e "${COLOUR}Installing build dependencies...\e[0m" && \
   apk --no-cache add --virtual=build-dependencies \
-    openssh-client-common \
-    openssh-client-default \
+    openssh \
     git \
     py3-pip && \
   echo -e "${COLOUR}Done.\e[0m"
