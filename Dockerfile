@@ -9,10 +9,11 @@ ARG SSH_DEPLOY_KEY
 # Build the
 RUN COLOUR='\e[1;93m' && \
   echo -e "${COLOUR}Installing build dependencies...\e[0m" && \
+  if [ "$TARGETPLATFORM" = "linux/arm/v6" ] || [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then BUILD_DEPS="cargo rust"; fi && \
   apk --no-cache add --virtual=build-dependencies \
-    cargo \
-    rust \
-    openssh \
+    ${BUILD_DEPS} \
+    openssh-client-common \
+    openssh-client-default \
     git \
     py3-pip && \
   echo -e "${COLOUR}Done.\e[0m"
