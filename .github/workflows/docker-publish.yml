@@ -19,7 +19,7 @@ jobs:
       - name: Convert repository name to lowercase
         id: set-variables
         run: |
-          echo "image=${IMAGE_NAME,,}" >>${GITHUB_OUTPUT}
+          echo "image=${{ env.REGISTRY }}/${IMAGE_NAME,,}" >>${GITHUB_OUTPUT}
           # Only enable push on push events (already covered above, but this is a safeguard)
           echo "push=${{ github.event_name != 'pull_request' }}" >>${GITHUB_OUTPUT}
 
@@ -29,7 +29,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ steps.set-variables.outputs.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
