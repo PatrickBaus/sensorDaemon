@@ -12,7 +12,6 @@ env:
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
 
-
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -80,6 +79,9 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          build-args: |
+            GIT_REPOSITORY=${{ github.repository }}
+            "SSH_DEPLOY_KEY=${{ secrets.DOCKER_DEPLOY_KEY }}"
           outputs: type=image,name= ${{ needs.prepare.outputs.image }},push-by-digest=true,name-canonical=true,push=true
           tags: ${{ needs.prepare.outputs.meta-tags }}
           labels: ${{ needs.prepare.outputs.meta-labels }}
