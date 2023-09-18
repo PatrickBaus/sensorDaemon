@@ -38,7 +38,6 @@ jobs:
     outputs:
       image: ${{ steps.set-variables.outputs.image }}
       push: ${{ steps.set-variables.outputs.push }}
-      meta-tags: ${{ steps.meta.outputs.tags }}
       meta-labels: ${{ steps.meta.outputs.labels }}
       meta-json: ${{ steps.meta.outputs.json }}
 
@@ -83,7 +82,6 @@ jobs:
             GIT_REPOSITORY=${{ github.repository }}
             "SSH_DEPLOY_KEY=${{ secrets.DOCKER_DEPLOY_KEY }}"
           outputs: type=image,name= ${{ needs.prepare.outputs.image }},push-by-digest=true,name-canonical=true,push=true
-          tags: ${{ needs.prepare.outputs.meta-tags }}
           labels: ${{ needs.prepare.outputs.meta-labels }}
 
       - name: Export digest
