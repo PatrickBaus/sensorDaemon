@@ -131,6 +131,13 @@ class MqttManager:
                 self.__host,
                 self.__port,
             )
+        elif error_code == "timed out":
+            self.__logger.error(
+                "Worker (%s): The connection to MQTT server (%s:%i) timed out. Retrying.",
+                worker_name,
+                self.__host,
+                self.__port,
+            )
         else:
             self.__logger.exception("Worker (%s): MQTT connection error (code: %s). Retrying.", worker_name, error_code)
 
