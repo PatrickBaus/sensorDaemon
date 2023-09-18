@@ -216,7 +216,7 @@ class MqttManager:
                 )  # Connection refused is code 111
                 error_code = 111
             except aiomqtt.error.MqttError as exc:
-                error = re.search(r"^\[Errno ([+-]\d+)\]", str(exc))
+                error = re.search(r"^\[Errno ([+-]?\d+)\]", str(exc))
                 if error is not None:
                     self._log_mqtt_error_code(
                         worker_name, error_code=int(error.group(1)), previous_error_code=error_code
