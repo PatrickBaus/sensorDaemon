@@ -117,6 +117,13 @@ class MqttManager:
                 self.__host,
                 self.__port,
             )
+        elif error_code == -2:
+            self.__logger.error(
+                "Worker (%s): Failure in name resolution of MQTT server (%s:%i). Retrying.",
+                worker_name,
+                self.__host,
+                self.__port,
+            )
         elif error_code == -3:
             self.__logger.error(
                 "Worker (%s): Temporary failure in name resolution of MQTT server (%s:%i). Retrying.",
@@ -125,7 +132,7 @@ class MqttManager:
                 self.__port,
             )
         else:
-            self.__logger.exception("Worker (%s): MQTT connection error (code: %i). Retrying.", worker_name, error_code)
+            self.__logger.exception("Worker (%s): MQTT connection error (code: %s). Retrying.", worker_name, error_code)
 
     async def consumer(  # pylint: disable=too-many-branches
         self,
@@ -209,7 +216,7 @@ class MqttManager:
                 )  # Connection refused is code 111
                 error_code = 111
             except aiomqtt.error.MqttError as exc:
-                error = re.search(r"^\[Errno (\d+)\]", str(exc))
+                error = re.search(r"^\[Errno ([+-]\d+)\]", str(exc))
                 if error is not None:
                     self._log_mqtt_error_code(
                         worker_name, error_code=int(error.group(1)), previous_error_code=error_code
