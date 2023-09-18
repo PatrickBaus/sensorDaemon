@@ -38,8 +38,9 @@ jobs:
     outputs:
       image: ${{ steps.set-variables.outputs.image }}
       push: ${{ steps.set-variables.outputs.push }}
-      meta-labels: ${{ steps.meta.outputs.labels }}
       meta-json: ${{ steps.meta.outputs.json }}
+      meta-labels: ${{ steps.meta.outputs.labels }}
+      meta-version: ${{ steps.meta.outputs.version }}
 
   build:
     needs:
