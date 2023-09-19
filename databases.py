@@ -148,12 +148,16 @@ class Context:  # pylint: disable=too-few-public-methods
         database_name = None if database_model.get_settings() is None else database_model.get_settings().name
         database_name = str(database_model) if database_name is None else database_name
 
-        if error_code == 104:
-            self.__logger.info("Database worker (%s): Database disconnected. Waiting to restart.", database_name)
+        if error_code is None:
+            self.__logger.info("Database worker (%s): Database connected.", database_name)
+        elif error_code == -2:
+            self.__logger.error("Database worker (%s): Failure in name resolution. Retrying.", database_name)
+        elif error_code == 104:
+            self.__logger.error("Database worker (%s): Database disconnected. Waiting to restart.", database_name)
         elif error_code == 111:
-            self.__logger.info("Database worker (%s): Connection refused. Waiting to start.", database_name)
+            self.__logger.error("Database worker (%s): Connection refused. Waiting to start.", database_name)
         elif error_code == 211:
-            self.__logger.info("Database worker (%s): Initialising replica set. Waiting to start.", database_name)
+            self.__logger.error("Database worker (%s): Initialising replica set. Waiting to start.", database_name)
         elif error_code == "resume_token":
             self.__logger.error(
                 "Database worker (%s): Cannot resume Mongo DB change stream, there is no token. Starting from scratch.",
@@ -199,18 +203,19 @@ class Context:  # pylint: disable=too-few-public-methods
                     pipeline, full_document="updateLookup", resume_after=resume_token
                 ) as change_stream:
                     previous_error_code = None
+                    self._log_database_error(database_model, previous_error_code, 0, timeout=0)
                     async for change in change_stream:
                         # TODO: catch parser errors!
                         if change["operationType"] == "delete":
                             yield ChangeType.REMOVE, change["documentKey"]["_id"]
                         elif change["operationType"] == "update" or change["operationType"] == "replace":
-                            yield ChangeType.UPDATE, database_model.parse_obj(change["fullDocument"])
+                            yield ChangeType.UPDATE, database_model.model_validate(change["fullDocument"])
                         elif change["operationType"] == "insert":
-                            yield ChangeType.ADD, database_model.parse_obj(change["fullDocument"])
+                            yield ChangeType.ADD, database_model.model_validate(change["fullDocument"])
 
                     resume_token = change_stream.resume_token
             except pymongo.errors.AutoReconnect as exc:
-                error = re.search(r"\[Errno (\d+)\]", str(exc))
+                error = re.search(r"\[Errno ([+-]?\d+)\]", str(exc))
                 error_code: str | int = str(exc) if error is None else int(error.group(1))
                 self._log_database_error(database_model, error_code, previous_error_code, timeout)
                 previous_error_code = error_code
