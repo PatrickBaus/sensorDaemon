@@ -148,6 +148,6 @@ class TinkerforgeTransport(IPConnectionAsync):
                 )
             )
             | pipe.switchmap(self._stream_transport)
-            | retry.pipe((ConnectionError, asyncio.TimeoutError), self.reconnect_interval)
+            | retry.pipe((OSError, asyncio.TimeoutError), self.reconnect_interval)
         )
         return data_stream
