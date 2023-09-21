@@ -9,7 +9,7 @@ import asyncio
 import logging
 import re
 from contextlib import AsyncExitStack
-from typing import Any, Set
+from typing import Any, Unpack
 from uuid import UUID
 
 import aiomqtt
@@ -19,7 +19,7 @@ from aiostream import pipe, stream
 from async_event_bus import TopicNotRegisteredError, event_bus
 from data_types import DataEvent
 from databases import CONTEXTS as DATABASE_CONTEXTS
-from databases import MongoDb
+from databases import DatabaseParams, MongoDb
 from errors import UnknownDriverError
 from helper_functions import cancel_all_tasks, catch, iterate_safely
 from sensors.transports.transport_factory import transport_factory
@@ -241,13 +241,13 @@ class MqttManager:
                     self.__port,
                 )
 
-    async def cancel_tasks(self, tasks: Set[asyncio.Task]) -> None:
+    async def cancel_tasks(self, tasks: set[asyncio.Task]) -> None:
         """
         Cancel all tasks and log any exceptions raised.
 
         Parameters
         ----------
-        tasks: Set[asyncio.Task]
+        tasks: set[asyncio.Task]
             The tasks to cancel
         """
         try:
@@ -279,17 +279,17 @@ class MqttManager:
 class DatabaseManager:
     """This manager reads the configuration data from the database and publishes it on the event_bus network."""
 
-    def __init__(self, database_url: str) -> None:
+    def __init__(self, **kwargs: Unpack[DatabaseParams]) -> None:
         self.__logger = logging.getLogger(__name__)
-        self.__database_url = database_url
+        self.__database_driver = MongoDb(**kwargs)
 
-    async def cancel_tasks(self, tasks: Set[asyncio.Task]) -> None:
+    async def cancel_tasks(self, tasks: set[asyncio.Task]) -> None:
         """
         Cancel all tasks and log any exceptions raised.
 
         Parameters
         ----------
-        tasks: Set[asyncio.Task]
+        tasks: set[asyncio.Task]
             The tasks to cancel
         """
         try:
@@ -308,8 +308,7 @@ class DatabaseManager:
                     tasks: set[asyncio.Task] = set()
                     stack.push_async_callback(self.cancel_tasks, tasks)
 
-                    database_driver = MongoDb(self.__database_url)
-                    await stack.enter_async_context(database_driver)
+                    await stack.enter_async_context(self.__database_driver)
                     context_managers = await asyncio.gather(
                         *[stack.enter_async_context(context()) for context in DATABASE_CONTEXTS]
                     )

@@ -37,6 +37,46 @@ from _version import __version__
 from managers import DatabaseManager, HostManager, MqttManager
 
 
+def load_secret(name: str, *args, **kwargs) -> str:
+    """
+    Loads a sensitive parameter either from the environment variable or Docker secret file. See
+    https://docs.docker.com/engine/swarm/secrets/ for details. The env variable read for the file
+    path is automatically appended by '_FILE'. Using the name 'MY_SECRET', the secret is either read from 'MY_SECRET' or
+    the secret path is read from 'MY_SECRET_FILE'. In the latter case the secret is then read from  the file
+    'MY_SECRET_FILE'. The secret file is preferred over the env variable.
+
+    Parameters
+    ----------
+    name: str
+        The name of the env variable containing the secret or the file path.
+    Returns
+    -------
+    str:
+        The secret read either from the environment or secrets file.
+    """
+    # Remove the default return value for testing against the secrets file, we will put it back later.
+    if "default" in kwargs:
+        has_default = True
+        default_value = kwargs.pop("default")
+    else:
+        has_default = False
+        default_value = None
+    try:
+        with open(
+            config(f"{name}_FILE", *args, **kwargs), newline=None, mode="r", encoding="utf-8"
+        ) as secret_file:  # pylint: disable=unspecified-encoding
+            return secret_file.read().rstrip("\n")
+    except UndefinedValueError:
+        pass
+
+    if has_default:
+        kwargs["default"] = default_value
+    try:
+        return config(name, *args, **kwargs)
+    except UndefinedValueError:
+        raise UndefinedValueError(f"{name} not found. Declare it as envvar or define a default value.") from None
+
+
 class Kraken:
     """
     Main daemon, that runs in the background and monitors all sensors. It will
@@ -66,7 +106,9 @@ class Kraken:
             asyncio.get_running_loop().add_signal_handler(sig, lambda: asyncio.create_task(self.__shutdown()))
 
         # Read either environment variable, settings.ini or .env file
-        database_url = config("SENSORS_DATABASE_HOST")
+        database_params = {"host": config("SENSORS_DATABASE_HOST")}
+        database_params["username"] = load_secret("SENSORS_DATABASE_USERNAME", default=None)
+        database_params["password"] = load_secret("SENSORS_DATABASE_PASSWORD", default=None)
         # wamp_host = config('WAMP_HOST')
         # wamp_port = config('WAMP_PORT', cast=int, default=18080)
         # wamp_url = f"ws://{wamp_host}:{wamp_port}/ws"
@@ -86,7 +128,7 @@ class Kraken:
             self.__logger.warning("This is the node with id: %s", node_id)
 
         mqtt_manager = MqttManager(node_id=node_id, host=mqtt_host, port=mqtt_port)
-        database_manager = DatabaseManager(database_url=database_url)
+        database_manager = DatabaseManager(**database_params)
         host_manager = HostManager(node_id=node_id)
 
         tasks = set()

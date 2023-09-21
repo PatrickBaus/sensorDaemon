@@ -1,5 +1,5 @@
 aiostream~=0.4.5
-aiomqtt~=1.2.0
+aiomqtt~=1.2.1
 beanie~=1.22.6
 gpib-ctypes>=0.3.0
 prologix-gpib-async~=1.4.12

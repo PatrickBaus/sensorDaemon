@@ -18,7 +18,7 @@ experiments in real-time.
 both large scale servers and small [Raspberry Pis](https://www.raspberrypi.com/).
 
 # Setup
-The `LabKraken` is best installed via the Docker repository provided with this repository.
+`LabKraken` is best installed via the Docker repository provided with this repository.
 
 ## ... via [`docker-compose`](https://github.com/docker/compose)
 

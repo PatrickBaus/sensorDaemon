@@ -8,7 +8,7 @@ import asyncio
 import logging
 import re
 from types import TracebackType
-from typing import Any, AsyncGenerator, Type
+from typing import Any, AsyncGenerator, Type, TypedDict, Unpack
 
 try:
     from typing import Self  # type: ignore # Python 3.11
@@ -33,16 +33,29 @@ from database.models import (
 )
 
 
+class DatabaseParams(TypedDict):
+    """Parameters used for the configuration database. These will be passed to MongoClient()."""
+
+    host: str
+    username: str | None
+    password: str | None
+
+
 class MongoDb:
     """
     The Mongo DB abstraction for the settings database.
     """
 
-    def __init__(self, hostname: str | None = None, port: int | None = None) -> None:
-        self.__hostname = hostname
-        self.__port = port
+    def __init__(self, **kwargs: Unpack[DatabaseParams]) -> None:
+        self.__params = kwargs
         self.__client = None
         self.__logger = logging.getLogger(__name__)
+
+    @property
+    def hostname(self) -> str:
+        """Return the hostname including the port. Strips usernames and passwords."""
+        # strip usernames and password
+        return self.__params["host"][self.__params["host"].find("@") + 1 : self.__params["host"].rfind("/?")]
 
     async def __aenter__(self) -> Self:
         await self.__connect()
@@ -60,21 +73,14 @@ class MongoDb:
         connection_attempt = 1
         timeout = 0.5  # in s TODO: Make configurable
         while "database not connected":
-            hostname_string = self.__hostname if self.__port is None else f"{self.__hostname}:{self.__port}"
             if connection_attempt == 1:
                 self.__logger.info(
                     "Connecting to MongoDB (%s).",
-                    hostname_string[hostname_string.find("@") + 1 : hostname_string.rfind("/?")],
+                    self.hostname,
                 )
-            if self.__port is not None:
-                self.__client = motor.motor_asyncio.AsyncIOMotorClient(
-                    self.__hostname, self.__port, serverSelectionTimeoutMS=timeout * 1000, uuidRepresentation="standard"
-                )
-            else:
-                self.__client = motor.motor_asyncio.AsyncIOMotorClient(
-                    self.__hostname,
-                    serverSelectionTimeoutMS=timeout * 1000,
-                )
+            self.__client = motor.motor_asyncio.AsyncIOMotorClient(
+                **self.__params, serverSelectionTimeoutMS=timeout * 1000, uuidRepresentation="standard"
+            )
 
             database = self.__client.sensor_config
             try:
@@ -90,14 +96,14 @@ class MongoDb:
                 )
                 self.__logger.info(
                     "MongoDB (%s) connected.",
-                    hostname_string[hostname_string.find("@") + 1 : hostname_string.rfind("/?")],
+                    self.hostname,
                 )
             except pymongo.errors.AutoReconnect as exc:
                 if connection_attempt == 1:
                     # Only log the error once
                     self.__logger.error(
                         "Cannot connect to config database at %s. Error: %s. Retrying in %f s.",
-                        hostname_string[hostname_string.find("@") + 1 : hostname_string.rfind("/?")],
+                        self.hostname,
                         exc,
                         timeout,
                     )
