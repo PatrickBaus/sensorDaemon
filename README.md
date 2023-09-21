@@ -1,6 +1,7 @@
 [![GitHub release](https://img.shields.io/github/release/PatrickBaus/sensorDaemon.svg)](../../releases/latest)
 [![CI workflow](https://img.shields.io/github/actions/workflow/status/PatrickBaus/sensorDaemon/ci.yml?branch=master&label=ci&logo=github)](../../actions?workflow=ci)
 [![code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](../../pkgs/container/sensordaemon)
 # LabKraken Sensor Daemon
 `LabKraken` is a logging daemon for lab applications. It can extract data from a number of sources commonly found in
