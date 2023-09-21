@@ -8,7 +8,7 @@ import asyncio
 import logging
 import re
 from types import TracebackType
-from typing import Any, AsyncGenerator, Type, TypedDict, Unpack
+from typing import Any, AsyncGenerator, NotRequired, Type, TypedDict, Unpack
 
 try:
     from typing import Self  # type: ignore # Python 3.11
@@ -37,8 +37,8 @@ class DatabaseParams(TypedDict):
     """Parameters used for the configuration database. These will be passed to MongoClient()."""
 
     host: str
-    username: str | None
-    password: str | None
+    username: NotRequired[str | None]
+    password: NotRequired[str | None]
 
 
 class MongoDb:

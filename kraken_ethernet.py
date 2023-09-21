@@ -91,6 +91,22 @@ class Kraken:
         self.__logger = logging.getLogger(__name__)
         self.__shutdown_event = asyncio.Event()
 
+    @staticmethod
+    def load_database_parameters():
+        """Loads database parameters from env variables"""
+        result = {"host": config("SENSORS_DATABASE_HOST")}
+        # Optionally use a username and password from the env param (or secret file)
+        try:
+            result["username"] = load_secret("SENSORS_DATABASE_USERNAME")
+        except UndefinedValueError:
+            pass
+        try:
+            result["password"] = load_secret("SENSORS_DATABASE_PASSWORD")
+        except UndefinedValueError:
+            pass
+
+        return result
+
     async def run(self):  # pylint: disable=too-many-locals
         """
         Start the daemon and keep it running through the while (True)
@@ -105,10 +121,7 @@ class Kraken:
         for sig in signals:
             asyncio.get_running_loop().add_signal_handler(sig, lambda: asyncio.create_task(self.__shutdown()))
 
-        # Read either environment variable, settings.ini or .env file
-        database_params = {"host": config("SENSORS_DATABASE_HOST")}
-        database_params["username"] = load_secret("SENSORS_DATABASE_USERNAME", default=None)
-        database_params["password"] = load_secret("SENSORS_DATABASE_PASSWORD", default=None)
+        database_params = self.load_database_parameters()
         # wamp_host = config('WAMP_HOST')
         # wamp_port = config('WAMP_PORT', cast=int, default=18080)
         # wamp_url = f"ws://{wamp_host}:{wamp_port}/ws"
