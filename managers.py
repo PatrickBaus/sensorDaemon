@@ -131,6 +131,13 @@ class MqttManager:
                 self.__host,
                 self.__port,
             )
+        elif error_code == -5:
+            self.__logger.error(
+                "Worker (%s): Unknown host name of MQTT server (%s:%i). Retrying.",
+                worker_name,
+                self.__host,
+                self.__port,
+            )
         elif error_code == "timed out":
             self.__logger.error(
                 "Worker (%s): The connection to MQTT server (%s:%i) timed out. Retrying.",
