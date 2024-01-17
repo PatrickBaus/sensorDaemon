@@ -98,49 +98,49 @@ class MqttManager:
             return  # Only log an error once
         if error_code == 111:
             self.__logger.error(
-                "Worker (%s): Connection refused by MQTT server (%s:%i). Retrying.",
+                "Worker (%s): Connection refused by MQTT broker (%s:%i). Retrying.",
                 worker_name,
                 self.__host,
                 self.__port,
             )
         elif error_code == 113:
             self.__logger.error(
-                "Worker (%s): MQTT server (%s:%i) is unreachable. Retrying.",
+                "Worker (%s): MQTT broker (%s:%i) is unreachable. Retrying.",
                 worker_name,
                 self.__host,
                 self.__port,
             )
         elif error_code == 7:
             self.__logger.error(
-                "Worker (%s): The connection to MQTT server (%s:%i) was lost. Retrying.",
+                "Worker (%s): The connection to MQTT broker (%s:%i) was lost. Retrying.",
                 worker_name,
                 self.__host,
                 self.__port,
             )
         elif error_code == -2:
             self.__logger.error(
-                "Worker (%s): Failure in name resolution of MQTT server (%s:%i). Retrying.",
+                "Worker (%s): Failure in name resolution of MQTT broker (%s:%i). Retrying.",
                 worker_name,
                 self.__host,
                 self.__port,
             )
         elif error_code == -3:
             self.__logger.error(
-                "Worker (%s): Temporary failure in name resolution of MQTT server (%s:%i). Retrying.",
+                "Worker (%s): Temporary failure in name resolution of MQTT broker (%s:%i). Retrying.",
                 worker_name,
                 self.__host,
                 self.__port,
             )
         elif error_code == -5:
             self.__logger.error(
-                "Worker (%s): Unknown host name of MQTT server (%s:%i). Retrying.",
+                "Worker (%s): Unknown host name of MQTT broker (%s:%i). Retrying.",
                 worker_name,
                 self.__host,
                 self.__port,
             )
         elif error_code == "timed out":
             self.__logger.error(
-                "Worker (%s): The connection to MQTT server (%s:%i) timed out. Retrying.",
+                "Worker (%s): The connection to MQTT broker (%s:%i) timed out. Retrying.",
                 worker_name,
                 self.__host,
                 self.__port,
