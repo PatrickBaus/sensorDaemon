@@ -223,7 +223,7 @@ class MqttManager:
                         event = None  # Get a new event to publish
                         input_queue.task_done()
                         error_code = 0  # 0 = success
-            except aiomqtt.exceptions.MqttCodeError as exc:
+            except aiomqtt.MqttCodeError as exc:
                 self._log_mqtt_error_code(worker_name, error_code=exc.rc, previous_error_code=error_code)
                 error_code = exc.rc
             except ConnectionRefusedError:
@@ -231,7 +231,7 @@ class MqttManager:
                     worker_name, error_code=111, previous_error_code=error_code
                 )  # Connection refused is code 111
                 error_code = 111
-            except aiomqtt.exceptions.MqttError as exc:
+            except aiomqtt.MqttError as exc:
                 error = re.search(r"^\[Errno ([+-]?\d+)\]", str(exc))
                 if error is not None:
                     self._log_mqtt_error_code(
