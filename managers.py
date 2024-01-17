@@ -190,7 +190,9 @@ class MqttManager:
             last_reconnect_attempt = asyncio.get_running_loop().time()
             try:
                 async with aiomqtt.Client(
-                    hostname=self.__host, port=self.__port, client_id=f"Labkraken-{self.__node_id}_worker-{worker_name}"
+                    hostname=self.__host,
+                    port=self.__port,
+                    identifier=f"Labkraken-{self.__node_id}_worker-{worker_name}",
                 ) as mqtt_client:
                     self.__logger.info(
                         "Worker (%s): Successfully connected to MQTT broker (%s:%i).",
@@ -221,7 +223,7 @@ class MqttManager:
                         event = None  # Get a new event to publish
                         input_queue.task_done()
                         error_code = 0  # 0 = success
-            except aiomqtt.error.MqttCodeError as exc:
+            except aiomqtt.exceptions.MqttCodeError as exc:
                 self._log_mqtt_error_code(worker_name, error_code=exc.rc, previous_error_code=error_code)
                 error_code = exc.rc
             except ConnectionRefusedError:
@@ -229,7 +231,7 @@ class MqttManager:
                     worker_name, error_code=111, previous_error_code=error_code
                 )  # Connection refused is code 111
                 error_code = 111
-            except aiomqtt.error.MqttError as exc:
+            except aiomqtt.exceptions.MqttError as exc:
                 error = re.search(r"^\[Errno ([+-]?\d+)\]", str(exc))
                 if error is not None:
                     self._log_mqtt_error_code(
