@@ -1,4 +1,4 @@
 """
 Kraken version information.
 """
-__version__ = "4.3.4"
+__version__ = "4.3.6"
