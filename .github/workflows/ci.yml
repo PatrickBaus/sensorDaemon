@@ -32,7 +32,8 @@ jobs:
     - name: Install dependencies for testing
       run: |
         python3 -m pip install --upgrade pip
-        python3 -m pip install .[test]
+        python3 -m pip install -r requirements.txt
+        python3 -m pip install -r test-requirements.txt
     - name: Test with pytest
       env:
         GIT_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
