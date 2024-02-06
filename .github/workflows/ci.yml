@@ -2,7 +2,6 @@ name: ci
 
 on:
   push:
-    branches: [ "master" ]
     # Publish pep440 tags as releases.
     tags: [ '*.*.*' ]
   pull_request:
