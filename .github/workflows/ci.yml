@@ -5,6 +5,7 @@ on:
     branches: [ "master" ]
     # Publish pep440 tags as releases.
     tags: [ '*.*.*' ]
+  pull_request:
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -89,9 +90,9 @@ jobs:
           - linux/arm/v7
           - linux/arm64
         exclude:
-          # Only build packages for ARMv6 and ARMv7 for tagged releases
-          - platform: ${{ startsWith(github.ref, 'refs/tags/') && 'nothing' || 'linux/arm/v6' }}
-          - platform: ${{ startsWith(github.ref, 'refs/tags/') && 'nothing' || 'linux/arm/v7' }}
+          # Only build packages for ARMv6 and ARMv7 for tagged releases or pull requests
+          - platform: ${{ startsWith(github.ref, 'refs/tags/') && 'nothing' || ${{ github.event_name == 'pull_request' }} && 'nothing' || 'linux/arm/v6' }}
+          - platform: ${{ startsWith(github.ref, 'refs/tags/') && 'nothing' || ${{ github.event_name == 'pull_request' }} && 'nothing' || 'linux/arm/v7' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
