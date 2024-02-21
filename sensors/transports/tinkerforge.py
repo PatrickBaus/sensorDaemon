@@ -98,15 +98,12 @@ class TinkerforgeTransport(IPConnectionAsync):
     @staticmethod
     async def notify_device(enumeration: tuple[EnumerationType, Device]) -> None:
         """
-        Filter enumerations. If the device exists, it returns False.
+        Call the "nodes/tinkerforge/{device.uid}/remove" event bus topic if the
+        enumeration type is DISCONNECTED.
+
         Parameters
         ----------
         enumeration tuple of EnumerationType and Device
-
-        Returns
-        -------
-        bool
-            Returns True if a new device should be created
         """
         enumeration_type, device = enumeration
         if enumeration_type is EnumerationType.DISCONNECTED:
