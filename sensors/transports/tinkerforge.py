@@ -115,7 +115,7 @@ class TinkerforgeTransport(IPConnectionAsync):
             stream.call(transport.enumerate) | pipe.filter(lambda x: False),  # drop the result, because we don't care
             stream.iterate(transport.read_enumeration())
             | pipe.action(transport.notify_device)  # Notify clients to shut down if necessary
-            | pipe.filter(transport.filter_enumerations)  # Only proceed with if the client is not yet created
+            | pipe.filter(transport.filter_enumerations)  # Only proceed if the client is not yet created
             | pipe.starmap(lambda enumeration_type, sensor: TinkerforgeSensor(sensor))
             | pipe.map(lambda sensor: sensor.stream_data())
             | pipe.flatten(),
