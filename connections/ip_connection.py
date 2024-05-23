@@ -1,6 +1,7 @@
 """
 This file contains an ip connection class, that simplifies the asyncio streamreader and streamwriter
 """
+
 from __future__ import annotations
 
 import asyncio

@@ -1,6 +1,7 @@
 """
 This is a wrapper for LabNode devices.
 """
+
 # pylint: disable=duplicate-code
 from __future__ import annotations
 
@@ -72,9 +73,9 @@ class LabnodeSensor:
             )
             | pipe.map(self._create_config)
             | pipe.switchmap(
-                lambda config: stream.empty()
-                if config is None or not config["enabled"]
-                else (self._configure_and_stream(config))
+                lambda config: (
+                    stream.empty() if config is None or not config["enabled"] else (self._configure_and_stream(config))
+                )
             )
         )
 

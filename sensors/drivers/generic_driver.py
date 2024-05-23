@@ -1,6 +1,7 @@
 """
 This is an asyncIO driver for a generic SCPI compatible device.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -145,16 +146,18 @@ class GenericDriverMixin:
                 stream.just(initial_config), stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{self.__uuid}/update"))
             )
             | pipe.action(
-                lambda config: logging.getLogger(__name__).info("Got new configuration for: %s.", self)
-                if config is not None
-                else logging.getLogger(__name__).info("Removed configuration for: %s.", self)
+                lambda config: (
+                    logging.getLogger(__name__).info("Got new configuration for: %s.", self)
+                    if config is not None
+                    else logging.getLogger(__name__).info("Removed configuration for: %s.", self)
+                )
             )
             | pipe.map(self._parse_config)
             | pipe.action(self._log_config_progress)
             | pipe.switchmap(
-                lambda config: stream.empty()
-                if config is None or not config["enabled"]
-                else (self._configure_and_stream(config))
+                lambda config: (
+                    stream.empty() if config is None or not config["enabled"] else (self._configure_and_stream(config))
+                )
             )
         )
 

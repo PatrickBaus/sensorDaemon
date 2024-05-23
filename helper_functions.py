@@ -1,6 +1,7 @@
 """
 A collection of helper functions used in Kraken.
 """
+
 from __future__ import annotations
 
 import asyncio

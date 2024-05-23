@@ -2,6 +2,7 @@
 This file contains the GPIB device factory, that produces sensor devices using
 available special GPIB device drivers.
 """
+
 from typing import Any
 
 from errors import UnknownDriverError
@@ -62,8 +63,7 @@ class SensorFactory:
             device = self.__available_drivers[driver]
         except KeyError:
             raise UnknownDriverError(f"No driver available for {driver}") from None
-        else:
-            return device(connection=connection, **kwargs)
+        return device(connection=connection, **kwargs)
 
 
 sensor_factory = SensorFactory()
