@@ -1,6 +1,7 @@
 """
 This is a generic transport driver implementing the basic streams used by transports, that cannot enumerate its devices.
 """
+
 from __future__ import annotations
 
 import logging

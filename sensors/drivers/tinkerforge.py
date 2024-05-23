@@ -1,6 +1,7 @@
 """
 This is a wrapper for Tinkerforge devices.
 """
+
 # pylint: disable=duplicate-code
 from __future__ import annotations
 
@@ -117,28 +118,32 @@ class TinkerforgeSensor:
                 | pipe.map(lambda x: None),
             )
             | pipe.switchmap(
-                lambda sensor: stream.empty()
-                if sensor is None
-                else (
-                    self._stream_config_updates(sensor)
-                    | pipe.switchmap(
-                        lambda config: stream.chain(
-                            stream.just(config),
-                            stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{config['uuid']}/remove"))[:1]
-                            | pipe.map(lambda x: None),
+                lambda sensor: (
+                    stream.empty()
+                    if sensor is None
+                    else (
+                        self._stream_config_updates(sensor)
+                        | pipe.switchmap(
+                            lambda config: stream.chain(
+                                stream.just(config),
+                                stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{config['uuid']}/remove"))[:1]
+                                | pipe.map(lambda x: None),
+                            )
                         )
-                    )
-                    | pipe.action(
-                        lambda config: logging.getLogger(__name__).info(
-                            "Got new configuration for: %s",
-                            sensor.device,
+                        | pipe.action(
+                            lambda config: logging.getLogger(__name__).info(
+                                "Got new configuration for: %s",
+                                sensor.device,
+                            )
                         )
-                    )
-                    | pipe.map(self._create_config)
-                    | pipe.switchmap(
-                        lambda config: stream.empty()
-                        if config is None or not config["enabled"]
-                        else (self._configure_and_stream(config))
+                        | pipe.map(self._create_config)
+                        | pipe.switchmap(
+                            lambda config: (
+                                stream.empty()
+                                if config is None or not config["enabled"]
+                                else (self._configure_and_stream(config))
+                            )
+                        )
                     )
                 )
             )

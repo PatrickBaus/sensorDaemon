@@ -1,6 +1,7 @@
 """
 This is an asyncIO driver for a generic SCPI compatible device.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -266,13 +267,13 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
         if manufacturer is None:
             logging.getLogger(__name__).warning("Could not query '*IDN?' of device: %s", self)
 
-    def stream_data(self, config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
+    def stream_data(self, initial_config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
         """
         Enumerate the device, then read data from it.
 
         Parameters
         ----------
-        config: dict
+        initial_config: dict
             A dict containing the configuration for the device
 
         Yields
@@ -282,5 +283,5 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
         """
         return stream.chain(
             stream.just(self) | pipe.action(async_(lambda sensor: sensor.enumerate())) | pipe.filter(lambda x: False),
-            super().stream_data(config),
+            super().stream_data(initial_config),
         )

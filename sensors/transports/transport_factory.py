@@ -2,6 +2,7 @@
 This file contains a factory to select the correct driver for all supported
 sensor hosts.
 """
+
 from typing import Any, Type
 
 from errors import UnknownDriverError

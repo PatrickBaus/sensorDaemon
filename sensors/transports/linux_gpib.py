@@ -2,6 +2,7 @@
 This is a wrapper for the Prologix Ethernet controller used by other generic devices like the SCPI driver. It wraps
 the Prologix library and adds the stream interface via GenericTransport.
 """
+
 # pylint: disable=duplicate-code
 from __future__ import annotations
 

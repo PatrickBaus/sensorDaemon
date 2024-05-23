@@ -2,6 +2,7 @@
 This is a wrapper for a generic Ethernet transport used by other generic devices like the SCPI driver. It wraps
 the IP connection and adds the stream interface via GenericTransport.
 """
+
 from __future__ import annotations
 
 from typing import Any

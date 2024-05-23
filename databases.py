@@ -2,6 +2,7 @@
 The database abstraction layer, that handles all application specific tasks of
 the databases.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -176,6 +177,9 @@ class Context:  # pylint: disable=too-few-public-methods
                 error_code,
                 timeout,
             )
+
+    async def monitor_changes(self, timeout: float) -> None:
+        raise NotImplementedError
 
     async def _monitor_database(
         self, database_model: Type[DeviceDocument], timeout: float
