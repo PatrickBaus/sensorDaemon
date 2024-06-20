@@ -8,5 +8,5 @@ python-decouple~=3.8
 simplejson~=3.19.2
 async_gpib~=2.1.2
 hp3478a_async~=1.4.1
-tinkerforge_async~=1.5.1
+tinkerforge_async~=1.5.2
 labnode_async~=0.16.3
