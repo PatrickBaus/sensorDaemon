@@ -1,12 +1,12 @@
-aiostream~=0.6.1
 aiomqtt~=2.1.0
+aiostream~=0.6.1
+async-gpib~=2.1.2
 beanie~=1.26.0
 gpib-ctypes>=0.3.0
+hp3478a-async~=1.4.1
+labnode-async~=0.16.3
 prologix-gpib-async~=1.4.13
 pydantic~=2.7.4
 python-decouple~=3.8
 simplejson~=3.19.2
-async_gpib~=2.1.2
-hp3478a_async~=1.4.1
-tinkerforge_async~=1.5.2
-labnode_async~=0.16.3
+tinkerforge-async~=1.5.2
