@@ -88,6 +88,7 @@ class LabnodeSensor:
             on_connect = tuple(create_device_function(self._device, func_call) for func_call in config["on_connect"])
             config["on_connect"] = on_connect
         except ConfigurationError:
+            self._logger.error("Invalid configuration for %s: config=%s", self._device, config["on_connect"])
             config = None
 
         return config

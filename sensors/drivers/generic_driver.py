@@ -115,6 +115,7 @@ class GenericDriverMixin:
                 create_device_function(self, func_call) for func_call in config["on_after_read"]
             )
         except ConfigurationError:
+            logging.getLogger(__name__).error("Invalid configuration for %s: config=%s", self, config)
             return None
 
         return config
