@@ -159,6 +159,7 @@ class TinkerforgeSensor:
             on_connect = tuple(create_device_function(self.device, func_call) for func_call in config["on_connect"])
             config["on_connect"] = on_connect
         except ConfigurationError:
+            self._logger.error("Invalid configuration for %s: config=%s", self.device, config["on_connect"])
             return None
 
         return config
