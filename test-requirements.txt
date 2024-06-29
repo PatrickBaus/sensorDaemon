@@ -1,4 +1,4 @@
 pre-commit~=3.7.1
-pylint~=3.2.4
+pylint~=3.2.5
 pylint-pydantic~=0.3.2
 pytest~=8.2.2
