@@ -19,7 +19,7 @@ classifiers = [
 ]
 keywords = ["IoT", "PID", "PID controller",]
 dependencies = [
-    "aiostream ~= 0.4.4",
+    "aiostream ~= 0.6.2",
     "labnode_async ~= 0.15.2",
     "python-decouple ~= 3.5",
     "tinkerforge_async ~= 1.5.1",
