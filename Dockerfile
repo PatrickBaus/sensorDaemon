@@ -1,4 +1,4 @@
-FROM alpine:3.20.3 as builder
+FROM alpine:3.20.3 AS builder
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -49,4 +49,4 @@ RUN chown -R worker:worker /app
 
 USER worker
 
-CMD python3 -OO -u /app/kraken_ethernet.py
+CMD ["python3", "-OO", "-u", "/app/kraken_ethernet.py"]
