@@ -1,4 +1,4 @@
-FROM alpine:3.20.2 as builder
+FROM alpine:3.20.3 as builder
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -25,7 +25,7 @@ RUN COLOUR='\e[1;93m' && \
   pip install -r /app/requirements.txt && \
   echo -e "${COLOUR}Done.\e[0m"
 
-FROM alpine:3.20.2
+FROM alpine:3.20.3
 LABEL maintainer="Patrick Baus <patrick.baus@physik.tu-darmstadt.de>"
 LABEL description="Kraken sensor data aggregator."
 
