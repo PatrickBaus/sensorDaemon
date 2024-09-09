@@ -33,7 +33,7 @@ services:
     environment:
       - SENSORS_DATABASE_HOST=mongodb://foo:bar@database-server:27017
       - MQTT_HOST=mqtt-broker
-      - NODE_ID=a4777632-3de5-4682-a0a7-3f86d879c74d 
+      - NODE_ID=a4777632-3de5-4682-a0a7-3f86d879c74d
 ```
 
 ## Versioning
