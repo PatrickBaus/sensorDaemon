@@ -90,9 +90,8 @@ jobs:
           - linux/arm/v7
           - linux/arm64
         exclude:
-          # Only build packages for ARMv6 and ARMv7 for tagged releases or pull requests
+          # Only build packages for ARMv6 for tagged releases or pull requests
           - platform: ${{ (startsWith(github.ref, 'refs/tags/') && 'nothing') || (github.event_name == 'pull_request' && 'nothing') || 'linux/arm/v6' }}
-          - platform: ${{ (startsWith(github.ref, 'refs/tags/') && 'nothing') || (github.event_name == 'pull_request' && 'nothing') || 'linux/arm/v7' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
