@@ -94,6 +94,9 @@ jobs:
           - platform: ${{ (startsWith(github.ref, 'refs/tags/') && 'nothing') || (github.event_name == 'pull_request' && 'nothing') || 'linux/arm/v6' }}
           - platform: ${{ (startsWith(github.ref, 'refs/tags/') && 'nothing') || (github.event_name == 'pull_request' && 'nothing') || 'linux/arm/v7' }}
     steps:
+      - name: List CPU
+        run: lscpu
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
