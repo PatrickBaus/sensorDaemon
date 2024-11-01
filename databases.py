@@ -56,7 +56,10 @@ class MongoDb:
     def hostname(self) -> str:
         """Return the hostname including the port. Strips usernames and passwords."""
         # strip usernames and password
-        return self.__params["host"][self.__params["host"].find("@") + 1 : self.__params["host"].rfind("/?")]
+        last_occurance = self.__params["host"].rfind("/?")
+        return self.__params["host"][
+            self.__params["host"].find("@") + 1 : last_occurance if last_occurance >= 0 else len(self.__params["host"])
+        ]
 
     async def __aenter__(self) -> Self:
         await self.__connect()
@@ -179,6 +182,9 @@ class Context:  # pylint: disable=too-few-public-methods
             )
 
     async def monitor_changes(self, timeout: float) -> None:
+        """
+        Will be called by the DatabaseManager context manager to produce a stream of database changes
+        """
         raise NotImplementedError
 
     async def _monitor_database(
