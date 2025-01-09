@@ -37,8 +37,7 @@ services:
 ```
 
 ## Versioning
-I use [SemVer](http://semver.org/) for versioning. For the versions available, see the
-[tags on this repository](/../../tags).
+I use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags](../../tags) available for this repository.
 
 ## Documentation
 I use the [Numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) style for documentation.
