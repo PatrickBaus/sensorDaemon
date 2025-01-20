@@ -34,7 +34,7 @@ from uuid import UUID
 from decouple import UndefinedValueError, config
 
 from _version import __version__
-from managers import DatabaseManager, HostManager, MqttManager
+from managers import DatabaseManager, HostManager, MqttManager, MQTTParams
 
 
 def load_secret(name: str, *args, **kwargs) -> str:
@@ -74,7 +74,7 @@ def load_secret(name: str, *args, **kwargs) -> str:
     try:
         return config(name, *args, **kwargs)
     except UndefinedValueError:
-        raise UndefinedValueError(f"{name} not found. Declare it as envvar or define a default value.") from None
+        raise UndefinedValueError(f"{name} not found. Declare it as env var or define a default value.") from None
 
 
 class Kraken:
@@ -107,6 +107,18 @@ class Kraken:
 
         return result
 
+    @staticmethod
+    def load_mqtt_parameters() -> MQTTParams:
+        """Loads MQTT broker parameters from env variables"""
+        result: MQTTParams = {
+            "hostname": config("MQTT_HOST"),
+            "port": config("MQTT_HOST", cast=int, default=1883),
+            "username": load_secret("MQTT_CLIENT_USER", default=None),
+            "password": load_secret("MQTT_CLIENT_PASSWORD", default=None),
+        }
+
+        return result
+
     async def run(self):  # pylint: disable=too-many-locals
         """
         Start the daemon and keep it running through the while (True)
@@ -122,12 +134,7 @@ class Kraken:
             asyncio.get_running_loop().add_signal_handler(sig, lambda: asyncio.create_task(self.__shutdown()))
 
         database_params = self.load_database_parameters()
-        # wamp_host = config('WAMP_HOST')
-        # wamp_port = config('WAMP_PORT', cast=int, default=18080)
-        # wamp_url = f"ws://{wamp_host}:{wamp_port}/ws"
-        # realm = "com.leapsight.test"
-        mqtt_host = config("MQTT_HOST", default="localhost")
-        mqtt_port = config("MQTT_PORT", cast=int, default=1883)
+        mqtt_params = self.load_mqtt_parameters()
         try:
             node_id = config("NODE_ID", cast=UUID)
         except UndefinedValueError:
@@ -140,7 +147,7 @@ class Kraken:
         else:
             self.__logger.warning("This is the node with id: %s", node_id)
 
-        mqtt_manager = MqttManager(node_id=node_id, host=mqtt_host, port=mqtt_port)
+        mqtt_manager = MqttManager(node_id=node_id, broker_params=mqtt_params)
         database_manager = DatabaseManager(**database_params)
         host_manager = HostManager(node_id=node_id)
 

@@ -10,7 +10,7 @@ import asyncio
 import logging
 import re
 from contextlib import AsyncExitStack
-from typing import Any, Unpack
+from typing import Any, TypedDict, Unpack
 from uuid import UUID
 
 import aiomqtt
@@ -29,14 +29,27 @@ EVENT_BUS_DATA = "sensor_data/all"
 MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 
 
+class MQTTParams(TypedDict):
+    """Parameters used for the configuration database. These will be passed to MongoClient()."""
+
+    hostname: str
+    port: int
+    username: str | None
+    password: str | None
+
+
 class MqttManager:
     """This manager will take the sensor data from the event_bus backend and publish them onto the MQTT network"""
 
-    def __init__(self, node_id: UUID | None, host: str, port: int, number_of_workers: int = 5) -> None:
+    def __init__(
+        self,
+        node_id: UUID | None,
+        broker_params: MQTTParams,
+        number_of_workers: int = 5,
+    ) -> None:
         self.__node_id = node_id
         self.__logger = logging.getLogger(__name__)
-        self.__host = host
-        self.__port = port
+        self.__broker = broker_params
         self.__number_of_workers = number_of_workers
 
     async def producer(self, output_queue: asyncio.Queue[tuple[str, dict[str, str | float | int]]]) -> None:
@@ -101,50 +114,50 @@ class MqttManager:
             self.__logger.error(
                 "Worker (%s): Connection refused by MQTT broker (%s:%i). Retrying.",
                 worker_name,
-                self.__host,
-                self.__port,
+                self.__broker["hostname"],
+                self.__broker["port"],
             )
         elif error_code == 113:
             self.__logger.error(
                 "Worker (%s): MQTT broker (%s:%i) is unreachable. Retrying.",
                 worker_name,
-                self.__host,
-                self.__port,
+                self.__broker["hostname"],
+                self.__broker["port"],
             )
         elif error_code == 7:
             self.__logger.error(
                 "Worker (%s): The connection to MQTT broker (%s:%i) was lost. Retrying.",
                 worker_name,
-                self.__host,
-                self.__port,
+                self.__broker["hostname"],
+                self.__broker["port"],
             )
         elif error_code == -2:
             self.__logger.error(
                 "Worker (%s): Failure in name resolution of MQTT broker (%s:%i). Retrying.",
                 worker_name,
-                self.__host,
-                self.__port,
+                self.__broker["hostname"],
+                self.__broker["port"],
             )
         elif error_code == -3:
             self.__logger.error(
                 "Worker (%s): Temporary failure in name resolution of MQTT broker (%s:%i). Retrying.",
                 worker_name,
-                self.__host,
-                self.__port,
+                self.__broker["hostname"],
+                self.__broker["port"],
             )
         elif error_code == -5:
             self.__logger.error(
                 "Worker (%s): Unknown host name of MQTT broker (%s:%i). Retrying.",
                 worker_name,
-                self.__host,
-                self.__port,
+                self.__broker["hostname"],
+                self.__broker["port"],
             )
         elif error_code == "timed out":
             self.__logger.error(
                 "Worker (%s): The connection to MQTT broker (%s:%i) timed out. Retrying.",
                 worker_name,
-                self.__host,
-                self.__port,
+                self.__broker["hostname"],
+                self.__broker["port"],
             )
         else:
             self.__logger.exception("Worker (%s): MQTT connection error (code: %s). Retrying.", worker_name, error_code)
@@ -179,27 +192,29 @@ class MqttManager:
                 self.__logger.info(
                     "Worker (%s): Connecting to MQTT broker (%s:%i) in %.0f s due to rate limiting.",
                     worker_name,
-                    self.__host,
-                    self.__port,
+                    self.__broker["hostname"],
+                    self.__broker["port"],
                     timeout,
                 )
             else:
                 self.__logger.info(
-                    "Worker (%s): Connecting to MQTT broker (%s:%i).", worker_name, self.__host, self.__port
+                    "Worker (%s): Connecting to MQTT broker (%s:%i).",
+                    worker_name,
+                    self.__broker["hostname"],
+                    self.__broker["port"],
                 )
             await asyncio.sleep(timeout)
             last_reconnect_attempt = asyncio.get_running_loop().time()
             try:
                 async with aiomqtt.Client(
-                    hostname=self.__host,
-                    port=self.__port,
                     identifier=f"Labkraken-{self.__node_id}_worker-{worker_name}",
+                    **self.__broker,
                 ) as mqtt_client:
                     self.__logger.info(
                         "Worker (%s): Successfully connected to MQTT broker (%s:%i).",
                         worker_name,
-                        self.__host,
-                        self.__port,
+                        self.__broker["hostname"],
+                        self.__broker["port"],
                     )
                     while "loop not cancelled":
                         if event is None:
@@ -247,8 +262,8 @@ class MqttManager:
                 self.__logger.exception(
                     "Worker (%s): Error while publishing data to MQTT broker (%s:%i). Reconnecting.",
                     worker_name,
-                    self.__host,
-                    self.__port,
+                    self.__broker["hostname"],
+                    self.__broker["port"],
                 )
 
     async def cancel_tasks(self, tasks: set[asyncio.Task]) -> None:
