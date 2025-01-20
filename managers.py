@@ -183,10 +183,10 @@ class MqttManager:
         """
         error_code: str | int = 0  # 0 = success
         event: tuple[str, dict[str, str | float | int]] | None = None
-        last_reconnect_attempt = asyncio.get_running_loop().time() - reconnect_interval
+        previous_reconnect_attempt = asyncio.get_running_loop().time() - reconnect_interval
         while "not connected":
             # Wait for at least reconnect_interval before connecting again
-            timeout = self._calculate_timeout(last_reconnect_attempt, reconnect_interval)
+            timeout = self._calculate_timeout(previous_reconnect_attempt, reconnect_interval)
             if round(timeout) > 0:
                 # Do not print '0 s' as this is confusing.
                 self.__logger.info(
@@ -204,7 +204,7 @@ class MqttManager:
                     self.__broker["port"],
                 )
             await asyncio.sleep(timeout)
-            last_reconnect_attempt = asyncio.get_running_loop().time()
+            previous_reconnect_attempt = asyncio.get_running_loop().time()
             try:
                 async with aiomqtt.Client(
                     identifier=f"Labkraken-{self.__node_id}_worker-{worker_name}",
