@@ -112,7 +112,7 @@ class Kraken:
         """Loads MQTT broker parameters from env variables"""
         result: MQTTParams = {
             "hostname": config("MQTT_HOST"),
-            "port": config("MQTT_HOST", cast=int, default=1883),
+            "port": config("MQTT_PORT", cast=int, default=1883),
             "username": load_secret("MQTT_CLIENT_USER", default=None),
             "password": load_secret("MQTT_CLIENT_PASSWORD", default=None),
         }
