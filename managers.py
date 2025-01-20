@@ -30,7 +30,7 @@ MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 
 
 class MQTTParams(TypedDict):
-    """Parameters used for the configuration database. These will be passed to MongoClient()."""
+    """Parameters used for the MQTT broker."""
 
     hostname: str
     port: int
