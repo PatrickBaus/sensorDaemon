@@ -23,7 +23,7 @@ def test_mqtt_hostnames_pass(hosts, result):
     """
     Test parsing hostname(s) from env variables.
     """
-    env_params = MQTTParams(hosts=hosts, identifier="foo", username="bar", password="12345")
+    env_params = MQTTParams(hosts=hosts, username="bar", password="12345")
 
     assert env_params.hosts == result
 
