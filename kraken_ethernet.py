@@ -142,7 +142,7 @@ class Kraken:
                 "No node is set. How about setting 'NODE_ID=%s'? I won't use a node id for now.", uuid.uuid4()
             )
         else:
-            self.__logger.warning("This is the node with id: %s", node_id)
+            self.__logger.warning("This is the node with id: %s.", node_id)
 
         mqtt_manager = MqttManager(node_id=node_id, broker_params=mqtt_params)
         database_manager = DatabaseManager(**database_params)
