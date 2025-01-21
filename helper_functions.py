@@ -9,7 +9,7 @@ import inspect
 from functools import partial
 from typing import Any, AsyncContextManager, AsyncGenerator, AsyncIterable, Awaitable, Callable, Type, TypedDict, cast
 
-from aiostream import operator, stream, streamcontext
+from aiostream import operator, pipable_operator, stream, streamcontext
 from aiostream.core import Stream
 
 from async_event_bus import TopicNotRegisteredError, event_bus
@@ -116,7 +116,7 @@ async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any) 
             return result
 
 
-@operator(pipable=True)
+@pipable_operator
 async def retry(
     source: AsyncIterable[Any], exc_class: Type[BaseException], interval: float = 0
 ) -> AsyncGenerator[Any, None]:
@@ -152,7 +152,7 @@ async def retry(
             return
 
 
-@operator(pipable=True)
+@pipable_operator
 async def context(
     source: AsyncIterable[Any],
     context_manager: AsyncContextManager,
@@ -223,7 +223,7 @@ async def with_context(
             on_exit()
 
 
-@operator(pipable=True)
+@pipable_operator
 async def finally_action(
     source: AsyncIterable[Any], func: Awaitable[Any] | Callable[[], Any]
 ) -> AsyncGenerator[Any, None]:
@@ -252,7 +252,7 @@ async def finally_action(
             cast(Callable, func)()
 
 
-@operator(pipable=True)
+@pipable_operator
 async def catch(
     source: AsyncIterable[Any], exc_class: Type[BaseException], on_exc: Callable[[BaseException], Stream] | None = None
 ) -> AsyncGenerator[Any, None]:

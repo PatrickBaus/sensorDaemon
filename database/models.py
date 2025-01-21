@@ -5,13 +5,13 @@ hosts/nodes or sensors.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Dict, List
 from uuid import UUID, uuid4
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, Field, validator  # pylint: disable=no-name-in-module  # <-- BaseModel
+from pydantic import BaseModel, Field, field_validator  # pylint: disable=no-name-in-module  # <-- BaseModel
 
 
 class FunctionCall(BaseModel):
@@ -50,7 +50,7 @@ class HostBaseModel(BaseModel):
     node_id: UUID | None = UUID("{00000000-0000-0000-0000-000000000000}")
     reconnect_interval: float | None = Field(ge=0)
 
-    @validator("sad")
+    @field_validator("sad")
     def validate_sad(cls, field_value):
         """Make sure, that the secondary address is either 0 or between 96 and 126. 0 means disabled."""
         if field_value is None or field_value == 0 or 0x60 <= field_value <= 0x7E:
@@ -71,24 +71,24 @@ class HostBaseModel(BaseModel):
         ]
 
 
-class BaseDocument(Document):
+class BaseDocument(Document):  # pylint: disable=too-many-ancestors
     """The base mode used by all database entries. It makes sure that the id is a universally/globally unique id"""
 
     id: UUID = Field(default_factory=uuid4)
 
 
-class TimeStampedDocument(BaseDocument):
+class TimeStampedDocument(BaseDocument):  # pylint: disable=too-many-ancestors
     """
     A base class that implements a minimal audit trail by recording the
     creation date and the date of the last change.
     """
 
     # pylint: disable=too-few-public-methods
-    date_created: datetime = datetime.utcnow()
-    date_modified: datetime = datetime.utcnow()
+    date_created: datetime = datetime.now(UTC)
+    date_modified: datetime = datetime.now(UTC)
 
 
-class DeviceDocument(TimeStampedDocument):
+class DeviceDocument(TimeStampedDocument):  # pylint: disable=too-many-ancestors
     """The database base model used by device drivers."""
 
     enabled: bool = True
@@ -109,7 +109,7 @@ class SensorHostModel(DeviceDocument, HostBaseModel):  # pylint: disable=too-man
         name = "SensorHost"
 
 
-class TinkforgeSensorConfigModel(BaseModel):
+class TinkerforgeSensorConfigModel(BaseModel):
     """
     The configuration of a sensor made by Tinkerforge GmbH.
     """
@@ -129,7 +129,7 @@ class TinkerforgeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancest
 
     # pylint: disable=too-few-public-methods
     uid: int
-    config: Dict[str, TinkforgeSensorConfigModel]  # bson does not allow int keys
+    config: Dict[str, TinkerforgeSensorConfigModel]  # bson does not allow int keys
     on_connect: List[FunctionCall] | List[None] = []
 
     class Settings:  # pylint: disable=too-few-public-methods
