@@ -110,14 +110,11 @@ class Kraken:
     @staticmethod
     def load_mqtt_parameters() -> MQTTParams:
         """Loads MQTT broker parameters from env variables"""
-        result: MQTTParams = {
-            "hostname": config("MQTT_HOST"),
-            "port": config("MQTT_PORT", cast=int, default=1883),
-            "username": load_secret("MQTT_CLIENT_USER", default=None),
-            "password": load_secret("MQTT_CLIENT_PASSWORD", default=None),
-        }
-
-        return result
+        return MQTTParams(
+            hosts=config("MQTT_HOST"),
+            username=load_secret("MQTT_CLIENT_USER", default=None),
+            password=load_secret("MQTT_CLIENT_PASSWORD", default=None),
+        )
 
     async def run(self):  # pylint: disable=too-many-locals
         """
