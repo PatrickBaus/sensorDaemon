@@ -6,7 +6,6 @@ hosts/nodes or sensors.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Dict, List
 from uuid import UUID, uuid4
 
 import pymongo
@@ -129,8 +128,8 @@ class TinkerforgeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancest
 
     # pylint: disable=too-few-public-methods
     uid: int
-    config: Dict[str, TinkerforgeSensorConfigModel]  # bson does not allow int keys
-    on_connect: List[FunctionCall] | List[None] = []
+    config: dict[str, TinkerforgeSensorConfigModel]  # bson does not allow int keys
+    on_connect: list[FunctionCall] | list[None] = []
 
     class Settings:  # pylint: disable=too-few-public-methods
         """Sets the index used. Also defines the database 'table' name."""
@@ -148,7 +147,7 @@ class TinkerforgeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancest
 
 class LabnodeSensorConfigModel(BaseModel):
     """
-    The configuration of a sensor made by Tinkerforge GmbH.
+    The configuration of a LabNode sensor.
     """
 
     # pylint: disable=too-few-public-methods
@@ -163,8 +162,8 @@ class LabnodeSensorModel(DeviceDocument):  # pylint: disable=too-many-ancestors
     """Labnode driver config"""
 
     uid: int
-    config: Dict[str, LabnodeSensorConfigModel]  # bson does not allow int keys
-    on_connect: List[FunctionCall] | List[None] = []
+    config: dict[str, LabnodeSensorConfigModel]  # bson does not allow int keys
+    on_connect: list[FunctionCall] | list[None] = []
 
     class Settings:  # pylint: disable=too-few-public-methods
         """Sets the index used. Also defines the database 'table' name."""
@@ -186,10 +185,10 @@ class GenericSensorModel(DeviceDocument):  # pylint: disable=too-many-ancestors
     host: UUID
     driver: str
     interval: float = Field(ge=0)
-    on_connect: List[FunctionCall] | List[None] = []
+    on_connect: list[FunctionCall] | list[None] = []
     on_read: FunctionCall
-    on_after_read: List[FunctionCall] | List[None]
-    on_disconnect: List[FunctionCall] | List[None] = []
+    on_after_read: list[FunctionCall] | list[None]
+    on_disconnect: list[FunctionCall] | list[None] = []
     topic: str
     unit: str
 
