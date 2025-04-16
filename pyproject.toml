@@ -5,10 +5,16 @@ authors = [
 ]
 description = "Kraken. A sensor aggregation daemon."
 readme = "README.md"
-license = { text="GNU General Public License v3 (GPLv3)" }
+license = "GPL-3.0-or-later"
+license-files = [
+    "LICENSE",
+]
 requires-python = ">=3.11"
 classifiers = [
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
@@ -18,13 +24,7 @@ classifiers = [
     "Topic :: Home Automation",
 ]
 keywords = ["IoT", "PID", "PID controller",]
-dependencies = [
-    "aiostream ~= 0.6.2",
-    "labnode_async ~= 0.15.2",
-    "python-decouple ~= 3.5",
-    "tinkerforge_async ~= 1.5.1",
-]
-dynamic = ["version"]
+dynamic = ["dependencies", "version"]
 
 [project.urls]
 "Homepage" = "https://github.com/TU-Darmstadt-APQ/lab_temperature-Backend"
@@ -73,4 +73,5 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
 version = {attr = "_version.__version__"}
