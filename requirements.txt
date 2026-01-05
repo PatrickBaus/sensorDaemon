@@ -1,4 +1,4 @@
-aiomqtt~=2.4.0
+aiomqtt~=2.5.0
 aiostream~=0.7.1
 async-gpib~=2.1.4
 beanie~=1.30.0
