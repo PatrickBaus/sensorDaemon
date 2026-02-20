@@ -9,4 +9,4 @@ prologix-gpib-async~=1.5.0
 pydantic~=2.12.5
 python-decouple~=3.8
 simplejson~=3.20.2
-tinkerforge-async~=1.6.1
+tinkerforge-async~=1.6.2
