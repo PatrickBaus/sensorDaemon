@@ -24,21 +24,12 @@ classifiers = [
     "Topic :: Home Automation",
 ]
 keywords = ["IoT", "PID", "PID controller",]
-dynamic = ["dependencies", "version"]
+dynamic = ["dependencies", "optional-dependencies.test", "version"]
 
 [project.urls]
 "Homepage" = "https://github.com/TU-Darmstadt-APQ/lab_temperature-Backend"
 "Bug Tracker" = "https://github.com/TU-Darmstadt-APQ/lab_temperature-Backend/issues"
 "Download" = "https://github.com/TU-Darmstadt-APQ/lab_temperature-Backend/releases"
-
-[project.optional-dependencies]
-dev = [
-    "black", "build", "isort", "mypy", "pre-commit", "pylint", "types-simplejson", "pylint_pydantic"
-]
-
-test = [
-    "mypy", "pylint", "pylint_pydantic", "pytest"
-]
 
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 120
@@ -74,4 +65,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
+optional-dependencies.dev = { file = ["requirements-dev.txt"] }
+optional-dependencies.test = { file = ["requirements-test.txt"] }
 version = {attr = "_version.__version__"}
