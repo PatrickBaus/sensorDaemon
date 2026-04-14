@@ -17,6 +17,7 @@ from uuid import UUID
 import aiomqtt
 import simplejson as json
 from aiostream import pipe, stream
+from paho.mqtt.reasoncodes import ReasonCode
 from pydantic import BaseModel, field_validator
 
 from async_event_bus import TopicNotRegisteredError, event_bus
@@ -158,14 +159,26 @@ class MqttManager:
         ----------
         worker_name: str
             The name of the worker, prepended to the message
-        error_code: int
-            The current error code
+        host: tuple of (str, int)
+            The hostname and port.
+        error_code: str or int
+            The current error code.
         previous_error_code: int or None
             The error code of the previous error or None if there was none.
         """
         if error_code == previous_error_code:
             return  # Only log an error once
-        if error_code == 111:
+        if error_code == 4:
+            self.__logger.error(
+                "Worker (%s): The client is currently not connected to the MQTT broker (%s:%i). Retrying.",
+                worker_name,
+                *host,
+            )
+        elif error_code == 7:
+            self.__logger.error(
+                "Worker (%s): The connection to MQTT broker (%s:%i) was lost. Retrying.", worker_name, *host
+            )
+        elif error_code == 111:
             self.__logger.error(
                 "Worker (%s): Connection refused by MQTT broker (%s:%i). Retrying.",
                 worker_name,
@@ -173,9 +186,15 @@ class MqttManager:
             )
         elif error_code == 113:
             self.__logger.error("Worker (%s): MQTT broker (%s:%i) is unreachable. Retrying.", worker_name, *host)
-        elif error_code == 7:
+        elif error_code == 128:
             self.__logger.error(
-                "Worker (%s): The connection to MQTT broker (%s:%i) was lost. Retrying.", worker_name, *host
+                "Worker (%s): MQTT broker (%s:%i) Raised an unspecified error (128). Retrying.", worker_name, *host
+            )
+        elif error_code == 134:
+            self.__logger.error(
+                "Worker (%s): Invalid username or password for MQTT broker (%s:%i). Retrying.",
+                worker_name,
+                *host,
             )
         elif error_code == -2:
             self.__logger.error(
@@ -196,7 +215,7 @@ class MqttManager:
         else:
             self.__logger.exception("Worker (%s): MQTT connection error (code: %s). Retrying.", worker_name, error_code)
 
-    async def consumer(  # pylint: disable=too-many-branches
+    async def consumer(  # pylint: disable=too-many-branches,too-many-locals
         self,
         input_queue: asyncio.Queue[tuple[str, dict[str, str | float | int]]],
         worker_name,
@@ -267,8 +286,9 @@ class MqttManager:
                         input_queue.task_done()
                         error_code = 0  # 0 = success
             except aiomqtt.MqttCodeError as exc:
-                self._log_mqtt_error_code(worker_name, host=host, error_code=exc.rc, previous_error_code=error_code)
-                error_code = exc.rc
+                rc_code = exc.rc.value if isinstance(exc.rc, ReasonCode) else exc.rc
+                self._log_mqtt_error_code(worker_name, host=host, error_code=rc_code, previous_error_code=error_code)
+                error_code = rc_code
             except ConnectionRefusedError:
                 self._log_mqtt_error_code(
                     worker_name, host=host, error_code=111, previous_error_code=error_code
