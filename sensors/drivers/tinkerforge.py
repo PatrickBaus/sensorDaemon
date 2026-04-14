@@ -6,12 +6,14 @@ This is a wrapper for Tinkerforge devices.
 from __future__ import annotations
 
 import logging
+from functools import partial
 from types import TracebackType
 
 try:
     from typing import Self  # type: ignore # Python 3.11
 except ImportError:
     from typing_extensions import Self
+
 from typing import Any, AsyncGenerator, Type
 from uuid import UUID
 
@@ -21,6 +23,7 @@ from tinkerforge_async.ip_connection import NotConnectedError
 
 from async_event_bus import event_bus
 from data_types import DataEvent
+from database.models import TinkerforgeSensorConfigModel
 from errors import ConfigurationError
 from helper_functions import call_safely, context, create_device_function
 from sensors.drivers.shared import DeviceStatus
@@ -125,7 +128,10 @@ class TinkerforgeSensor:
                         self._stream_config_updates(sensor)
                         | pipe.switchmap(
                             lambda config: stream.chain(
+                                # First inject the initial config into the stream,
                                 stream.just(config),
+                                # then listen for remove events and map those to None (no config) to unregister
+                                # the sensor
                                 stream.iterate(event_bus.subscribe(f"nodes/by_uuid/{config['uuid']}/remove"))[:1]
                                 | pipe.map(lambda x: None),
                             )
@@ -152,7 +158,22 @@ class TinkerforgeSensor:
 
         return data_stream
 
-    def _create_config(self, config: dict[str, Any] | None) -> dict[str, Any] | None:
+    def _create_config(self, config: dict[str, Any] | None) -> dict[str, tuple[partial, float] | Any] | None:
+        """
+        Maps the 'on_connect' key of the config to functions provided by the Tinkerforge device.
+        Parameters
+        ----------
+        config: dict or None
+            A dict that contains the key 'on_connect' which defines functions calls to made on the self.device object.
+            If None is given, None will be returned.
+
+        Returns
+        -------
+        dict or None
+            A dict containing a key called 'on_connect' that holds a tuple[partial, float], with partials that run on
+            the self.device object with a timeout in seconds (float).
+            Returns None if the config input parameter is None as well.
+        """
         if config is None:
             return None
         try:
@@ -164,7 +185,7 @@ class TinkerforgeSensor:
 
         return config
 
-    def _read_sensor(  # pylint: disable=too-many-arguments
+    def _read_sensor(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: AdvancedCallbackConfiguration
     ) -> AsyncGenerator[DataEvent, None]:
         monitor_stream = (
@@ -191,6 +212,23 @@ class TinkerforgeSensor:
     def _parse_callback_configuration(
         sid: str | int, config: dict[str, Any]
     ) -> tuple[int, str, str, AdvancedCallbackConfiguration]:
+        """
+
+        Parameters
+        ----------
+        sid: int or str
+            The secondary id, naming the sensor of the node. Each node may have multiple sensors with a separate sid.
+        config: dict
+            A dictionary containing the keys 'interval', 'trigger_only_on_change'. 'unit', and 'topic'
+
+        Returns
+        -------
+        tuple of int, str, str, AdvancedCallbackConfiguration:
+            The sid is an int specifying the secondary id of the sensor in the tree below the node
+            The unit is a str naming the unit of measurement of this sensor
+            The topic is a str defining where to publish the data
+            The callback_config is an AdvancedCallbackConfiguration that specifies the configuration if this sensor
+        """
         sid = int(sid)
         callback_config = AdvancedCallbackConfiguration(
             period=config["interval"],
@@ -219,26 +257,43 @@ class TinkerforgeSensor:
             return stream.empty()
         return stream.just((sid, unit, topic, remote_callback_config))
 
-    def _configure_and_stream(self, config: dict[str, Any] | None) -> AsyncGenerator[DataEvent, None]:
+    @staticmethod
+    @staticmethod
+    def _configure(config: TinkerforgeSensorConfigModel):
+        """
+        Configure the sensor by calling all 'on_connect' functions set in the config.
+
+        Parameters
+        ----------
+        config: dict[str, tuple[partial, float]]
+            A config dict, that contains the key 'on_connect', which holds the function and a timeout when calling it.
+        """
+        return (
+            stream.iterate(config["on_connect"])
+            | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
+            | pipe.concat(task_limit=1)
+            | pipe.filter(lambda result: False)
+        )
+
+    def _configure_and_stream(
+        self,
+        config: TinkerforgeSensorConfigModel | None,
+    ) -> AsyncGenerator[DataEvent, None]:
         if config is None:
             return stream.empty()
         try:
             # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is
             # nothing to compare them to (filter => false), then read all sensors of the bricklet and process them in
             # parallel (flatten).
-            config_stream = stream.chain(
-                stream.iterate(config["on_connect"])
-                | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-                | pipe.concat(task_limit=1)
-                | pipe.filter(lambda result: False),
+            data_stream = stream.chain(
+                self._configure(config),
                 stream.iterate(config["config"].items())
                 | pipe.starmap(self._parse_callback_configuration)
                 | pipe.starmap(self._set_callback_configuration)
                 | pipe.flatten()
-                | pipe.map(lambda args: self._read_sensor(config["uuid"], *args))
-                | pipe.flatten(),
+                | pipe.flatmap(lambda args: self._read_sensor(config["uuid"], *args)),
             )
-            return config_stream
+            return data_stream
         except NotConnectedError:
             # Do not log it
             raise
