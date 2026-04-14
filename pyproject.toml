@@ -42,9 +42,6 @@ init-hook='import sys; sys.path.append(".")'
 [tool.pylint.'MISCELLANEOUS']
 notes = ["FIXME",]
 
-[tool.mypy]
-enable_incomplete_feature = "Unpack"
-
 [tool.isort]
 line_length = 120
 profile = "black"

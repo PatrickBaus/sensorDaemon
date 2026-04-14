@@ -32,6 +32,8 @@ class FunctionCall(BaseModel):
         sensor: TinkerforgeSensorModel
             A sensor that implements the function
         """
+        assert self.args is not None
+        assert self.kwargs is not None
         getattr(sensor, self.function)(*self.args, **self.kwargs)
 
 
