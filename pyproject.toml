@@ -64,7 +64,7 @@ build-backend = "setuptools.build_meta"
 [dependency-groups]
 dev = [
     "black~=26.5.1",
-    "build~=1.5.1",
+    "build~=1.6.0",
     "isort~=9.0.1",
     "pre_commit~=4.6.2",
     "types-simplejson~=4.1.0.20260724",
