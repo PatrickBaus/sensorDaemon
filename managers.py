@@ -271,7 +271,7 @@ class MqttManager:
                             # convert payload to JSON
                             # Typically sensors return data as decimals or ints to preserve the precision
                             encoded_payload = json.dumps(payload, use_decimal=True)
-                        except TypeError:
+                        except TypeError, ValueError:
                             self.__logger.error(
                                 "Worker (%s): Error while serializing DataEvent: %s. Dropping event.",
                                 worker_name,
