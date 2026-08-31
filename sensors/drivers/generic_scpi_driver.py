@@ -171,8 +171,9 @@ class GenericScpiMixin:
         try:
             result = Decimal(value)
         except InvalidOperation:
-            logging.getLogger(__name__).warning(("Invalid number read '%r' is not a number.", value))
-            return Decimal("NaN")
+            raise ValueError(
+                f"Invalid number read '{value!r}' is not a number.",
+            ) from None
         # Treat special SCPI values
         # Not A Number
         if result == Decimal("9.91e37"):
