@@ -253,7 +253,6 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
         maximum_tries = 2
         manufacturer = None
         while maximum_tries:
-            device_id = None  # Init to None in case try/except errors out
             try:
                 device_id = await self.get_id()
                 (
@@ -263,8 +262,8 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
                     revision,  # pylint: disable=unused-variable  # For documentation purposes
                 ) = device_id
                 self.device_name = f"{manufacturer} {model_number} ({serial_number})"
-            except ValueError:
-                logging.getLogger(__name__).warning("Device returned invalid device id: '%r'. Retrying.", device_id)
+            except ValueError as e:
+                logging.getLogger(__name__).warning("Device returned invalid device id: '%s'. Retrying.", e)
                 continue  # Retry it once more
             else:
                 break  # Stop the loop if everything went well
