@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Iterable
 
 from aiostream import async_, pipe, stream
@@ -168,7 +168,11 @@ class GenericScpiMixin:
 
     @staticmethod
     def _map_scpi_number_to_decimal(value: str) -> Decimal:
-        result = Decimal(value)
+        try:
+            result = Decimal(value)
+        except InvalidOperation:
+            logging.getLogger(__name__).warning(("Invalid number read '%r' is not a number.", value))
+            return Decimal("NaN")
         # Treat special SCPI values
         # Not A Number
         if result == Decimal("9.91e37"):
