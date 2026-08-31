@@ -81,6 +81,7 @@ class GenericDriverMixin:
             | pipe.concat(task_limit=1)
             | pipe.filter(lambda result: False),
             self._read_device(config)
+            | catch.pipe(ValueError, on_exc=self.on_error)
             | pipe.starmap(
                 lambda sid, item: DataEvent(
                     sender=config["uuid"], topic=config["topic"], value=item, sid=sid, unit=config["unit"]
