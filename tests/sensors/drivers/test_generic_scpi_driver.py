@@ -219,7 +219,7 @@ class TestGenericScpiMixin:
     async def test_get_id_rejects_invalid_id(self, mixin, response):
         """Test get id rejects invalid id."""
         mixin.query = AsyncMock(return_value=response)
-        with pytest.raises(ValueError, match="Device returned invalid ID"):
+        with pytest.raises(ValueError, match=r"is not a valid SCPI \*IDN reply"):
             await mixin.get_id()
 
     @pytest.mark.asyncio
