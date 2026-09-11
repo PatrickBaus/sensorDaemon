@@ -104,14 +104,14 @@ class GenericScpiMixin:
         """
         # use the default terminator if none is given
         try:
-            terminator = self.TERMINATOR.encode() if scpi_terminator is None else scpi_terminator.encode()
+            terminator = self.TERMINATOR.encode() if not scpi_terminator else scpi_terminator.encode()
         except UnicodeEncodeError:
             self.__logger.warning("Invalid terminator '%r', using default: '%r'", scpi_terminator, self.TERMINATOR)
             terminator = self.TERMINATOR.encode()
 
         data = await self._conn.read(*args, **kwargs)
         # Strip the terminator if we are using one and the last bytes match the terminator
-        if data[-len(terminator) :] == terminator:
+        if data.endswith(terminator):
             data = data[: -len(terminator)]
         try:
             return data.decode("utf-8").split(",")
