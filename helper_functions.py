@@ -9,7 +9,7 @@ import inspect
 from functools import partial
 from typing import Any, AsyncContextManager, AsyncGenerator, AsyncIterable, Awaitable, Callable, Type, TypedDict, cast
 
-from aiostream import operator, pipable_operator, stream, streamcontext
+from aiostream import operator, pipable_operator, streamcontext
 from aiostream.core import Stream
 
 from async_event_bus import TopicNotRegisteredError, event_bus
@@ -281,7 +281,7 @@ async def catch(
                 async for item in streamer:
                     yield item
         else:
-            yield stream.empty()
+            return
 
 
 def create_device_function(device: Any, func_call: FunctionCallConfig) -> tuple[partial, float]:
