@@ -67,7 +67,10 @@ class GenericScpiMixin:
             Read timeout in seconds. Use None for an infinite timeout.
         """
         await self.write("*OPC?")
-        while (await asyncio.wait_for(self.read(), timeout=timeout)) != "1":
+        while True:
+            response = await asyncio.wait_for(self.read(), timeout=timeout)
+            if list(response) == ["1"]:
+                return
             await asyncio.sleep(0.1)
 
     async def get_id(self) -> tuple[str, str, str, str]:
@@ -104,14 +107,14 @@ class GenericScpiMixin:
         """
         # use the default terminator if none is given
         try:
-            terminator = self.TERMINATOR.encode() if scpi_terminator is None else scpi_terminator.encode()
+            terminator = self.TERMINATOR.encode() if not scpi_terminator else scpi_terminator.encode()
         except UnicodeEncodeError:
             self.__logger.warning("Invalid terminator '%r', using default: '%r'", scpi_terminator, self.TERMINATOR)
             terminator = self.TERMINATOR.encode()
 
         data = await self._conn.read(*args, **kwargs)
         # Strip the terminator if we are using one and the last bytes match the terminator
-        if data[-len(terminator) :] == terminator:
+        if data.endswith(terminator):
             data = data[: -len(terminator)]
         try:
             return data.decode("utf-8").split(",")
@@ -164,7 +167,7 @@ class GenericScpiMixin:
             The result of the query. The result return by device is split at commas.
         """
         await self.write(cmd, scpi_terminator)
-        return await self.read(scpi_terminator, *args, **kwargs)
+        return await self.read(*args, scpi_terminator=scpi_terminator, **kwargs)
 
     @staticmethod
     def _map_scpi_number_to_decimal(value: str) -> Decimal:
@@ -204,7 +207,7 @@ class GenericScpiMixin:
         iterable of Decimal
             The number(s) read from the device. This might also be NaN, Infinity, or -Infinity.
         """
-        return map(self._map_scpi_number_to_decimal, await self.read(scpi_terminator, *args, **kwargs))
+        return map(self._map_scpi_number_to_decimal, await self.read(*args, scpi_terminator=scpi_terminator, **kwargs))
 
     async def query_number(self, cmd: str, scpi_terminator: str | None = None) -> Iterable[Decimal]:
         """
@@ -223,7 +226,7 @@ class GenericScpiMixin:
             The number(s) read from the device. This might also be NaN, Infinity, or -Infinity.
         """
         await self.write(cmd, scpi_terminator)
-        return await self.read_number(scpi_terminator)
+        return await self.read_number(scpi_terminator=scpi_terminator)
 
 
 class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
