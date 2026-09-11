@@ -67,7 +67,10 @@ class GenericScpiMixin:
             Read timeout in seconds. Use None for an infinite timeout.
         """
         await self.write("*OPC?")
-        while (await asyncio.wait_for(self.read(), timeout=timeout)) != "1":
+        while True:
+            response = await asyncio.wait_for(self.read(), timeout=timeout)
+            if list(response) == ["1"]:
+                return
             await asyncio.sleep(0.1)
 
     async def get_id(self) -> tuple[str, str, str, str]:
