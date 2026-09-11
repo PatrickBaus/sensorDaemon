@@ -4,6 +4,7 @@
 
 import asyncio
 from functools import partial
+from typing import AsyncIterator
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -196,8 +197,9 @@ class TestRetry:
     async def test_retry_does_not_catch_unexpected_exception(self):
         """Propagate exceptions other than the configured class."""
 
-        async def source():
+        async def source() -> AsyncIterator[None]:
             raise RuntimeError("unexpected")
+            yield  # pylint: disable=unreachable
 
         with pytest.raises(RuntimeError, match="unexpected"):
             async with helper_functions.streamcontext(
@@ -351,8 +353,9 @@ class TestCatch:
     async def test_catch_switches_to_exception_stream(self):
         """Switch to the stream returned by on_exc."""
 
-        async def source():
+        async def source() -> AsyncIterator[None]:
             raise ValueError("expected")
+            yield  # pylint: disable=unreachable
 
         def replacement(_exc):
             async def replacement_source():
