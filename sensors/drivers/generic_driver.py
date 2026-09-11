@@ -40,10 +40,14 @@ class GenericDriverMixin:
         timeout: float
         on_read, timeout = config["on_read"]
         if inspect.isasyncgenfunction(on_read.func):
-            return stream.iterate(on_read()) | pipe.map(lambda value: (0, value)) | pipe.timeout(timeout)
+            return (
+                stream.iterate(on_read())
+                | pipe.map(lambda value: (0, value))
+                | pipe.timeout(timeout)
+                | retry.pipe((ValueError,), config["interval"], action=lambda exc: self.log_error(exc, msg="Retrying."))
+            )
         return (
             stream.repeat(config["on_read"], interval=config["interval"])  # Repeat query to on_read at interval
-            | retry.pipe((ValueError,), config["interval"], action=lambda exc: self.log_error(exc, msg="Retrying."))
             | pipe.starmap(
                 lambda func, timeout: stream.just(func())  # Get the results of the query (a mapping/list)
                 | pipe.concatmap(stream.iterate)  # iterate the results
@@ -51,6 +55,7 @@ class GenericDriverMixin:
                 | pipe.timeout(timeout)  # time out if no result is produced within the deadline
             )
             | pipe.concat(task_limit=1)
+            | retry.pipe((ValueError,), config["interval"], action=lambda exc: self.log_error(exc, msg="Retrying."))
         )
 
     def on_error(self, exc: BaseException) -> AsyncGenerator[None, None]:
