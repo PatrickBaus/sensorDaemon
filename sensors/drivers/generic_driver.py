@@ -106,6 +106,7 @@ class GenericDriverMixin:
             )
             | finally_action.pipe(stream.call(self._clean_up, config["on_disconnect"])),
         ) | catch.pipe(TypeError, on_exc=self.on_error)
+
         return config_stream
 
     def _parse_config(self, config: dict[str, Any]) -> dict[str, Any] | None:
