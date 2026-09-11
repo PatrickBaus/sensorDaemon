@@ -3,7 +3,7 @@ This file contains a factory to select the correct driver for all supported
 sensor hosts.
 """
 
-from typing import Any, Type
+from typing import Any
 
 from errors import UnknownDriverError
 
@@ -20,7 +20,7 @@ class TransportFactory:
     """
 
     def __init__(self):
-        self.__available_drivers: dict[str, Type[Any]] = {}
+        self.__available_drivers: dict[str, type[Any]] = {}
 
     def register(self, transport: Any) -> None:
         """

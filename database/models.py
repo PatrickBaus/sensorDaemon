@@ -3,8 +3,6 @@ This file contains all database data models, that represent either sensor
 hosts/nodes or sensors.
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 

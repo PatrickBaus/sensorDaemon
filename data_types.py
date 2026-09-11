@@ -2,8 +2,6 @@
 This file contains all custom data types used across the application
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, auto

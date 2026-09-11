@@ -3,13 +3,11 @@ The database abstraction layer, that handles all application specific tasks of
 the databases.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 import re
 from types import TracebackType
-from typing import Any, AsyncGenerator, NotRequired, Type, TypedDict, Unpack
+from typing import Any, AsyncGenerator, NotRequired, TypedDict, Unpack
 
 try:
     from typing import Self  # type: ignore # Python 3.11
@@ -66,7 +64,7 @@ class MongoDb:
         return self
 
     async def __aexit__(
-        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         pass
 
@@ -141,13 +139,13 @@ class Context:  # pylint: disable=too-few-public-methods
         raise NotImplementedError
 
     async def __aexit__(
-        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         raise NotImplementedError
 
     def _log_database_error(
         self,
-        database_model: Type[DeviceDocument],
+        database_model: type[DeviceDocument],
         error_code: str | int | None,
         previous_error_code: str | int | None,
         timeout: float,
@@ -188,14 +186,14 @@ class Context:  # pylint: disable=too-few-public-methods
         raise NotImplementedError
 
     async def _monitor_database(
-        self, database_model: Type[DeviceDocument], timeout: float
+        self, database_model: type[DeviceDocument], timeout: float
     ) -> AsyncGenerator[tuple[ChangeType, UUID | Document], None]:
         """
         Monitor all changes made to a certain database table.
 
         Parameters
         ----------
-        database_model: Type[DeviceDocument]
+        database_model: type[DeviceDocument]
             The database model of the table to be monitored
         timeout: float
             The timeout in seconds to wait after a connection error.
@@ -271,7 +269,7 @@ class LabnodeContext(Context):
         return self
 
     async def __aexit__(
-        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get_config")
 
@@ -377,7 +375,7 @@ class GenericSensorContext(Context):
         return self
 
     async def __aexit__(
-        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get_config")
 
@@ -487,7 +485,7 @@ class HostContext(Context):
         return self
 
     async def __aexit__(
-        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get")
         event_bus.unregister(self.topic + "/get_config")
@@ -608,7 +606,7 @@ class TinkerforgeContext(Context):
         return self
 
     async def __aexit__(
-        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.topic + "/get_config")
 

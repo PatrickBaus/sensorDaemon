@@ -3,8 +3,6 @@ This is a generic transport driver implementing error handling for an ethernet s
 """
 
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import asyncio
 import logging
 

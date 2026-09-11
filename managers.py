@@ -4,8 +4,6 @@ hosts of a certain type are managed by their managers. The mangers configure the
 hosts extract the data stream from them.
 """
 
-from __future__ import annotations
-
 import asyncio
 import itertools
 import logging

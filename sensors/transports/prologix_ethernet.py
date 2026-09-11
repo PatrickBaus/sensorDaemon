@@ -3,8 +3,6 @@ This is a wrapper for the Prologix Ethernet controller used by other generic dev
 the Prologix library and adds the stream interface via GenericTransport.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from uuid import UUID
 
@@ -39,7 +37,7 @@ class PrologixEthernetTransport(GenericEthernetTransport, AsyncPrologixGpibEther
         """
         return f"{self.hostname}:{self.port}"
 
-    def __init__(  # pylint: disable=too-many-arguments  # The parameters are coming from a (relational) database
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments  # The parameters are coming from a (relational) database
         self,
         hostname: str,
         port: int,

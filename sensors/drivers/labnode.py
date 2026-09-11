@@ -3,8 +3,6 @@ This is a wrapper for LabNode devices.
 """
 
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import logging
 from typing import Any, AsyncGenerator
 from uuid import UUID
@@ -93,7 +91,7 @@ class LabnodeSensor:
 
         return config
 
-    def _read_sensor(  # pylint: disable=too-many-arguments
+    def _read_sensor(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self, sid: int, interval: float, unit: str, topic: str, timeout: float
     ) -> AsyncGenerator[DataEvent, None]:
         if self.__uuid is None:

@@ -2,8 +2,6 @@
 This is an asyncIO driver for a generic SCPI compatible device.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 from decimal import Decimal, InvalidOperation
@@ -175,7 +173,7 @@ class GenericScpiMixin:
             result = Decimal(value)
         except InvalidOperation:
             raise ValueError(
-                f"Invalid number read '{value!r}' is not a number.",
+                f"Device returned invalid data: '{value!r}' is not a number.",
             ) from None
         # Treat special SCPI values
         # Not A Number
