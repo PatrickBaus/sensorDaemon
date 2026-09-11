@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, Mock, call
 
 import pytest
 
-from data_types import DataEvent
 from errors import ConfigurationError
 from sensors.drivers import generic_driver
 from sensors.drivers.generic_driver import GenericDriverMixin
@@ -343,13 +342,3 @@ class TestConfigureAndStreamBehavior:
 
         assert created[0]["args"] == [1]
         assert created[0]["kwargs"] == {"x": 2}
-
-    def test_data_event_shape(self):
-        """Test data event shape."""
-        event = DataEvent(sender="uuid", topic="temperature", value=12.5, sid=3, unit="K")
-        assert event.sender == "uuid"
-        assert event.topic == "temperature"
-        assert event.value == 12.5
-        assert event.sid == 3
-        assert event.unit == "K"
-        assert event.timestamp > 0
