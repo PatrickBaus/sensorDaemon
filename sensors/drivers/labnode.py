@@ -2,6 +2,8 @@
 This is a wrapper for LabNode devices.
 """
 
+from __future__ import annotations
+
 # pylint: disable=duplicate-code
 import logging
 from typing import Any, AsyncGenerator

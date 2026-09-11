@@ -2,6 +2,8 @@
 This is an asyncIO driver for a generic SCPI compatible device.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 from hp3478a_async import HP_3478A

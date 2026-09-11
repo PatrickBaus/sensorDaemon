@@ -2,6 +2,8 @@
 This is an asyncIO driver for a generic SCPI compatible device.
 """
 
+from __future__ import annotations
+
 import asyncio
 import inspect
 import logging
