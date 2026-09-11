@@ -45,6 +45,16 @@ class DataEvent:
     unit: str
 
     def __post_init__(self):
+        """Validate the event fields and initialize its timestamp."""
+        if not isinstance(self.sender, UUID):
+            raise TypeError(f"sender must be a UUID, not {type(self.sender).__name__}")
+        if not isinstance(self.sid, int) or isinstance(self.sid, bool):
+            raise TypeError(f"sid must be an int, not {type(self.sid).__name__}")
+        if not isinstance(self.topic, str):
+            raise TypeError(f"topic must be a str, not {type(self.topic).__name__}")
+        if not isinstance(self.unit, str):
+            raise TypeError(f"unit must be a str, not {type(self.unit).__name__}")
+
         # A slightly clumsy approach to setting the timestamp property, because this is frozen. Taken from:
         # https://docs.python.org/3/library/dataclasses.html#frozen-instances
         object.__setattr__(self, "timestamp", datetime.now(timezone.utc).timestamp())

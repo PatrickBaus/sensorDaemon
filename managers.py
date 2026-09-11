@@ -407,7 +407,7 @@ class HostManager:  # pylint: disable=too-few-public-methods
         self.__topic = "db_autodiscovery_sensors"
 
     @staticmethod
-    def _create_transport(config: dict[str, Any]):
+    def _create_transport(config: dict[str, Any] | None):
         if config is None:
             return None
         try:
