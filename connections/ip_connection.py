@@ -2,14 +2,11 @@
 This file contains an ip connection class, that simplifies the asyncio streamreader and streamwriter
 """
 
-from __future__ import annotations
-
 import asyncio
 import errno
 import logging
 from asyncio import StreamReader, StreamWriter
 from types import TracebackType
-from typing import Type
 
 try:
     from typing import Self  # type: ignore # Python 3.11
@@ -139,7 +136,7 @@ class GenericIpConnection:
         return self
 
     async def __aexit__(
-        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         await self.disconnect()
 

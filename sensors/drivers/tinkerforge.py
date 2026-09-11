@@ -2,9 +2,9 @@
 This is a wrapper for Tinkerforge devices.
 """
 
-# pylint: disable=duplicate-code
 from __future__ import annotations
 
+# pylint: disable=duplicate-code
 import logging
 from functools import partial
 from types import TracebackType
@@ -14,7 +14,7 @@ try:
 except ImportError:
     from typing_extensions import Self
 
-from typing import Any, AsyncGenerator, Type
+from typing import Any, AsyncGenerator
 from uuid import UUID
 
 from aiostream import async_, pipe, stream
@@ -62,7 +62,7 @@ class TinkerforgeSensor:
         return self
 
     async def __aexit__(
-        self, exc_type: Type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None
     ) -> None:
         event_bus.unregister(self.__topic + "/status")
 

@@ -67,7 +67,7 @@ class GenericDriverMixin:
         AsyncGenerator
             Am empty stream, that terminates without generating a value.
         """
-        logging.getLogger(__name__).error("Error while while reading %s. Terminating device. Error: %s", self, exc)
+        logging.getLogger(__name__).error("Error while reading %s. Terminating device. Error: %s", self, exc)
         return stream.empty()
 
     def _configure_and_stream(self, config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:

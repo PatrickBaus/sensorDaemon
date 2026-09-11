@@ -22,8 +22,6 @@ Kraken is a sensor data aggregation tool for distributed sensors arrays. It uses
 AsyncIO instead of threads to scale and outputs data to a MQTT broker.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 import signal

@@ -175,7 +175,7 @@ class GenericScpiMixin:
             result = Decimal(value)
         except InvalidOperation:
             raise ValueError(
-                f"Invalid number read '{value!r}' is not a number.",
+                f"Device returned invalid data: '{value!r}' is not a number.",
             ) from None
         # Treat special SCPI values
         # Not A Number

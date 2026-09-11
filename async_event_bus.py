@@ -3,8 +3,6 @@ A lightweight event bus for the asyncio framework that relies on asynchronous
 generators to deliver messages.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 from inspect import isasyncgen

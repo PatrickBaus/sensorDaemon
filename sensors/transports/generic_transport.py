@@ -2,8 +2,6 @@
 This is a generic transport driver implementing the basic streams used by transports, that cannot enumerate its devices.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 from uuid import UUID
@@ -61,7 +59,7 @@ class GenericTransport:
         """
         return self.__label
 
-    def __init__(  # pylint: disable=too-many-arguments  # The parameters are coming from a (relational) database
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments  # The parameters are coming from a (relational) database
         self,
         uuid: UUID,
         database_topic: str,

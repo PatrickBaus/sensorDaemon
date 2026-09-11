@@ -2,8 +2,6 @@
 A collection of helper functions used in Kraken.
 """
 
-from __future__ import annotations
-
 import asyncio
 import inspect
 from functools import partial
@@ -118,7 +116,7 @@ async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any) 
 
 @pipable_operator
 async def retry(
-    source: AsyncIterable[Any], exc_class: Type[BaseException], interval: float = 0
+    source: AsyncIterable[Any], exc_class: type[BaseException], interval: float = 0
 ) -> AsyncGenerator[Any, None]:
     """
     Retry a datastream if the exception `exc_class` is thrown.
