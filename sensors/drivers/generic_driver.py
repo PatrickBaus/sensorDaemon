@@ -15,7 +15,7 @@ from aiostream import pipe, stream
 from async_event_bus import event_bus
 from data_types import DataEvent
 from errors import ConfigurationError
-from helper_functions import catch, create_device_function, finally_action
+from helper_functions import catch, create_device_function, finally_action, retry
 
 
 class GenericDriverMixin:
@@ -35,8 +35,7 @@ class GenericDriverMixin:
             if isinstance(result, Exception):
                 logging.getLogger(__name__).error("Error during shutdown of: %s", self, exc_info=result)
 
-    @staticmethod
-    def _read_device(config: dict[str, Any]) -> AsyncGenerator[tuple[int, Any], None]:
+    def _read_device(self, config: dict[str, Any]) -> AsyncGenerator[tuple[int, Any], None]:
         on_read: partial
         timeout: float
         on_read, timeout = config["on_read"]
@@ -44,6 +43,7 @@ class GenericDriverMixin:
             return stream.iterate(on_read()) | pipe.map(lambda value: (0, value)) | pipe.timeout(timeout)
         return (
             stream.repeat(config["on_read"], interval=config["interval"])  # Repeat for every new config
+            | retry.pipe((ValueError,), config["interval"], action=lambda exc: self.log_error(exc, msg="Retrying."))
             | pipe.starmap(
                 lambda func, interval: stream.just(func())  # Get the results of the query (a mapping/list)
                 | pipe.concatmap(stream.iterate)  # iterate the results
@@ -67,8 +67,25 @@ class GenericDriverMixin:
         AsyncGenerator
             Am empty stream, that terminates without generating a value.
         """
-        logging.getLogger(__name__).error("Error while reading %s. Terminating device. Error: %s", self, exc)
+        self.log_error(exc, "Terminating device.")
         return stream.empty()
+
+    def log_error(self, exc: BaseException, msg: str | None = None):
+        """
+        Log an error that occurred while reading from the device.
+
+        Parameters
+        ----------
+        exc : BaseException
+            The exception that caused the error.
+        msg : str, optional
+            Additional information to include in the log message.
+            If ``None`` or an empty string, no additional message is logged.
+        """
+        if msg:
+            logging.getLogger(__name__).error("Error while reading %s. Error: %s. %s", self, exc, msg)
+        else:
+            logging.getLogger(__name__).error("Error while reading %s. Error: %s", self, exc)
 
     def _configure_and_stream(self, config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
         if config is None:
