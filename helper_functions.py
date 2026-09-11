@@ -116,7 +116,10 @@ async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any) 
 
 @pipable_operator
 async def retry(
-    source: AsyncIterable[Any], exc_class: type[BaseException], interval: float = 0
+    source: AsyncIterable[Any],
+    exc_class: type[BaseException],
+    interval: float = 0,
+    action: Callable[[BaseException], None] | None = None,
 ) -> AsyncGenerator[Any, None]:
     """
     Retry a datastream if the exception `exc_class` is thrown.
@@ -128,6 +131,8 @@ async def retry(
         The exception class to catch
     interval: float
         The time in seconds to wait between retries
+    action: Callable, optional
+        A function, that takes an exception
 
     Yield
     -------
@@ -141,7 +146,9 @@ async def retry(
             async with streamcontext(source) as streamer:
                 async for item in streamer:
                     yield item
-        except exc_class:
+        except exc_class as e:
+            if action is not None:
+                action(e)
             delay = timeout - loop.time()
             await asyncio.sleep(delay)
             timeout = loop.time() + interval

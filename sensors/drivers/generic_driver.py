@@ -35,8 +35,7 @@ class GenericDriverMixin:
             if isinstance(result, Exception):
                 logging.getLogger(__name__).error("Error during shutdown of: %s", self, exc_info=result)
 
-    @staticmethod
-    def _read_device(config: dict[str, Any]) -> AsyncGenerator[tuple[int, Any], None]:
+    def _read_device(self, config: dict[str, Any]) -> AsyncGenerator[tuple[int, Any], None]:
         on_read: partial
         timeout: float
         on_read, timeout = config["on_read"]
@@ -67,8 +66,25 @@ class GenericDriverMixin:
         AsyncGenerator
             Am empty stream, that terminates without generating a value.
         """
-        logging.getLogger(__name__).error("Error while reading %s. Terminating device. Error: %s", self, exc)
+        self.log_error(exc, "Terminating device.")
         return stream.empty()
+
+    def log_error(self, exc: BaseException, msg: str | None = None):
+        """
+        Log an error that occurred while reading from the device.
+
+        Parameters
+        ----------
+        exc : BaseException
+            The exception that caused the error.
+        msg : str, optional
+            Additional information to include in the log message.
+            If ``None`` or an empty string, no additional message is logged.
+        """
+        if msg:
+            logging.getLogger(__name__).error("Error while reading %s. Error: %s. %s", self, exc, msg)
+        else:
+            logging.getLogger(__name__).error("Error while reading %s. Error: %s", self, exc)
 
     def _configure_and_stream(self, config: dict[str, Any]) -> AsyncGenerator[DataEvent, None]:
         if config is None:
