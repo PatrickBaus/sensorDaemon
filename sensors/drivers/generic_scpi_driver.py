@@ -164,7 +164,7 @@ class GenericScpiMixin:
             The result of the query. The result return by device is split at commas.
         """
         await self.write(cmd, scpi_terminator)
-        return await self.read(scpi_terminator, *args, **kwargs)
+        return await self.read(*args, scpi_terminator=scpi_terminator, **kwargs)
 
     @staticmethod
     def _map_scpi_number_to_decimal(value: str) -> Decimal:
@@ -204,7 +204,7 @@ class GenericScpiMixin:
         iterable of Decimal
             The number(s) read from the device. This might also be NaN, Infinity, or -Infinity.
         """
-        return map(self._map_scpi_number_to_decimal, await self.read(scpi_terminator, *args, **kwargs))
+        return map(self._map_scpi_number_to_decimal, await self.read(*args, scpi_terminator=scpi_terminator, **kwargs))
 
     async def query_number(self, cmd: str, scpi_terminator: str | None = None) -> Iterable[Decimal]:
         """
@@ -223,7 +223,7 @@ class GenericScpiMixin:
             The number(s) read from the device. This might also be NaN, Infinity, or -Infinity.
         """
         await self.write(cmd, scpi_terminator)
-        return await self.read_number(scpi_terminator)
+        return await self.read_number(scpi_terminator=scpi_terminator)
 
 
 class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
