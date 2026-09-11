@@ -5,6 +5,8 @@
 
 import asyncio
 import errno
+from datetime import datetime
+from decimal import Decimal
 from unittest.mock import AsyncMock, Mock, call
 from uuid import UUID, uuid4
 
@@ -238,9 +240,16 @@ class TestMqttManager:
         monkeypatch.setattr(managers.aiomqtt, "Client", lambda **kwargs: fake_client)
         monkeypatch.setattr(asyncio, "sleep", AsyncMock())
         real_queue = asyncio.Queue()
-        real_queue.put_nowait(("sensors/test", {"value": object()}))
+        payload = {
+            "timestamp": datetime(2100, 1, 1, 0, 0, 0, 0),
+            "uuid": str(UUID("12345678-1234-5678-1234-567812345678")),
+            "sid": 0,
+            "value": Decimal("NaN"),
+            "unit": "Hz",
+        }
+        real_queue.put_nowait(("sensors/test", payload))
 
-        with caplog.at_level("ERROR"):
+        with caplog.at_level("DEBUG"):
             task = asyncio.create_task(mqtt_manager.consumer(real_queue, "worker", reconnect_interval=0))
             await asyncio.wait_for(real_queue.join(), timeout=1)
             task.cancel()
