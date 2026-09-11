@@ -82,7 +82,7 @@ class GenericScpiMixin:
         try:
             company_name, model, serial, firmware = idn
         except ValueError:
-            raise ValueError(f"Device returned invalid ID: {idn!r}") from None
+            raise ValueError(f"{idn!r} is not a valid SCPI *IDN reply") from None
         return company_name, model, serial, firmware
 
     async def read(self, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> Iterable[str]:
@@ -266,7 +266,7 @@ class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
                 ) = device_id
                 self.device_name = f"{manufacturer} {model_number} ({serial_number})"
             except ValueError as e:
-                logging.getLogger(__name__).warning("Device returned invalid device id: '%s'. Retrying.", e)
+                logging.getLogger(__name__).warning("Error while enumerating device %s: '%s'. Retrying.", self, e)
                 continue  # Retry it once more
             else:
                 break  # Stop the loop if everything went well
