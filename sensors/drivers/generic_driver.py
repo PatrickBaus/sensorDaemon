@@ -15,7 +15,7 @@ from aiostream import pipe, stream
 from async_event_bus import event_bus
 from data_types import DataEvent
 from errors import ConfigurationError
-from helper_functions import catch, create_device_function, finally_action
+from helper_functions import catch, create_device_function, finally_action, retry
 
 
 class GenericDriverMixin:
@@ -43,6 +43,7 @@ class GenericDriverMixin:
             return stream.iterate(on_read()) | pipe.map(lambda value: (0, value)) | pipe.timeout(timeout)
         return (
             stream.repeat(config["on_read"], interval=config["interval"])  # Repeat for every new config
+            | retry.pipe((ValueError,), config["interval"], action=lambda exc: self.log_error(exc, msg="Retrying."))
             | pipe.starmap(
                 lambda func, interval: stream.just(func())  # Get the results of the query (a mapping/list)
                 | pipe.concatmap(stream.iterate)  # iterate the results
