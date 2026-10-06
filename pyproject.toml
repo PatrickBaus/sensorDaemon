@@ -71,7 +71,7 @@ dev = [
     {include-group = "lint"},
 ]
 lint = [
-    "mypy~=2.3.1",
+    "mypy~=2.4.0",
     "pylint~=4.1.1",
     "pylint-pydantic~=0.4.1",
 ]
