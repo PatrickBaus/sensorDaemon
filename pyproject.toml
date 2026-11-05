@@ -67,7 +67,7 @@ dev = [
     "build~=1.6.1",
     "isort~=9.0.2",
     "pre_commit~=4.7.0",
-    "types-simplejson~=4.2.0.20261006",
+    "types-simplejson~=4.2.0.20261031",
     {include-group = "lint"},
 ]
 lint = [
