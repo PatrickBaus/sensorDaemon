@@ -16,9 +16,9 @@ except ImportError:
 
 from uuid import UUID
 
-import motor.motor_asyncio
 import pymongo  # to access the error classes
 from beanie import Document, init_beanie
+from pymongo import AsyncMongoClient
 
 from async_event_bus import event_bus
 from data_types import ChangeType
@@ -47,7 +47,7 @@ class MongoDb:
 
     def __init__(self, **kwargs: Unpack[DatabaseParams]) -> None:
         self.__params = kwargs
-        self.__client = None
+        self.__client: AsyncMongoClient | None = None
         self.__logger = logging.getLogger(__name__)
 
     @property
@@ -80,7 +80,7 @@ class MongoDb:
                     "Worker (MongoDB): Connecting to database (%s).",
                     self.hostname,
                 )
-            self.__client = motor.motor_asyncio.AsyncIOMotorClient(
+            self.__client = AsyncMongoClient(
                 **self.__params, serverSelectionTimeoutMS=timeout * 1000, uuidRepresentation="standard"
             )
 
@@ -109,6 +109,7 @@ class MongoDb:
                         exc,
                         timeout,
                     )
+                await self.__client.close()
                 await asyncio.sleep(timeout)
                 continue
             finally:
@@ -213,7 +214,7 @@ class Context:  # pylint: disable=too-few-public-methods
         pipeline: list[dict[str, dict[str, str]]] = []
         while "loop not cancelled":
             try:
-                async with database_model.get_motor_collection().watch(
+                async with await database_model.get_pymongo_collection().watch(
                     pipeline, full_document="updateLookup", resume_after=resume_token
                 ) as change_stream:
                     previous_error_code = None
