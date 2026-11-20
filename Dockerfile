@@ -1,50 +1,117 @@
+# syntax=docker/dockerfile:1
 FROM alpine:3.24.4 AS base
-
-FROM base AS builder
-
-ARG TARGETPLATFORM
-
-COPY . /app
-
-RUN COLOUR='\e[1;93m' && \
-  echo -e "${COLOUR}Installing build dependencies...\e[0m" && \
-  if [ "$TARGETPLATFORM" = "linux/arm/v6" ] || [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then BUILD_DEPS="cargo rust"; fi && \
-  apk --no-cache add --virtual=build-dependencies \
-    ${BUILD_DEPS} \
-    py3-pip && \
-  echo -e "${COLOUR}Done.\e[0m"
-
-# Define the python virtual environment
-ENV VIRTUAL_ENV=/opt/venv
-RUN python3 -m venv --upgrade-deps $VIRTUAL_ENV
+ENV APP_USER=worker \
+    APP_USER_ID=5556 \
+    WORK_DIR=/app \
+    VIRTUAL_ENV=/opt/venv \
+    PYTHON_VERSION=3.14 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN COLOUR='\e[1;93m' && \
-  echo -e "${COLOUR}Installing LabKraken...\e[0m" && \
-  pip install -r /app/requirements.txt && \
-  echo -e "${COLOUR}Done.\e[0m"
+# Minimal Python from Alpine's repos (shared by all stages), pinned via apk's
+# fuzzy match ("~="): 3.14 -> any 3.14.x, 3.14.2 -> 3.14.2-rN only.
+# PYTHON_VERSION is bumped to the latest patch by the "Update Python version" workflow.
+# The venv symlinks to /usr/bin/python3, so every stage needs this same package.
+RUN apk --no-cache upgrade \
+    && apk --no-cache add "python3~=${PYTHON_VERSION}"
 
-FROM base AS runner
-LABEL maintainer="Patrick Baus <patrick.baus@physik.tu-darmstadt.de>"
-LABEL description="Kraken sensor data aggregator."
+# ============================================
+# Stage 1: Build stage
+# ============================================
+FROM base AS builder
+ARG TARGETPLATFORM
 
-ARG WORKER_USER_ID=5556
+# Install build dependencies. There are no prebuilt musl wheels for some Rust
+# extensions (e.g. pydantic-core) on 32-bit ARM, so those need a Rust toolchain.
+RUN if [ "$TARGETPLATFORM" = "linux/arm/v6" ] || [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+        BUILD_DEPS="cargo rust"; \
+    fi \
+    && apk add --no-cache py3-pip ${BUILD_DEPS}
 
-# Upgrade installed packages,
-# add a user called `worker`
-# Then install Python dependency
-RUN apk --no-cache upgrade && \
-    addgroup -g ${WORKER_USER_ID} worker && \
-    adduser -D -u ${WORKER_USER_ID} -G worker worker && \
-    apk --no-cache add python3
+# Create virtual environment WITHOUT pip/setuptools. Packages are installed from
+# the builder's system pip via `pip --python`, so the venv never contains pip.
+RUN python3 -m venv --without-pip $VIRTUAL_ENV
 
-COPY --from=builder /opt/venv /opt/venv
+# Install the runtime dependencies first, so this layer stays cached as long as
+# requirements.txt does not change.
+COPY requirements.txt ${WORK_DIR}/
+WORKDIR ${WORK_DIR}
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    pip --python $VIRTUAL_ENV/bin/python install -r requirements.txt
 
-# Enable venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Application code
+COPY . ${WORK_DIR}
 
-COPY --from=builder --chown=worker:worker /app /app
+# ============================================
+# Stage 2: Test stage
+# ============================================
+FROM builder AS test
 
-USER worker
+# Test the code against the venv in a copy, so pytest never lands in the
+# production image. Runs once per target platform.
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    cp -a $VIRTUAL_ENV /tmp/venv-test \
+    && pip --python /tmp/venv-test/bin/python install --group test \
+    && /tmp/venv-test/bin/python -m pytest --exitfirst \
+    && touch /tmp/tests-passed
 
-CMD ["python3", "-OO", "-u", "/app/kraken_ethernet.py"]
+# ============================================
+# Stage 3: Production stage
+# ============================================
+FROM base AS prod
+LABEL maintainer="Patrick Baus <patrick.baus@physik.tu-darmstadt.de>" \
+      description="Kraken sensor data aggregator."
+
+# Add an unprivileged user with a fixed UID/GID (useful for mounted secrets)
+RUN addgroup -g ${APP_USER_ID} ${APP_USER} \
+    && adduser -D -u ${APP_USER_ID} -G ${APP_USER} ${APP_USER}
+
+# Only build the production image if the tests passed
+COPY --from=test /tmp/tests-passed /tmp/tests-passed
+# Copy virtual environment from builder
+COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
+# Copy application code (without tests and repository metadata)
+COPY --chown=${APP_USER}:${APP_USER} --from=builder \
+     --exclude=tests --exclude=.git --exclude=.github \
+     ${WORK_DIR} ${WORK_DIR}
+WORKDIR ${WORK_DIR}
+
+# Switch to non-root user
+USER ${APP_USER}
+
+CMD ["python3", "-OO", "kraken_ethernet.py"]
+
+# ============================================
+# Stage 4: Development builder stage
+# ============================================
+FROM builder AS builder_dev
+
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    apk add --no-cache git \
+    && pip --python $VIRTUAL_ENV/bin/python install --group dev --group test
+
+# ============================================
+# Stage 5: Development stage
+# ============================================
+FROM base AS dev
+
+RUN apk add --no-cache git \
+    && addgroup -g ${APP_USER_ID} ${APP_USER} \
+    && adduser -D -u ${APP_USER_ID} -G ${APP_USER} ${APP_USER}
+
+# Copy virtual environment from builder
+COPY --from=builder_dev $VIRTUAL_ENV $VIRTUAL_ENV
+# Copy application code
+COPY --chown=${APP_USER}:${APP_USER} --from=builder_dev ${WORK_DIR} ${WORK_DIR}
+WORKDIR ${WORK_DIR}
+
+# Switch to non-root user
+USER ${APP_USER}
+
+CMD ["python3", "kraken_ethernet.py"]
+
+# ============================================
+# Default target: production
+# ============================================
+FROM prod
