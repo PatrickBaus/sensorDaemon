@@ -1,0 +1,173 @@
+name: Update Python version
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-python
+  cancel-in-progress: false
+
+env:
+  DOCKERFILE: Dockerfile
+  # Alpine architectures matching the CI build platforms:
+  # linux/amd64 -> x86_64, linux/arm/v6 -> armhf, linux/arm/v7 -> armv7, linux/arm64 -> aarch64
+  ALPINE_ARCHES: x86_64 armhf armv7 aarch64
+
+jobs:
+  update-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read Alpine version and current Python pin from Dockerfile
+        id: current
+        run: |
+          # alpine:edge is a rolling release: there is no Alpine vX.Y repo to look the version
+          # up in, so do not patch anything. This is not an error, the run just ends here.
+          if grep -qiE '^FROM[[:space:]].*alpine:edge' "$DOCKERFILE"; then
+            msg="$DOCKERFILE uses alpine:edge, which has no versioned repo to compare against. Skipping the Python update."
+            echo "::notice::$msg"
+            echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+            echo "supported=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          alpine=$(sed -nE 's/^FROM alpine:([0-9]+\.[0-9]+).*/\1/p' "$DOCKERFILE" | head -n1)
+          python=$(sed -nE 's/.*PYTHON_VERSION=([0-9][0-9.]*).*/\1/p' "$DOCKERFILE" | head -n1)
+          if [ -z "$alpine" ] || [ -z "$python" ]; then
+            echo "::error::Could not find 'FROM alpine:X.Y' and PYTHON_VERSION in $DOCKERFILE"
+            exit 1
+          fi
+          echo "supported=true" >> "$GITHUB_OUTPUT"
+          echo "alpine=$alpine" >> "$GITHUB_OUTPUT"
+          echo "python=$python" >> "$GITHUB_OUTPUT"
+          echo "Alpine $alpine, pinned Python $python"
+
+      - name: Look up latest python3 available on all architectures
+        id: latest
+        if: steps.current.outputs.supported == 'true'
+        env:
+          ALPINE: ${{ steps.current.outputs.alpine }}
+        run: |
+          # Alpine's builders for each architecture publish independently, so a new python3
+          # can reach x86_64 before the ARM repos. Use the lowest version found across all
+          # build architectures, so a bump never pins a version some platforms do not have yet.
+          dir=$(mktemp -d)
+          all=()
+          echo "| Architecture | python3 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          for arch in $ALPINE_ARCHES; do
+            mkdir -p "$dir/$arch"
+            curl -fsSL --retry 3 "https://dl-cdn.alpinelinux.org/alpine/v${ALPINE}/main/${arch}/APKINDEX.tar.gz" \
+              | tar -xz -C "$dir/$arch" APKINDEX
+            # APKINDEX is paragraph-based: P: = package name, V: = version (e.g. 3.14.10-r1)
+            full=$(awk -v RS= -F'\n' '
+              { p=""; v=""
+                for (i=1; i<=NF; i++) {
+                  if ($i ~ /^P:/) p=substr($i,3)
+                  if ($i ~ /^V:/) v=substr($i,3)
+                }
+                if (p == "python3") print v }' "$dir/$arch/APKINDEX" | sort -V | tail -n1)
+            if ! [[ "${full%%-r*}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Unexpected python3 version '$full' in Alpine v${ALPINE} main/${arch}"
+              exit 1
+            fi
+            echo "Alpine v${ALPINE} ${arch}: $full"
+            echo "| ${arch} | ${full} |" >> "$GITHUB_STEP_SUMMARY"
+            all+=("$full")
+          done
+          full=$(printf '%s\n' "${all[@]}" | sort -V | head -n1)
+          version="${full%%-r*}"
+          if [ "$(printf '%s\n' "${all[@]}" | sort -u | wc -l)" -gt 1 ]; then
+            echo "::notice::Architectures differ, using the lowest common python3 $full"
+          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Lowest common python3 in Alpine v${ALPINE}: $full"
+
+      - name: Compare versions
+        id: compare
+        if: steps.current.outputs.supported == 'true'
+        env:
+          CURRENT: ${{ steps.current.outputs.python }}
+          LATEST: ${{ steps.latest.outputs.version }}
+        run: |
+          highest=$(printf '%s\n%s\n' "$CURRENT" "$LATEST" | sort -V | tail -n1)
+          if [ "$CURRENT" != "$LATEST" ] && [ "$highest" = "$LATEST" ]; then
+            echo "update=true" >> "$GITHUB_OUTPUT"
+            echo "Newer Python available: $CURRENT -> $LATEST"
+          else
+            echo "update=false" >> "$GITHUB_OUTPUT"
+            echo "Already up to date ($CURRENT)"
+          fi
+
+      - name: Update Dockerfile
+        if: steps.compare.outputs.update == 'true'
+        env:
+          LATEST: ${{ steps.latest.outputs.version }}
+        run: |
+          sed -i -E "s/(PYTHON_VERSION=)[0-9][0-9.]*/\1${LATEST}/" "$DOCKERFILE"
+          git diff --stat
+
+      - name: Create pull request
+        if: steps.compare.outputs.update == 'true'
+        uses: Quantum-Electronic-Devices/create-pull-request@53004b9edc072770eb55f66e37d81eb8850b96ee # v1.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/update-python/${{ steps.latest.outputs.version }}
+          title: "[Docker] Bump Python to ${{ steps.latest.outputs.version }}"
+          body: |
+            Alpine v${{ steps.current.outputs.alpine }} now ships `python3` **${{ steps.latest.outputs.full }}** on all build architectures (${{ env.ALPINE_ARCHES }}).
+
+            Updates `PYTHON_VERSION` in `${{ env.DOCKERFILE }}`:
+            `${{ steps.current.outputs.python }}` → `${{ steps.latest.outputs.version }}`
+
+            _Opened automatically by the "Update Python version" workflow._
+          labels: dependencies, docker, python
+
+      - name: Close superseded pull requests
+        # Runs on every successful check, not only after a bump: this also cleans up
+        # PRs made redundant by a manual Python bump on the default branch.
+        if: steps.current.outputs.supported == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PREFIX: chore/update-python/
+          UPDATE: ${{ steps.compare.outputs.update }}
+          CURRENT: ${{ steps.current.outputs.python }}
+          LATEST: ${{ steps.latest.outputs.version }}
+        run: |
+          # With a bump, the PR for $LATEST is kept and every older one is superseded by it.
+          # Without one, the default branch already pins $CURRENT, so any PR up to it is redundant.
+          if [ "$UPDATE" = "true" ]; then
+            keep="$LATEST"
+            target="$LATEST"
+          else
+            keep=""
+            target="$CURRENT"
+          fi
+          gh pr list --state open --limit 100 --json number,headRefName \
+            --jq ".[] | select(.headRefName | startswith(\"$PREFIX\")) | \"\(.number) \(.headRefName)\"" \
+          | while read -r number branch; do
+              version="${branch#"$PREFIX"}"
+              [ "$version" = "$keep" ] && continue
+              # Only close PRs for versions at or below the target, never newer ones
+              [ "$(printf '%s\n%s\n' "$version" "$target" | sort -V | tail -n1)" = "$target" ] || continue
+              if [ -n "$keep" ]; then
+                reason="Superseded by the bump to Python $keep (branch \`${PREFIX}${keep}\`)."
+              else
+                reason="The default branch already pins Python $CURRENT, so this PR is no longer needed."
+              fi
+              echo "Closing #$number ($branch): $reason"
+              gh pr close "$number" --delete-branch --comment "$reason"
+              echo "- Closed #$number (\`$branch\`)" >> "$GITHUB_STEP_SUMMARY"
+            done
