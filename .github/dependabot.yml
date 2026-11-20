@@ -17,6 +17,9 @@ updates:
     commit-message:
       # Prefix all commit messages with "[pip] "
       prefix: "[pip] "
+    cooldown:
+      exclude:
+        - "tinkerforge_async"
 
   - package-ecosystem: "docker"
     directory: "/"
