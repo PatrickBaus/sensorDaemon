@@ -1,11 +1,27 @@
-name: ci
+name: CI/CD Pipeline
 
 on:
-  push:
-    # Publish pep440 tags as releases.
-    branches: [ "master" ]
-    tags: [ '*.*.*' ]
   pull_request:
+    branches:
+      - master
+      - main
+
+  push:
+    branches:
+      - master
+      - main
+    # Publish pep440 tags as releases.
+    tags: [ '*.*.*' ]
+
+# Least privilege by default; jobs that need more declare it themselves.
+permissions:
+  contents: read
+
+# Serialize runs per ref so an older run cannot finish last and overwrite a tag
+# (e.g. :master) with an older image. PR runs are cancelled when superseded.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -17,6 +33,7 @@ jobs:
   tests:
     name: Run Python tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     strategy:
       matrix:
@@ -24,10 +41,12 @@ jobs:
 
     steps:
     - name: Checkout source repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Set up python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
       with:
         cache: 'pip' # caching pip dependencies
         python-version: ${{ matrix.python-version }}
@@ -35,29 +54,113 @@ jobs:
     - name: Install dependencies for testing
       run: |
         python3 -m pip install --upgrade pip
-        python3 -m pip install -r requirements.txt --group test
+        python3 -m pip install -r requirements.txt --group test --group dev
 
-    - name: Test with pytest
+    - name: Run tests
       env:
         GIT_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
       run: |
         pytest --exitfirst --verbose --failed-first
 
+    - name: Run isort
+      # --check-only bails out on error but does not fix it
+      run: |
+        isort --check-only .
+
+    - name: Run Pylint
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        git ls-files -z '*.py' | xargs -0 pylint --reports n --generated-members='pipe.*'
+
+    - name: Run MyPy
+      # Non-blocking until the existing type errors are fixed. Remove continue-on-error then.
+      continue-on-error: true
+      run: |
+        mypy --ignore-missing-imports .
+
+    - name: Run Black
+      run: |
+        black --check .
+
+    - name: Run blacken-docs (Documentation)
+      # This checks all Markdown and reST files in your repo
+      run: |
+        git ls-files -z '*.md' '*.rst' | xargs -0 --no-run-if-empty blacken-docs --line-length=120 --check --
+
+  smoke-test:
+    name: Run smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout source repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Setup Docker buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+    # The image is built here once and its layers are saved to the GitHub Actions cache.
+    # The build job below reuses them for linux/amd64, so it does not have to build the image again.
+    - name: Build image
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      with:
+        context: .
+        target: prod
+        load: true
+        tags: kraken:prod
+        cache-from: type=gha,scope=linux_amd64
+        cache-to: type=gha,scope=linux_amd64,mode=max,ignore-error=true
+
+    # There is no MQTT broker or database here: Kraken must start, keep retrying the
+    # connections without crashing, and shut down cleanly on SIGTERM.
+    - name: Start container
+      run: |
+        docker run -d --name kraken \
+            -e MQTT_HOST=127.0.0.1 \
+            -e SENSORS_DATABASE_HOST=mongodb://127.0.0.1:27017 \
+            kraken:prod
+
+    - name: Smoke Test
+      run: |
+        timeout 30s bash -c 'until docker logs kraken 2>&1 | grep -q "Starting Kraken v"; do sleep 2; done'
+        sleep 15
+        if [ "$(docker inspect -f '{{.State.Running}}' kraken)" != "true" ]; then
+          echo "::error::Kraken exited during the smoke test"
+          exit 1
+        fi
+        docker stop --timeout 10 kraken
+        exit_code=$(docker inspect -f '{{.State.ExitCode}}' kraken)
+        if [ "$exit_code" != "0" ]; then
+          echo "::error::Kraken did not shut down cleanly (exit code $exit_code)"
+          exit 1
+        fi
+
+    - name: Show container logs
+      if: always()
+      run: docker logs kraken || true
+
+    - name: Cleanup
+      if: always()
+      run: docker rm -f kraken
+
   prepare:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Convert repository name to lowercase
         id: set-variables
         run: |
-          echo "image=${{ env.REGISTRY }}/${IMAGE_NAME,,}" >>${GITHUB_OUTPUT}
-          # Only enable push on push events (already covered above, but this is a safeguard)
-          echo "push=${{ github.event_name != 'pull_request' }}" >>${GITHUB_OUTPUT}
+          echo "image=${{ env.REGISTRY }}/${IMAGE_NAME,,}" >> "${GITHUB_OUTPUT}"
+          # Only push images for push events, never for pull requests
+          echo "push=${{ github.event_name != 'pull_request' }}" >> "${GITHUB_OUTPUT}"
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ steps.set-variables.outputs.image }}
           tags: |
@@ -73,11 +176,17 @@ jobs:
       meta-labels: ${{ steps.meta.outputs.labels }}
       meta-version: ${{ steps.meta.outputs.version }}
 
+  # Pull requests build every platform without pushing, so that e.g. a Python bump is
+  # tested on ARM before it is merged.
   build:
+    name: Build and push Docker images
     needs:
       - tests
+      - smoke-test
       - prepare
     runs-on: ubuntu-latest
+    # 32-bit ARM builds compile Rust extensions and run the tests under QEMU
+    timeout-minutes: 120
     permissions:
       contents: read
       packages: write
@@ -93,100 +202,119 @@ jobs:
           - platform: ${{ (startsWith(github.ref, 'refs/tags/') && 'nothing') || (github.event_name == 'pull_request' && 'nothing') || 'linux/arm/v6' }}
           - platform: ${{ (startsWith(github.ref, 'refs/tags/') && 'nothing') || (github.event_name == 'pull_request' && 'nothing') || 'linux/arm/v7' }}
     steps:
-      - name: List CPU
-        run: lscpu
-
       - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Set up QEMU
-        if: matrix.platform != 'linux/amd64'
-        uses: docker/setup-qemu-action@v4
-
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log into registry ${{ env.REGISTRY }}
-        if: needs.prepare.outputs.push == 'true'
-        uses: docker/login-action@v4.8.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Build and push the Docker image with Buildx (don't tag it yet)
-      # https://github.com/docker/build-push-action
-      - name: Build and push Docker image by digest
-        id: build
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ needs.prepare.outputs.image }},push-by-digest=true,name-canonical=true,push=${{ needs.prepare.outputs.push }}
-          labels: ${{ needs.prepare.outputs.meta-labels }}
-
-      - name: Export digest
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-        shell: bash
+          persist-credentials: false
 
       - name: Sanitize platform string
         id: platform
         env:
           PLATFORM_STRING: ${{ matrix.platform }}
         run: |
-          echo "value=${PLATFORM_STRING//\//_}" >> $GITHUB_OUTPUT
+          echo "value=${PLATFORM_STRING//\//_}" >> "${GITHUB_OUTPUT}"
+        shell: bash
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: needs.prepare.outputs.push == 'true'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        if: matrix.platform != 'linux/amd64'
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Validate build configuration
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          call: check
+
+      # Build and push the Docker image with Buildx (don't tag it yet)
+      # The images are pushed by digest (push-by-digest=true)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image by digest
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          target: prod
+          provenance: mode=max
+          sbom: true
+          outputs: type=image,name=${{ needs.prepare.outputs.image }},push-by-digest=true,name-canonical=true,push=${{ needs.prepare.outputs.push }}
+          labels: ${{ needs.prepare.outputs.meta-labels }}
+          # One cache per platform. linux/amd64 reuses the layers built by the smoke-test job,
+          # the ARM platforms keep their (slow to build) layers for the next run.
+          cache-from: type=gha,scope=${{ steps.platform.outputs.value }}
+          cache-to: type=gha,scope=${{ steps.platform.outputs.value }},mode=max,ignore-error=true
+
+      - name: Export digest
+        if: needs.prepare.outputs.push == 'true'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
         shell: bash
 
       - name: Upload digest
         if: needs.prepare.outputs.push == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: digest-${{ steps.platform.outputs.value }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
 
-  push:
+  tag:
+    name: Tag docker images for platforms
     needs:
-      - prepare
       - build
+      - prepare
     if: needs.prepare.outputs.push == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: /tmp/digests
           pattern: digest-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-      # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log into registry ${{ env.REGISTRY }}
-        if: needs.prepare.outputs.push == 'true'
-        uses: docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create manifest list and push
-        if: needs.prepare.outputs.push == 'true'
+      # Combine all platform images built above (digests) into one tag, so that each platform can pull e.g. the 'latest' tag.
+      - name: Create manifest list and tag
         working-directory: /tmp/digests
+        env:
+          META_JSON: ${{ needs.prepare.outputs.meta-json }}
+          IMAGE: ${{ needs.prepare.outputs.image }}
         run: |
-          docker buildx imagetools create $(jq -r '"-t " + (.tags | join(" -t "))' <<< '${{ needs.prepare.outputs.meta-json }}') \
-            $(printf '${{ needs.prepare.outputs.image }}@sha256:%s ' *)
+          docker buildx imagetools create \
+            $(jq -r '"-t " + (.tags | join(" -t "))' <<< "${META_JSON}") \
+            $(printf "${IMAGE}@sha256:%s " *)
 
       - name: Inspect image
-        if: needs.prepare.outputs.push == 'true'
+        env:
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          VERSION: ${{ needs.prepare.outputs.meta-version }}
         run: |
-          docker buildx imagetools inspect '${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.meta-version }}'
+          docker buildx imagetools inspect "${IMAGE}:${VERSION}"

@@ -2,11 +2,13 @@ name: Trivy vulnerability test
 
 on:
   workflow_run:
-    workflows: [ "ci" ]
+    workflows: [ "CI/CD Pipeline" ]
     types:
       - completed
   schedule:
     - cron: '0 0 * * 1'
+permissions: {}
+
 env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
@@ -15,10 +17,25 @@ env:
 
 jobs:
   build:
-
+    # Scheduled runs always scan. After CI, only scan when a push to master/tag
+    # succeeded: skipping failed runs and PR runs (the scanned tags are
+    # master/latest, which a PR run does not change).
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    # Job-level (not workflow-level) so that skipped runs (e.g. triggered by a
+    # PR CI run) never enter the group and cancel a real scan. Includes the
+    # matrix tag so master/latest jobs don't cancel each other, and the event
+    # name so the weekly scheduled scan isn't cancelled by a push-triggered one.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ matrix.docker-tag }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
+      packages: read
       security-events: write
 
     strategy:
@@ -26,10 +43,10 @@ jobs:
         docker-tag: [ "master", "latest" ]
 
     steps:
-      # Login against a Docker registry except on PR
+      # Login against a Docker registry
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
-        uses: docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -37,17 +54,54 @@ jobs:
 
       - name: Convert repository name to lowercase
         run: |
-          echo "IMAGE_NAME_LC=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME_LC=${IMAGE_NAME,,}" >>"${GITHUB_ENV}"
 
-      - name: Scan image for vulnerabilities in Docker image ${{ matrix.docker-tag }}
-        uses: aquasecurity/trivy-action@master
+      - name: Scan ${{ env.IMAGE_NAME_LC }} image for vulnerabilities (${{ matrix.docker-tag }})
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ matrix.docker-tag }}'
+          format: 'table'
+          output: 'trivy.txt'
+          hide-progress: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+
+      - name: Publish Trivy results to workflow summary (${{ env.IMAGE_NAME_LC }} / ${{ matrix.docker-tag }})
+        if: always()
+        run: |
+          if [[ -s trivy.txt ]]; then
+            {
+              echo "## Trivy scan: ${{ env.IMAGE_NAME_LC }}:${{ matrix.docker-tag }}"
+              echo
+              echo '```text'
+              cat trivy.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Trivy scan: ${{ env.IMAGE_NAME_LC }}:${{ matrix.docker-tag }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "No Trivy output file was produced." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Generate SARIF only for public repositories, where GitHub code scanning
+      # is available without enabling Code Security for private repositories.
+      # !cancelled() instead of the implicit success(): the scan above exits
+      # non-zero when it finds vulnerabilities, which is exactly when the SARIF
+      # report is needed.
+      - name: Generate SARIF results for public repository
+        if: ${{ !cancelled() && github.event.repository.private == false }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ matrix.docker-tag }}'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          hide-progress: true
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+          skip-setup-trivy: true
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4.39.3
-        if: always()
+      - name: Upload Trivy results to GitHub Code Scanning
+        if: ${{ !cancelled() && github.event.repository.private == false && hashFiles('trivy-results.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: 'trivy-results.sarif'
+          category: 'trivy-${{ env.IMAGE_NAME_LC }}-${{ matrix.docker-tag }}'
