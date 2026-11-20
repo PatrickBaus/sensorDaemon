@@ -25,6 +25,7 @@ AsyncIO instead of threads to scale and outputs data to a MQTT broker.
 import asyncio
 import logging
 import signal
+import sys
 
 # noinspection PyPackageRequirements
 import uuid
@@ -115,11 +116,17 @@ class Kraken:
             password=load_secret("MQTT_CLIENT_PASSWORD", default=None),
         )
 
-    async def run(self):  # pylint: disable=too-many-locals
+    async def run(self) -> int:  # pylint: disable=too-many-locals
         """
         Start the daemon and keep it running through the while (True)
         loop. Execute shutdown() to kill it.
+
+        Returns
+        -------
+        int
+            The exit code. 0 if Kraken was shut down on request, 1 if a worker stopped unexpectedly.
         """
+        exit_code = 0
         self.__logger.warning("#################################################")
         self.__logger.warning("Starting Kraken v%s...", __version__)
         self.__logger.warning("#################################################")
@@ -148,13 +155,13 @@ class Kraken:
         host_manager = HostManager(node_id=node_id)
 
         tasks = set()
-        mqtt_task = asyncio.create_task(mqtt_manager.run())
+        mqtt_task = asyncio.create_task(mqtt_manager.run(), name="MQTT manager")
         tasks.add(mqtt_task)
         shutdown_event_task = asyncio.create_task(self.__shutdown_event.wait())
         tasks.add(shutdown_event_task)
-        database_task = asyncio.create_task(database_manager.run())
+        database_task = asyncio.create_task(database_manager.run(), name="database manager")
         tasks.add(database_task)
-        host_manager_task = asyncio.create_task(host_manager.run())
+        host_manager_task = asyncio.create_task(host_manager.run(), name="host manager")
         tasks.add(host_manager_task)
 
         try:
@@ -169,10 +176,14 @@ class Kraken:
                     except asyncio.CancelledError:
                         pass
                 else:
-                    # TODO: We have an error...do sth.
-                    pass
+                    # A worker must never stop on its own. Log why it did, then shut down with an error, so that
+                    # the container is restarted by its restart policy.
+                    exit_code = 1
+                    self._log_worker_failure(task)
         finally:
             await self.shutdown()
+
+        return exit_code
 
         # @component.register("com.kraken.database.tinkerforge.get", options=RegisterOptions(details_arg='details'))
         # async def get_sensor(uid, *args, **kwargs):
@@ -180,6 +191,22 @@ class Kraken:
         #     print(sensor_config)
         #     sensor_config['id'] = str(sensor_config['id'])
         #     return sensor_config
+
+    def _log_worker_failure(self, task: asyncio.Task) -> None:
+        """
+        Log why a worker task stopped. Workers must never stop on their own, so this is always an error.
+
+        Parameters
+        ----------
+        task: asyncio.Task
+            The worker task, that has stopped
+        """
+        if task.cancelled():
+            self.__logger.error("Worker %s was cancelled unexpectedly.", task.get_name())
+        elif task.exception() is not None:
+            self.__logger.error("Worker %s stopped with an error.", task.get_name(), exc_info=task.exception())
+        else:
+            self.__logger.error("Worker %s stopped unexpectedly.", task.get_name())
 
     async def __shutdown(self):
         self.__shutdown_event.set()
@@ -210,16 +237,21 @@ class Kraken:
             self.__logger.exception("Error while reaping tasks during shutdown")
 
 
-async def main():
+async def main() -> int:
     """
     The main (infinite) loop, that runs until Kraken has shut down.
+
+    Returns
+    -------
+    int
+        The exit code of the daemon
     """
     daemon = Kraken()
     try:
-        await daemon.run()
+        return await daemon.run()
     except asyncio.CancelledError:
         # Silently swallow the error to suppress the noise, then terminate.
-        pass
+        return 0
 
 
 def parse_log_level(log_level: int | str) -> int:
@@ -253,4 +285,4 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-asyncio.run(main())
+sys.exit(asyncio.run(main()))
