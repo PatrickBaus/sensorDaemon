@@ -425,3 +425,34 @@ class TestHostManager:
 
         assert manager._HostManager__node_id == node_id
         assert manager._HostManager__topic == "db_autodiscovery_sensors"
+
+    @pytest.mark.asyncio
+    async def test_stream_transport_restarts_after_unexpected_error(self, caplog):
+        """An unexpected error restarts only the failing transport instead of ending the stream."""
+        attempts = 0
+
+        class FlakyTransport:  # pylint: disable=too-few-public-methods
+            """A transport that fails with an error the transports do not retry, then delivers data."""
+
+            label = "flaky host"
+
+            def stream_data(self):
+                """Fail on the first call, then yield one value."""
+
+                async def generator():
+                    nonlocal attempts
+                    attempts += 1
+                    if attempts == 1:
+                        raise asyncio.LimitOverrunError("too much data without a separator", 0)
+                    yield "data"
+
+                return generator()
+
+        with caplog.at_level("ERROR"):
+            result = await asyncio.wait_for(
+                managers.HostManager._stream_transport(FlakyTransport(), restart_interval=0)[:1], timeout=1
+            )
+
+        assert result == "data"
+        assert attempts == 2
+        assert "Unexpected error while streaming data from flaky host" in caplog.text

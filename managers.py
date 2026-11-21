@@ -9,12 +9,12 @@ import itertools
 import logging
 import re
 from contextlib import AsyncExitStack
-from typing import Any, Unpack
+from typing import Any, AsyncGenerator, Unpack
 from uuid import UUID
 
 import aiomqtt
 import simplejson as json
-from aiostream import pipe, stream
+from aiostream import operator, pipe, stream, streamcontext
 from paho.mqtt.reasoncodes import ReasonCode
 from pydantic import BaseModel, field_validator
 
@@ -23,7 +23,7 @@ from data_types import DataEvent
 from databases import CONTEXTS as DATABASE_CONTEXTS
 from databases import DatabaseParams, MongoDb
 from errors import UnknownDriverError
-from helper_functions import cancel_all_tasks, catch, iterate_safely
+from helper_functions import cancel_all_tasks, catch, iterate_safely, retry
 from sensors.transports.transport_factory import transport_factory
 
 EVENT_BUS_DATA = "sensor_data/all"
@@ -397,6 +397,27 @@ class DatabaseManager:
                 await asyncio.sleep(5)
 
 
+@operator
+async def _transport_data(transport: Any) -> AsyncGenerator[Any, None]:
+    """
+    Stream the data of a transport. Each iteration calls `transport.stream_data()` again, so that the stream can be
+    restarted after an error.
+
+    Parameters
+    ----------
+    transport: Any
+        The transport to stream data from
+
+    Yields
+    -------
+    Any
+        The data produced by the transport
+    """
+    async with streamcontext(transport.stream_data()) as streamer:
+        async for item in streamer:
+            yield item
+
+
 class HostManager:  # pylint: disable=too-few-public-methods
     """This manager creates the sensor objects and reads data from them to publish it onto the event_bus."""
 
@@ -416,6 +437,34 @@ class HostManager:  # pylint: disable=too-few-public-methods
             # catch all exceptions here, because a faulty driver should not bring down the daemon
             logging.getLogger(__name__).exception("Error while creating transport '%s'.", config["driver"])
         return None
+
+    @staticmethod
+    def _stream_transport(transport: Any, restart_interval: float = 5):
+        """
+        Stream the data of a single transport. Any unexpected error is logged and the transport is restarted, so that a
+        single faulty host or device cannot stop the data streams of all other hosts.
+
+        Parameters
+        ----------
+        transport: Any
+            The transport to stream data from
+        restart_interval: float, default=5
+            The minimum time in seconds between two restarts of the transport.
+
+        Returns
+        -------
+        Stream
+            The data stream of the transport
+        """
+        return _transport_data(transport) | retry.pipe(
+            Exception,
+            restart_interval,
+            action=lambda exc: logging.getLogger(__name__).error(
+                "Unexpected error while streaming data from %s. Restarting the transport.",
+                getattr(transport, "label", transport),
+                exc_info=exc,
+            ),
+        )
 
     @staticmethod
     def _is_config_valid(node_id: UUID | None, config: dict[str, Any]) -> bool:
@@ -457,7 +506,7 @@ class HostManager:  # pylint: disable=too-few-public-methods
             | pipe.map(lambda config: config if self._is_config_valid(self.__node_id, config) else None)
             | pipe.map(self._create_transport)
             | pipe.switchmap(
-                lambda transport: stream.empty() if transport is None else stream.iterate(transport.stream_data())
+                lambda transport: stream.empty() if transport is None else self._stream_transport(transport)
             )
             | pipe.action(lambda data: event_bus.publish("wamp/publish", data))
         )
