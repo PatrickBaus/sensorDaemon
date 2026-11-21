@@ -19,6 +19,7 @@ from uuid import UUID
 import motor.motor_asyncio
 import pymongo  # to access the error classes
 from beanie import Document, init_beanie
+from pydantic import ValidationError
 
 from async_event_bus import event_bus
 from data_types import ChangeType
@@ -157,8 +158,7 @@ class Context:  # pylint: disable=too-few-public-methods
         if error_code == previous_error_code:
             return  # Only log an error once
 
-        database_name = None if database_model.get_settings() is None else database_model.get_settings().name
-        database_name = str(database_model) if database_name is None else database_name
+        database_name = self._database_name(database_model)
 
         if error_code is None:
             self.__logger.info("Worker (%s database): Successfully connected.", database_name)
@@ -195,6 +195,46 @@ class Context:  # pylint: disable=too-few-public-methods
         """
         raise NotImplementedError
 
+    @staticmethod
+    def _database_name(database_model: type[DeviceDocument]) -> str:
+        """Return the name of the database 'table' for log messages."""
+        settings = database_model.get_settings()
+        database_name = None if settings is None else settings.name
+        return str(database_model) if database_name is None else database_name
+
+    @staticmethod
+    def _parse_change(
+        database_model: type[DeviceDocument], change: dict[str, Any]
+    ) -> tuple[ChangeType, UUID | Document] | None:
+        """
+        Convert a change stream event to a change type and either the new document or the uuid of the deleted
+        document.
+
+        Parameters
+        ----------
+        database_model: type[DeviceDocument]
+            The database model of the table monitored
+        change: dict
+            The change stream event
+
+        Returns
+        -------
+        tuple of ChangeType and UUID or Document or None
+            The change or None if the event type is not relevant
+
+        Raises
+        ------
+        pydantic.ValidationError
+            If the changed document is not a valid `database_model`
+        """
+        if change["operationType"] == "delete":
+            return ChangeType.REMOVE, change["documentKey"]["_id"]
+        if change["operationType"] in ("update", "replace"):
+            return ChangeType.UPDATE, database_model.model_validate(change["fullDocument"])
+        if change["operationType"] == "insert":
+            return ChangeType.ADD, database_model.model_validate(change["fullDocument"])
+        return None
+
     async def _monitor_database(
         self, database_model: type[DeviceDocument], timeout: float
     ) -> AsyncGenerator[tuple[ChangeType, UUID | Document], None]:
@@ -229,13 +269,19 @@ class Context:  # pylint: disable=too-few-public-methods
                     previous_error_code = None
                     self._log_database_error(database_model, previous_error_code, 0, timeout=0)
                     async for change in change_stream:
-                        # TODO: catch parser errors!
-                        if change["operationType"] == "delete":
-                            yield ChangeType.REMOVE, change["documentKey"]["_id"]
-                        elif change["operationType"] == "update" or change["operationType"] == "replace":
-                            yield ChangeType.UPDATE, database_model.model_validate(change["fullDocument"])
-                        elif change["operationType"] == "insert":
-                            yield ChangeType.ADD, database_model.model_validate(change["fullDocument"])
+                        try:
+                            parsed_change = self._parse_change(database_model, change)
+                        except ValidationError as exc:
+                            # An invalid document must not stop the monitoring of the whole database. Skip it.
+                            self.__logger.error(
+                                "Worker (%s database): Ignoring invalid document %s. Error: %s",
+                                self._database_name(database_model),
+                                change.get("documentKey", {}).get("_id"),
+                                exc,
+                            )
+                        else:
+                            if parsed_change is not None:
+                                yield parsed_change
                         # Remember the position in the change stream after each processed change, so that the changes
                         # made while the connection is down are replayed after reconnecting.
                         resume_token = change_stream.resume_token
