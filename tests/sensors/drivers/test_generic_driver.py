@@ -342,3 +342,60 @@ class TestConfigureAndStreamBehavior:
 
         assert created[0]["args"] == [1]
         assert created[0]["kwargs"] == {"x": 2}
+
+
+class TestOnAfterRead:
+    """The 'on_after_read' functions are called after each read."""
+
+    @pytest.mark.asyncio
+    async def test_on_after_read_is_called_after_each_query(self, driver):
+        """With a regular on_read function, the after-read functions run after the data of each read."""
+        calls = []
+
+        async def read():
+            """Provide a test helper."""
+            calls.append("read")
+            return [1, 2]
+
+        async def after_read():
+            """Provide a test helper."""
+            calls.append("after_read")
+
+        config = {
+            "on_read": (partial(read), 1),
+            "interval": 0,
+            "on_after_read": ((partial(after_read), 1),),
+        }
+
+        items = await asyncio.wait_for(
+            driver._read_device(config) | generic_driver.pipe.take(4) | generic_driver.pipe.list(), timeout=1
+        )
+
+        assert items == [(0, 1), (1, 2), (0, 1), (1, 2)]
+        assert calls[:3] == ["read", "after_read", "read"]
+
+    @pytest.mark.asyncio
+    async def test_on_after_read_is_called_after_each_generated_value(self, driver):
+        """With an async generator as on_read function, the after-read functions run after each value."""
+        calls = []
+
+        async def read():
+            """Provide a test helper."""
+            for value in (1, 2):
+                calls.append(f"read {value}")
+                yield value
+
+        async def after_read():
+            """Provide a test helper."""
+            calls.append("after_read")
+
+        config = {
+            "on_read": (partial(read), 1),
+            "interval": 0,
+            "on_after_read": ((partial(after_read), 1),),
+        }
+
+        items = await asyncio.wait_for(driver._read_device(config) | generic_driver.pipe.list(), timeout=1)
+
+        assert items == [(0, 1), (0, 2)]
+        assert calls == ["read 1", "after_read", "read 2", "after_read"]

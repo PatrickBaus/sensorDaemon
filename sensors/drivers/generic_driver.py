@@ -8,14 +8,40 @@ import asyncio
 import inspect
 import logging
 from functools import partial
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, AsyncIterable, Iterable
 
-from aiostream import pipe, stream
+from aiostream import pipable_operator, pipe, stream, streamcontext
 
 from async_event_bus import event_bus
 from data_types import DataEvent
 from errors import ConfigurationError
 from helper_functions import catch, create_device_function, finally_action, retry
+
+
+@pipable_operator
+async def call_after_each(source: AsyncIterable[Any], calls: AsyncIterable[Any]) -> AsyncGenerator[Any, None]:
+    """
+    Forward the items of a stream and iterate `calls` after each item, before the next item is requested from the
+    source.
+
+    Parameters
+    ----------
+    source: AsyncIterable
+        The source stream
+    calls: AsyncIterable
+        A stream, that is iterated (and its results dropped) after each item of the source
+
+    Yields
+    -------
+    Any
+        The items of the source stream
+    """
+    async with streamcontext(source) as streamer:
+        async for item in streamer:
+            yield item
+            async with streamcontext(calls) as calls_streamer:
+                async for _ in calls_streamer:
+                    pass
 
 
 class GenericDriverMixin:
@@ -35,24 +61,71 @@ class GenericDriverMixin:
             if isinstance(result, Exception):
                 logging.getLogger(__name__).error("Error during shutdown of: %s", self, exc_info=result)
 
+    @staticmethod
+    def _call_functions(funcs: Iterable[tuple[partial, float]]):
+        """
+        Call the functions one after another, each with its own timeout, and drop their results.
+
+        Parameters
+        ----------
+        funcs: Iterable of tuple of partial and float
+            The functions to call and their timeouts in seconds
+
+        Returns
+        -------
+        Stream
+            An empty stream, that calls the functions when iterated.
+        """
+        return (
+            stream.iterate(funcs)
+            | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
+            | pipe.concat(task_limit=1)
+            | pipe.filter(lambda result: False)
+        )
+
+    def _with_after_read(self, read_stream, config: dict[str, Any]):
+        """
+        Call the 'on_after_read' functions of the config after the data of a read has been streamed.
+
+        Parameters
+        ----------
+        read_stream: Stream
+            The data of a single read
+        config: dict
+            The device config, that may contain the key 'on_after_read'
+
+        Returns
+        -------
+        Stream
+            The data of the read followed by the calls to the 'on_after_read' functions
+        """
+        after_read = config.get("on_after_read")
+        if not after_read:
+            return read_stream
+        return stream.chain(read_stream, self._call_functions(after_read))
+
     def _read_device(self, config: dict[str, Any]) -> AsyncGenerator[tuple[int, Any], None]:
         on_read: partial
         timeout: float
         on_read, timeout = config["on_read"]
         if inspect.isasyncgenfunction(on_read.func):
-            return (
-                stream.iterate(on_read())
-                | pipe.map(lambda value: (0, value))
-                | pipe.timeout(timeout)
-                | retry.pipe((ValueError,), config["interval"], action=lambda exc: self.log_error(exc, msg="Retrying."))
+            data_stream = stream.iterate(on_read()) | pipe.map(lambda value: (0, value)) | pipe.timeout(timeout)
+            if config.get("on_after_read"):
+                # Call the 'on_after_read' functions after each value produced by the generator
+                data_stream = data_stream | call_after_each.pipe(self._call_functions(config["on_after_read"]))
+            return data_stream | retry.pipe(
+                (ValueError,), config["interval"], action=lambda exc: self.log_error(exc, msg="Retrying.")
             )
         return (
             stream.repeat(config["on_read"], interval=config["interval"])  # Repeat query to on_read at interval
             | pipe.starmap(
-                lambda func, timeout: stream.just(func())  # Get the results of the query (a mapping/list)
-                | pipe.concatmap(stream.iterate)  # iterate the results
-                | pipe.enumerate()  # add the sid for each result in order
-                | pipe.timeout(timeout)  # time out if no result is produced within the deadline
+                lambda func, timeout: self._with_after_read(
+                    stream.just(func())  # Get the results of the query (a mapping/list)
+                    | pipe.concatmap(stream.iterate)  # iterate the results
+                    | pipe.enumerate()  # add the sid for each result in order
+                    | pipe.timeout(timeout),  # time out if no result is produced within the deadline
+                    config,
+                )
             )
             | pipe.concat(task_limit=1)
             | retry.pipe((ValueError,), config["interval"], action=lambda exc: self.log_error(exc, msg="Retrying."))
