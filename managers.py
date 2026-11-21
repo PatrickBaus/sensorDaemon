@@ -298,13 +298,17 @@ class MqttManager:
                         try:
                             topic, payload = event
                             # convert payload to JSON
-                            # Typically sensors return data as decimals or ints to preserve the precision
-                            encoded_payload = json.dumps(payload, use_decimal=True)
-                        except (TypeError, ValueError):
-                            self.__logger.debug(
-                                "Worker (%s): Error while serializing DataEvent: %s. Dropping event.",
+                            # Typically sensors return data as decimals or ints to preserve the precision.
+                            # Instruments report overloads as NaN or +-Infinity. Encode them as the (non-standard)
+                            # JSON tokens NaN, Infinity and -Infinity like simplejson did before v4.2 instead of
+                            # dropping the measurement.
+                            encoded_payload = json.dumps(payload, use_decimal=True, allow_nan=True)
+                        except (TypeError, ValueError) as exc:
+                            self.__logger.error(
+                                "Worker (%s): Error while serializing DataEvent: %s. Dropping event. Error: %s",
                                 worker_name,
-                                payload,
+                                event,
+                                exc,
                             )
                         else:
                             # self.__logger.info("Going to publish: %s to %s", payload, topic)
