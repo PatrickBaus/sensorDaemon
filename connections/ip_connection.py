@@ -214,7 +214,7 @@ class GenericIpConnection:
         try:
             # wait_for() blocks until the request is done if timeout is None
             data = await asyncio.wait_for(coro, timeout=timeout)
-            self.__logger.debug("Data read from host (%s:%d): %s", data, self.__hostname, self.__port)
+            self.__logger.debug("Data read from host (%s:%d): %s", self.__hostname, self.__port, data)
 
             return data
         except asyncio.TimeoutError:
