@@ -390,7 +390,7 @@ class LabnodeContext(Context):
             if device is None:
                 return device
 
-            device = device.dict()
+            device = device.model_dump()
             # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
             # to the back of the dict
             device["uuid"] = device.pop("id")
@@ -411,14 +411,14 @@ class LabnodeContext(Context):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
                 assert isinstance(change, LabnodeSensorModel)
-                change_dict = change.dict()
+                change_dict = change.model_dump()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
                 assert isinstance(change, LabnodeSensorModel)
-                change_dict = change.dict()
+                change_dict = change.model_dump()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/add", change_dict)
             elif change_type == ChangeType.REMOVE:
@@ -499,7 +499,7 @@ class GenericSensorContext(Context):
             if device is None:
                 return device
 
-            device = device.dict()
+            device = device.model_dump()
             # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
             # to the back of the dict
             device["uuid"] = device.pop("id")
@@ -520,14 +520,14 @@ class GenericSensorContext(Context):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
                 assert isinstance(change, GenericSensorModel)
-                change_dict = change.dict()
+                change_dict = change.model_dump()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
                 assert isinstance(change, GenericSensorModel)
-                change_dict = change.dict()
+                change_dict = change.model_dump()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['host']}/add", change_dict)
             elif change_type == ChangeType.REMOVE:
@@ -621,7 +621,7 @@ class HostContext(Context):
             if device is None:
                 return device
 
-            device = device.dict()
+            device = device.model_dump()
             # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
             # to the back of the dict
             device["uuid"] = device.pop("id")
@@ -644,12 +644,12 @@ class HostContext(Context):
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
                 assert isinstance(change, SensorHostModel)
-                change_dict = change.dict()
+                change_dict = change.model_dump()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
                 assert isinstance(change, SensorHostModel)
-                change_dict = change.dict()
+                change_dict = change.model_dump()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"{self.topic}/add_host", change_dict["uuid"])
             elif change_type == ChangeType.REMOVE:
@@ -728,7 +728,7 @@ class TinkerforgeContext(Context):
             if device is None:
                 return device
 
-            device = device.dict()
+            device = device.model_dump()
             # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
             # to the back of the dict
             device["uuid"] = device.pop("id")
@@ -749,7 +749,7 @@ class TinkerforgeContext(Context):
             # Remember: Do not await in the iterator, as this stops the stream of updates
             if change_type == ChangeType.UPDATE:
                 assert isinstance(change, TinkerforgeSensorModel)
-                change_dict = change.dict()
+                change_dict = change.model_dump()
                 # Rename the id key, because we use the parameter uuid throughout the program, because `id` is already
                 # used in Python
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
@@ -757,7 +757,7 @@ class TinkerforgeContext(Context):
                 event_bus.publish(f"nodes/tinkerforge/{change_dict['uid']}/update", change_dict)
             elif change_type == ChangeType.ADD:
                 assert isinstance(change, TinkerforgeSensorModel)
-                change_dict = change.dict()
+                change_dict = change.model_dump()
                 change_dict["uuid"] = change_dict.pop("id")  # Note uuid will be moved to the end of the dict.
                 event_bus.publish(f"nodes/by_uuid/{change_dict['uuid']}/remove", None)
                 event_bus.publish(f"nodes/tinkerforge/{change_dict['uid']}/update", change_dict)
