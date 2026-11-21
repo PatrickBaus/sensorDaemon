@@ -276,6 +276,29 @@ class TestMqttManager:
         assert fake_client.kwargs["port"] == 1883
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "value,encoded",
+        [(Decimal("NaN"), "NaN"), (Decimal("Infinity"), "Infinity"), (Decimal("-Infinity"), "-Infinity")],
+    )
+    async def test_consumer_publishes_non_finite_values(self, mqtt_manager, monkeypatch, value, encoded):
+        """Publish overload readings (NaN, +-Infinity) instead of dropping them."""
+        fake_client = FakeMqttClient()
+        monkeypatch.setattr(managers.aiomqtt, "Client", lambda **kwargs: fake_client)
+        monkeypatch.setattr(asyncio, "sleep", AsyncMock())
+        queue = asyncio.Queue()
+        queue.put_nowait(("sensors/test", {"value": value, "unit": "V"}))
+
+        task = asyncio.create_task(mqtt_manager.consumer(queue, "worker", reconnect_interval=0))
+        await asyncio.wait_for(queue.join(), timeout=1)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        assert fake_client.publish.await_args == call(
+            "sensors/test", payload=f'{{"value": {encoded}, "unit": "V"}}', qos=2
+        )
+
+    @pytest.mark.asyncio
     async def test_consumer_drops_unserializable_payload(self, mqtt_manager, monkeypatch, caplog):
         """Mark an event done when JSON serialization fails."""
         fake_client = FakeMqttClient()
