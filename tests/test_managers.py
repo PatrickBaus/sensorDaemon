@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 import managers
 from data_types import DataEvent
+from database.models import HostBaseModel
 from errors import UnknownDriverError
 
 
@@ -435,6 +436,12 @@ class TestHostManager:
     def test_is_config_valid(self, node_id, config, expected):
         """Validate enabled and node-assigned configurations."""
         assert managers.HostManager._is_config_valid(node_id, config) is expected
+
+    def test_is_config_valid_accepts_default_node_id(self):
+        """A host saved without a node id gets the nil UUID from the model and is served by every node."""
+        default_node_id = HostBaseModel.model_construct().node_id
+
+        assert managers.HostManager._is_config_valid(uuid4(), {"enabled": True, "node_id": default_node_id})
 
     def test_is_config_valid_rejects_different_node(self):
         """Reject a configuration assigned to another node."""

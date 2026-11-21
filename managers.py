@@ -28,6 +28,8 @@ from helper_functions import cancel_all_tasks, catch, iterate_safely, retry
 from sensors.transports.transport_factory import transport_factory
 
 EVENT_BUS_DATA = "sensor_data/all"
+# A host config without a node id is served by all nodes. The database model uses the nil UUID as the default node id.
+UNASSIGNED_NODE_IDS = (None, UUID(int=0))
 MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 
 
@@ -521,7 +523,7 @@ class HostManager:  # pylint: disable=too-few-public-methods
         return (
             config is not None
             and config["enabled"]
-            and (config["node_id"] is None or node_id is None or config["node_id"] == node_id)
+            and (config["node_id"] in UNASSIGNED_NODE_IDS or node_id is None or config["node_id"] == node_id)
         )
 
     async def run(self) -> None:
