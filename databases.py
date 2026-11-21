@@ -121,6 +121,10 @@ class Context:  # pylint: disable=too-few-public-methods
     The database context used by all config databases.
     """
 
+    # MongoDB error codes raised when a change stream cannot be resumed from a resume token:
+    # 280 = ChangeStreamFatalError, 286 = ChangeStreamHistoryLost
+    RESUME_TOKEN_LOST_ERRORS = (280, 286)
+
     @property
     def topic(self) -> str:
         """
@@ -169,6 +173,12 @@ class Context:  # pylint: disable=too-few-public-methods
         elif error_code == "resume_token":
             self.__logger.error(
                 "Worker (%s database): Cannot resume Mongo DB change stream, there is no token. Starting from scratch.",
+                database_name,
+            )
+        elif error_code == "resume_token_lost":
+            self.__logger.error(
+                "Worker (%s database): Cannot resume Mongo DB change stream from the last known position. Changes made"
+                " while disconnected may have been missed. Starting from scratch.",
                 database_name,
             )
         else:
@@ -226,6 +236,9 @@ class Context:  # pylint: disable=too-few-public-methods
                             yield ChangeType.UPDATE, database_model.model_validate(change["fullDocument"])
                         elif change["operationType"] == "insert":
                             yield ChangeType.ADD, database_model.model_validate(change["fullDocument"])
+                        # Remember the position in the change stream after each processed change, so that the changes
+                        # made while the connection is down are replayed after reconnecting.
+                        resume_token = change_stream.resume_token
 
                     resume_token = change_stream.resume_token
             except pymongo.errors.AutoReconnect as exc:
@@ -235,7 +248,13 @@ class Context:  # pylint: disable=too-few-public-methods
                 previous_error_code = error_code
                 await asyncio.sleep(timeout)
             except pymongo.errors.OperationFailure as exc:
-                error_code = exc.code if exc.code == 211 else str(exc)
+                if exc.code in self.RESUME_TOKEN_LOST_ERRORS:
+                    # The change stream cannot be resumed from the token, because the oplog no longer contains it.
+                    # Start from scratch instead of retrying with the same token forever.
+                    resume_token = None
+                    error_code = "resume_token_lost"
+                else:
+                    error_code = exc.code if exc.code == 211 else str(exc)
                 self._log_database_error(database_model, error_code, previous_error_code, timeout)
                 previous_error_code = error_code
                 await asyncio.sleep(timeout)
@@ -246,8 +265,12 @@ class Context:  # pylint: disable=too-few-public-methods
                     # There is no usable resume token because there was a
                     # failure during ChangeStream initialization.
                     error_code = "resume_token"
-                    self._log_database_error(database_model, error_code, previous_error_code, timeout)
-                    previous_error_code = error_code
+                else:
+                    # The resume attempt failed. Do not retry with the same token forever.
+                    resume_token = None
+                    error_code = "resume_token_lost"
+                self._log_database_error(database_model, error_code, previous_error_code, timeout)
+                previous_error_code = error_code
 
                 await asyncio.sleep(timeout)
 
