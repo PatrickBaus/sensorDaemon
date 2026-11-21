@@ -143,7 +143,7 @@ class GenericScpiMixin:
         except UnicodeEncodeError:
             self.__logger.error("Cannot write invalid command '%r'. Use ASCII or UTF-8 strings only.", cmd)
             raise ScpiIoError(
-                f"Cannot write illegal command %s to device {self}",
+                f"Cannot write illegal command {cmd!r} to device {self}",
             ) from None
 
     async def query(self, cmd: str, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> Iterable[str]:

@@ -52,7 +52,7 @@ class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
     ) -> None:
         super().__init__(
             uuid=uuid,
-            database_topic="db_labnode",
+            database_topic="db_labnode_sensors",
             transport_name="APQ LabNode",
             reconnect_interval=reconnect_interval,
             label=label,

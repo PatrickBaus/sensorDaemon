@@ -83,8 +83,8 @@ class TimeStampedDocument(BaseDocument):  # pylint: disable=too-many-ancestors
     """
 
     # pylint: disable=too-few-public-methods
-    date_created: datetime = datetime.now(UTC)
-    date_modified: datetime = datetime.now(UTC)
+    date_created: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    date_modified: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class DeviceDocument(TimeStampedDocument):  # pylint: disable=too-many-ancestors
