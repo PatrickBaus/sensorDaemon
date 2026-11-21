@@ -80,6 +80,27 @@ class TestMQTTParams:
         with pytest.raises((ValidationError, ValueError)):
             managers.MQTTParams(hosts=host, username=None, password=None)
 
+    @pytest.mark.parametrize(
+        "host,expected",
+        [
+            ("mqtt_broker", ("mqtt_broker", 1883)),  # Docker Compose service name
+            ("kraken_mqtt_1:1884", ("kraken_mqtt_1", 1884)),  # Docker Compose container name
+            ("10.0.0.5:1883", ("10.0.0.5", 1883)),
+            ("[::1]:1884", ("::1", 1884)),
+            ("[fd00::1]", ("fd00::1", 1883)),
+            ("broker.example.", ("broker.example.", 1883)),  # fully qualified name with trailing dot
+        ],
+    )
+    def test_container_names_and_ip_addresses_are_accepted(self, host, expected):
+        """Accept hostnames with underscores, IPv4 addresses and IPv6 addresses in brackets."""
+        assert managers.MQTTParams(hosts=host, username=None, password=None).hosts == [expected]
+
+    @pytest.mark.parametrize("host", ["::1", "[::1", "[not-an-ip]:1883", "host:", "host.-example", "a" * 64])
+    def test_malformed_addresses_are_rejected(self, host):
+        """Reject bare IPv6 addresses, invalid IPv6 addresses, empty ports and invalid labels."""
+        with pytest.raises((ValidationError, ValueError)):
+            managers.MQTTParams(hosts=host, username=None, password=None)
+
     def test_maximum_port_is_accepted(self):
         """Accept port 65535."""
         params = managers.MQTTParams(hosts="broker.example:65535", username=None, password=None)
