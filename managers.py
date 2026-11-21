@@ -5,6 +5,7 @@ hosts extract the data stream from them.
 """
 
 import asyncio
+import ipaddress
 import itertools
 import logging
 import re
@@ -30,14 +31,52 @@ EVENT_BUS_DATA = "sensor_data/all"
 MQTT_DATA_TOPIC = "sensors/{driver}/{uid}/{sid}"
 
 
-# A regular expression to match a hostname with an optional port.
-# It adheres to RFC 1035 (https://www.rfc-editor.org/rfc/rfc1035) and matches ports
-# between 0-65535.
-HOSTNAME_REGEX = (
-    r"^((?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:["
-    r"0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?)(?:\:([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{"
-    r"2}|655[0-2][0-9]|6553[0-5]))?$"
-)
+# A host with an optional port: Either "[IPv6 address]:port" or "hostname:port". The port is optional.
+HOST_PORT_REGEX = re.compile(r"^(?:\[(?P<ipv6>[^\]]+)\]|(?P<hostname>[^:\[\]]+))(?::(?P<port>[0-9]{1,5}))?$")
+# A hostname label as defined by RFC 1035 (https://www.rfc-editor.org/rfc/rfc1035), but also allowing underscores,
+# because they are commonly used in container names, e.g. by Docker Compose.
+HOSTNAME_LABEL_REGEX = re.compile(r"^[0-9A-Za-z_](?:[0-9A-Za-z_-]{0,61}[0-9A-Za-z_])?$")
+DEFAULT_MQTT_PORT = 1883
+
+
+def parse_host(host: str) -> tuple[str, int]:
+    """
+    Parse a hostname, IPv4 or IPv6 address with an optional port. IPv6 addresses must be enclosed in brackets.
+
+    Parameters
+    ----------
+    host: str
+        The host to parse, e.g. "example.com:1883", "mqtt_broker", "192.168.1.2:1883" or "[::1]:1883"
+
+    Returns
+    -------
+    tuple of str and int
+        The hostname or address and the port. If no port or port 0 is given, the MQTT default port 1883 is returned.
+
+    Raises
+    ------
+    ValueError
+        If the host is not a valid hostname, address or port.
+    """
+    match = HOST_PORT_REGEX.match(host)
+    if match is None:
+        raise ValueError(f"'{host}' is not a valid hostname.")
+    port = int(match.group("port")) if match.group("port") else 0
+    if port > 65535:
+        raise ValueError(f"'{host}' has an invalid port number.")
+    port = port or DEFAULT_MQTT_PORT
+
+    if match.group("ipv6") is not None:
+        try:
+            return str(ipaddress.IPv6Address(match.group("ipv6"))), port
+        except ValueError:
+            raise ValueError(f"'{host}' is not a valid IPv6 address.") from None
+
+    hostname = match.group("hostname")
+    labels = hostname[:-1].split(".") if hostname.endswith(".") else hostname.split(".")
+    if len(hostname) > 255 or not all(HOSTNAME_LABEL_REGEX.match(label) for label in labels):
+        raise ValueError(f"'{host}' is not a valid hostname.")
+    return hostname, port
 
 
 class MQTTParams(BaseModel):
@@ -74,20 +113,10 @@ class MQTTParams(BaseModel):
         list of tuple of str and int
             A list of (hostname, port) tuples.
         """
-        hosts = value.split(",")
-        result = []
-        for host in hosts:
-            host = host.strip()
-            match = re.search(HOSTNAME_REGEX, host)
-            if match is None:
-                raise ValueError(f"'{value}' is not a valid hostname or list of hostnames.")
-            result.append(
-                (
-                    match.group(1),
-                    int(match.group(2)) if match.group(2) and not match.group(2) == "0" else 1883,
-                )
-            )
-        return result
+        try:
+            return [parse_host(host.strip()) for host in value.split(",")]
+        except ValueError as exc:
+            raise ValueError(f"'{value}' is not a valid hostname or list of hostnames. {exc}") from None
 
 
 class MqttManager:
