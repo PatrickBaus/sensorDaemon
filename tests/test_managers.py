@@ -97,6 +97,27 @@ class TestMQTTParams:
 class TestMqttManager:
     """Tests for MQTT manager behavior."""
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("node_id", [None, UUID("12345678-1234-5678-1234-567812345678")])
+    async def test_client_ids_are_unique_per_instance(self, broker_params, monkeypatch, node_id):
+        """Two instances must not share an MQTT client id unless they are configured as the same node."""
+        identifiers = []
+
+        def fake_client_factory(**kwargs):
+            identifiers.append(kwargs["identifier"])
+            raise asyncio.CancelledError  # Stop the consumer after the first connection attempt
+
+        monkeypatch.setattr(managers.aiomqtt, "Client", fake_client_factory)
+        for _ in range(2):
+            manager = managers.MqttManager(node_id, broker_params)
+            with pytest.raises(asyncio.CancelledError):
+                await manager.consumer(asyncio.Queue(), "worker", reconnect_interval=0)
+
+        if node_id is None:
+            assert identifiers[0] != identifiers[1]
+        else:
+            assert identifiers == [f"Labkraken-{node_id}_worker-worker"] * 2
+
     def test_calculate_timeout_before_interval_has_elapsed(self, monkeypatch):
         """Return the remaining reconnect delay."""
         loop = Mock()
