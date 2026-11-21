@@ -130,13 +130,17 @@ class AsyncEventBus:
         """
         self.__logger.debug("Calling function '%s' with args: %s, kwargs: %s", event_name, args, kwargs)
         try:
-            gen_or_func: Coroutine | AsyncGenerator = self.__registered_calls[event_name](*args, **kwargs)
-            if isasyncgen(gen_or_func):
-                return gen_or_func
-            return await cast(Coroutine, gen_or_func)
+            function = self.__registered_calls[event_name]
         except KeyError:
             if not ignore_unregistered:
                 raise TopicNotRegisteredError(f"Function {event_name} is not registered.") from None
+            return None
+        # Call the function outside the try block, so that a KeyError raised by the function itself is not mistaken
+        # for an unregistered topic.
+        gen_or_func: Coroutine | AsyncGenerator = function(*args, **kwargs)
+        if isasyncgen(gen_or_func):
+            return gen_or_func
+        return await cast(Coroutine, gen_or_func)
 
 
 event_bus = AsyncEventBus()
