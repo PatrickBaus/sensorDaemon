@@ -258,7 +258,6 @@ class TinkerforgeSensor:
         return stream.just((sid, unit, topic, remote_callback_config))
 
     @staticmethod
-    @staticmethod
     def _configure(config: TinkerforgeSensorConfigModel):
         """
         Configure the sensor by calling all 'on_connect' functions set in the config.
