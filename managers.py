@@ -10,7 +10,7 @@ import logging
 import re
 from contextlib import AsyncExitStack
 from typing import Any, AsyncGenerator, Unpack
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import aiomqtt
 import simplejson as json
@@ -99,7 +99,9 @@ class MqttManager:
         broker_params: MQTTParams,
         number_of_workers: int = 5,
     ) -> None:
-        self.__node_id = node_id
+        # The MQTT client id must be unique per broker. Otherwise, the broker disconnects the existing client when
+        # another client connects with the same id. Without a node id, use a random id for this instance.
+        self.__client_id = str(node_id) if node_id is not None else f"no-node-id-{uuid4()}"
         self.__logger = logging.getLogger(__name__)
         self.__broker = broker_params
         self.__number_of_workers = number_of_workers
@@ -252,7 +254,7 @@ class MqttManager:
             previous_reconnect_attempt = asyncio.get_running_loop().time()
             try:
                 async with aiomqtt.Client(
-                    identifier=f"Labkraken-{self.__node_id}_worker-{worker_name}",
+                    identifier=f"Labkraken-{self.__client_id}_worker-{worker_name}",
                     hostname=host[0],
                     port=host[1],
                     **self.__broker.model_dump(exclude={"hosts"}),
