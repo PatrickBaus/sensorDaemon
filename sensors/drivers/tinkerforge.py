@@ -5,13 +5,15 @@ This is a wrapper for Tinkerforge devices.
 from __future__ import annotations
 
 # pylint: disable=duplicate-code
+import asyncio
 import logging
+import struct
 from functools import partial
 from types import TracebackType
 from typing import Any, AsyncGenerator, Self, TypeAlias
 from uuid import UUID
 
-from aiostream import async_, pipe, stream
+from aiostream import Stream, async_, pipe, stream
 from tinkerforge_async.devices import (
     AdvancedCallbackConfiguration,
     Device,
@@ -26,6 +28,18 @@ from database.models import TinkerforgeSensorConfigModel
 from errors import ConfigurationError
 from helper_functions import call_safely, context, create_device_function
 from sensors.drivers.shared import DeviceStatus
+
+# The errors a device function raises for an invalid configuration: a wrong number or type of arguments (TypeError), a
+# value the device does not accept (ValueError, which includes InvalidSidError), a value that cannot be converted
+# (ArithmeticError, e.g. decimal.InvalidOperation), or a value out of range of the Tinkerforge protocol (struct.error).
+INVALID_CONFIGURATION_ERRORS = (TypeError, ValueError, ArithmeticError, struct.error)
+
+
+def error_name(exc: BaseException) -> str:
+    """Return the name of the exception class, e.g. ValueError or struct.error. Built-in names are not qualified."""
+    cls = type(exc)
+    return cls.__qualname__ if cls.__module__ == "builtins" else f"{cls.__module__}.{cls.__qualname__}"
+
 
 # The callback configuration as returned by the devices. The Isolator Bricklet returns a SimpleCallbackConfiguration.
 CallbackConfiguration: TypeAlias = AdvancedCallbackConfiguration | SimpleCallbackConfiguration
@@ -285,22 +299,44 @@ class TinkerforgeSensor:
             return stream.empty()
         return stream.just((sid, unit, topic, remote_callback_config))
 
-    @staticmethod
-    def _configure(config: TinkerforgeSensorConfigModel):
+    async def _configure(self, config: TinkerforgeSensorConfigModel) -> bool:
         """
-        Configure the sensor by calling all 'on_connect' functions set in the config.
+        Configure the sensor by calling all 'on_connect' functions set in the config, in order and one at a time. An
+        invalid function call is logged and the remaining calls are skipped.
 
         Parameters
         ----------
         config: dict[str, tuple[partial, float]]
             A config dict, that contains the key 'on_connect', which holds the function and a timeout when calling it.
+
+        Returns
+        -------
+        bool
+            True if all functions were called successfully, False if one of them was rejected as invalid.
+
+        Raises
+        ------
+        TimeoutError
+            If the device does not answer in time. This is a problem of the connection, not of the configuration.
         """
-        return (
-            stream.iterate(config["on_connect"])
-            | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-            | pipe.concat(task_limit=1)
-            | pipe.filter(lambda result: False)
-        )
+        func: partial
+        for func, timeout in config["on_connect"]:
+            try:
+                await asyncio.wait_for(func(), timeout)
+            except INVALID_CONFIGURATION_ERRORS as exc:
+                arguments = [repr(arg) for arg in func.args] + [
+                    f"{key}={value!r}" for key, value in func.keywords.items()
+                ]
+                self._logger.error(
+                    "Invalid configuration for %s: on_connect call %s(%s) failed with %s: %s. Sensor disabled.",
+                    self.device,
+                    func.func.__name__,
+                    ", ".join(arguments),
+                    error_name(exc),
+                    exc,
+                )
+                return False
+        return True
 
     def _configure_and_stream(
         self,
@@ -308,14 +344,19 @@ class TinkerforgeSensor:
     ) -> AsyncGenerator[DataEvent, None]:
         if config is None:
             return stream.empty()
-        # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is
-        # nothing to compare them to (filter => false), then read all sensors of the bricklet and process them in
-        # parallel (flatten).
-        return stream.chain(
-            self._configure(config),
+        # Run all config steps first. If the configuration is invalid, the sensor is disabled. Otherwise, read all
+        # sensors of the bricklet and process them in parallel (flatten).
+        configured: Stream[bool] = stream.call(self._configure, config)
+        return configured | pipe.switchmap(
+            lambda is_configured: self._stream_sensors(config) if is_configured else stream.empty()
+        )
+
+    def _stream_sensors(self, config: TinkerforgeSensorConfigModel) -> Stream[DataEvent]:
+        """Configure the callbacks of all sensors of the bricklet and stream their data in parallel."""
+        return (
             stream.iterate(config["config"].items())
             | pipe.starmap(self._parse_callback_configuration)
             | pipe.starmap(self._set_callback_configuration)
             | pipe.flatten()
-            | pipe.flatmap(lambda args: self._read_sensor(config["uuid"], *args)),
+            | pipe.flatmap(lambda args: self._read_sensor(config["uuid"], *args))
         )

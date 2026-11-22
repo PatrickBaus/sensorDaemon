@@ -6,11 +6,13 @@
 import asyncio
 import struct
 from decimal import Decimal
+from functools import partial
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
 from aiostream import pipe, streamcontext
+from tinkerforge_async.bricklet_io4_v2 import BrickletIO4V2
 from tinkerforge_async.bricklet_isolator import BrickletIsolator
 from tinkerforge_async.bricklet_ptc import BrickletPtc
 from tinkerforge_async.bricklet_ptc_v2 import BrickletPtcV2
@@ -211,6 +213,70 @@ async def test_a_config_with_an_unknown_on_connect_function_is_ignored(tinkerfor
             reading.cancel()
 
     assert not connection.requests
+
+
+def edge_count_call(*args, **kwargs):
+    """An on_connect call of set_edge_count_configuration() as stored in the database."""
+    return {"function": "set_edge_count_configuration", "args": list(args), "kwargs": kwargs, "timeout": 1}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "call, error",
+    [
+        # The debounce time in ms instead of s. 100 s do not fit into the uint8 of the protocol.
+        (edge_count_call(0, 1, 100), "struct.error"),
+        (edge_count_call(7), "with ValueError"),  # There is no channel 7
+        (edge_count_call(0, 1, 0.1, True, "too many"), "with TypeError"),
+        (edge_count_call(0, 1, "not a number"), "decimal.InvalidOperation"),
+    ],
+)
+async def test_an_invalid_on_connect_call_disables_only_this_sensor(tinkerforge_database, caplog, call, error):
+    """
+    An on_connect call, that the device function rejects, disables the sensor without a traceback. The following
+    on_connect calls are skipped and the sensor is not configured. A corrected config from the database enables it
+    again.
+    """
+    connection = FakeTinkerforgeConnection()
+    device = BrickletIO4V2(4444, connection)
+    sensor_uuid = uuid4()
+    valid_call = {"function": "set_status_led_config", "args": [0], "kwargs": {}, "timeout": 1}
+    tinkerforge_database[4444] = tinkerforge_config(4444, sensor_uuid, on_connect=[call, valid_call])
+
+    with caplog.at_level("INFO"):
+        async with streamcontext(TinkerforgeSensor(device).stream_data()) as data:
+            reading = asyncio.ensure_future(anext(data))
+            await wait_for(lambda: "Sensor disabled" in caplog.text)
+            # The sensor is disabled, but still waits for a new config
+            assert not reading.done()
+            assert not connection.requests
+
+            event_bus.publish(f"nodes/by_uuid/{sensor_uuid}/remove", None)
+            event_bus.publish(
+                "nodes/tinkerforge/4444/update",
+                tinkerforge_config(4444, sensor_uuid, on_connect=[edge_count_call(0, 1, 0.1), valid_call]),
+            )
+            await wait_for(lambda: "SET_INPUT_VALUE_CALLBACK_CONFIGURATION" in connection.names_of_requests())
+            reading.cancel()
+
+    assert connection.names_of_requests()[:2] == ["SET_EDGE_COUNT_CONFIGURATION", "SET_STATUS_LED_CONFIG"]
+    (record,) = [record for record in caplog.records if "Sensor disabled" in record.getMessage()]
+    assert record.levelname == "ERROR"
+    assert record.exc_info is None  # No traceback
+    assert "set_edge_count_configuration(" in record.getMessage()
+    assert error in record.getMessage()
+
+
+@pytest.mark.asyncio
+async def test_a_timeout_of_an_on_connect_call_is_not_a_configuration_error():
+    """A device, that does not answer, is a connection problem. The error is raised, so the connection is restarted."""
+
+    async def no_answer():
+        await asyncio.Event().wait()
+
+    sensor = TinkerforgeSensor(BrickletIO4V2(4444, fake_ip_connection()))
+    with pytest.raises(TimeoutError):
+        await sensor._configure({"on_connect": ((partial(no_answer), 0.01),)})
 
 
 @pytest.mark.asyncio
