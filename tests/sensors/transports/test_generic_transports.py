@@ -15,6 +15,7 @@ from async_gpib import GpibError
 from async_event_bus import event_bus
 from data_types import DataEvent
 from errors import UnknownDriverError
+from sensors.drivers.hp3478a_driver import Hp3478ADriver
 from sensors.factories.sensor_factory import sensor_factory
 from sensors.transports.ethernet import EthernetTransport
 from sensors.transports.generic_transport import GenericTransport
@@ -195,3 +196,13 @@ def test_transport_factory():
     assert isinstance(transport, EthernetTransport)
     with pytest.raises(UnknownDriverError):
         transport_factory.get("unknown")
+
+
+def test_the_sensor_factory_creates_hp3478a_multimeters():
+    """An HP 3478A multimeter is created with its own driver, that uses the connection of the transport."""
+    connection = Mock()
+    device = sensor_factory.get("hp3478a2", connection=connection, uuid=uuid4())
+
+    assert isinstance(device, Hp3478ADriver)
+    assert device.connection is connection
+    assert Hp3478ADriver.driver() == "hp3478a2"
