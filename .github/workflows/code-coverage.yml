@@ -46,7 +46,10 @@ jobs:
       - name: Install dependencies for testing
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install -r requirements.txt --group test
+          python3 -m pip install -r requirements.txt --group test --group version
+      # Kraken is not installed, so _version.py is not written by a build
+      - name: Write _version.py
+        run: python3 -m setuptools_scm --force-write-version-files
       # This creates the file .coverage. The settings (branch coverage, relative paths, source, omitted files) are in the
       # [tool.coverage] sections of pyproject.toml
       - name: Run tests with coverage

@@ -43,6 +43,11 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 # Application code
 COPY . ${WORK_DIR}
 
+# The version of Kraken, e.g. 4.7.0 or 4.7.1.dev3. The CI/CD pipeline derives it from the git tags with
+# setuptools-scm. The build context contains no git metadata, so it is passed as a build argument.
+ARG VERSION=unknown
+RUN printf '__version__ = "%s"\n' "${VERSION}" > _version.py
+
 # ============================================
 # Stage 2: Test stage
 # ============================================
