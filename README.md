@@ -4,9 +4,9 @@
 
 | Name      |    Stmts |     Miss |   Branch |   BrPart |    Cover |   Missing |
 |---------- | -------: | -------: | -------: | -------: | -------: | --------: |
-| **TOTAL** | **1594** |    **0** |  **306** |    **0** | **100%** |           |
+| **TOTAL** | **1593** |    **0** |  **306** |    **0** | **100%** |           |
 
-30 files skipped due to complete coverage.
+29 files skipped due to complete coverage.
 
 
 ## Setup coverage badge
