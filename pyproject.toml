@@ -50,9 +50,11 @@ line-length = 120
 
 [tool.coverage.run]
 # Only the code of Kraken is measured, not the tests
+branch = true
+# python-coverage-comment-action needs relative paths in the .coverage file
+relative_files = true
 source = ["."]
 omit = ["tests/*"]
-branch = true
 
 [tool.coverage.report]
 fail_under = 100
@@ -74,16 +76,6 @@ markers = [
     # conftest.py reorders tests moving slow ones to the end of the list
     "slow",
 ]
-
-[tool.coverage.run]
-branch = true
-# python-coverage-comment-action needs relative paths in the .coverage file
-relative_files = true
-source = ["."]
-omit = ["tests/*"]
-
-[tool.coverage.report]
-show_missing = true
 
 [build-system]
 requires = [
