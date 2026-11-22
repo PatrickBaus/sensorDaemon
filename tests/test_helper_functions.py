@@ -8,7 +8,7 @@ from typing import AsyncIterator
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from aiostream import stream
+from aiostream import pipe, stream
 
 import helper_functions
 from async_event_bus import TopicNotRegisteredError
@@ -303,17 +303,17 @@ class TestFinallyAction:
 
     @pytest.mark.asyncio
     async def test_finally_action_awaits_async_function(self):
-        """Await an asynchronous function when the stream closes."""
-        callback = Mock()
+        """Await an awaitable (e.g. a coroutine) when the stream closes."""
+        callback = AsyncMock()
 
         async def source():
             yield 1
 
-        async with helper_functions.streamcontext(helper_functions.finally_action(source(), callback)) as streamer:
+        async with helper_functions.streamcontext(helper_functions.finally_action(source(), callback())) as streamer:
             async for _ in streamer:
                 pass
 
-        callback.assert_called_once_with()
+        callback.assert_awaited_once_with()
 
 
 class TestCatch:
@@ -412,3 +412,65 @@ class TestCreateDeviceFunction:
 
         with pytest.raises(ConfigurationError, match="Function 'missing' not found"):
             helper_functions.create_device_function(device, config)
+
+
+@pytest.mark.asyncio
+async def test_iterate_safely_retries_if_the_status_subscription_ends(monkeypatch):
+    """If the status subscription ends without a positive status, the topic is called again."""
+
+    async def source():
+        yield "ready"
+
+    call = AsyncMock(side_effect=[TopicNotRegisteredError(), source()])
+
+    async def subscribe(_topic):
+        yield False  # then the subscription ends
+
+    monkeypatch.setattr(helper_functions.event_bus, "call", call)
+    monkeypatch.setattr(helper_functions.event_bus, "subscribe", subscribe)
+
+    assert [item async for item in helper_functions.iterate_safely("data", "status")] == ["ready"]
+    assert call.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_call_safely_retries_if_the_status_subscription_ends(monkeypatch):
+    """If the status subscription ends without a positive status, the topic is called again."""
+    call = AsyncMock(side_effect=[TopicNotRegisteredError(), "result"])
+
+    async def subscribe(_topic):
+        yield False  # then the subscription ends
+
+    monkeypatch.setattr(helper_functions.event_bus, "call", call)
+    monkeypatch.setattr(helper_functions.event_bus, "subscribe", subscribe)
+
+    assert await helper_functions.call_safely("data", "status") == "result"
+    assert call.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_context_without_callbacks():
+    """The callbacks of the context operator are optional."""
+    context_manager = AsyncContext()
+
+    result = await (stream.iterate([1, 2]) | helper_functions.context.pipe(context_manager) | pipe.list())
+
+    assert result == [1, 2]
+    assert context_manager.entered and context_manager.exited
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("on_exit", [None, Mock()])
+async def test_with_context_keeps_the_context_open_until_the_stream_is_closed(on_exit):
+    """After yielding the context, the stream waits until it is cancelled or closed. Then it exits the context."""
+    context_manager = AsyncContext(value="ctx")
+
+    async with helper_functions.streamcontext(helper_functions.with_context(context_manager, on_exit)) as streamer:
+        assert await anext(streamer) == "ctx"
+        # It does not end on its own, it waits until it is cancelled
+        with pytest.raises(TimeoutError):
+            await asyncio.wait_for(anext(streamer), timeout=0.01)
+
+    assert context_manager.exited
+    if on_exit is not None:
+        on_exit.assert_called_once_with()

@@ -11,6 +11,7 @@ from functools import partial
 from unittest.mock import AsyncMock, Mock, call
 
 import pytest
+from aiostream import operator
 
 from errors import ConfigurationError
 from sensors.drivers import generic_driver
@@ -399,3 +400,30 @@ class TestOnAfterRead:
 
         assert items == [(0, 1), (0, 2)]
         assert calls == ["read 1", "after_read", "read 2", "after_read"]
+
+
+@pytest.mark.asyncio
+async def test_call_after_each_runs_the_calls_after_every_item_and_drops_their_results():
+    """The calls are iterated after each item of the source. Their results are not forwarded."""
+    calls_made = []
+
+    async def calls():
+        """Provide a test helper."""
+        calls_made.append("call")
+        yield "result of the call"
+
+    items = await (
+        generic_driver.stream.iterate([1, 2])
+        | generic_driver.call_after_each.pipe(operator(calls)())
+        | generic_driver.pipe.list()
+    )
+
+    assert items == [1, 2]
+    assert calls_made == ["call", "call"]
+
+
+def test_log_error_without_message(driver, caplog):
+    """Without an additional message, only the error is logged."""
+    with caplog.at_level("ERROR"):
+        driver.log_error(ValueError("invalid data"))
+    assert caplog.records[-1].getMessage() == "Error while reading Test driver. Error: invalid data"
