@@ -40,6 +40,16 @@ services:
 ## Versioning
 I use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags](../../tags) available for this repository.
 
+The version is not stored in the source code. It is taken from the git tag by
+[setuptools-scm](https://setuptools-scm.readthedocs.io/). To release a new version, push a new tag, e.g. `4.7.0`. The
+Docker image built from it reports version 4.7.0. Commits after a tag get a development version like `4.7.1.dev3`.
+
+When running Kraken from a git checkout, write `_version.py` first:
+```bash
+python3 -m pip install --group version
+python3 -m setuptools_scm --force-write-version-files
+```
+
 ## Documentation
 I use the [Numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) style for documentation.
 

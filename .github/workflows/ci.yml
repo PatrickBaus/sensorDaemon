@@ -56,9 +56,13 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install -r requirements.txt --group test --group dev
 
+    # Kraken is not installed, so _version.py is not written by a build. The version does not matter for the tests,
+    # so the shallow checkout is enough. setuptools-scm then uses a development version.
+    - name: Write _version.py
+      run: |
+        python3 -m setuptools_scm --force-write-version-files
+
     - name: Run tests
-      env:
-        GIT_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
       run: |
         pytest --exitfirst --verbose --failed-first
 
@@ -89,6 +93,8 @@ jobs:
 
   smoke-test:
     name: Run smoke test
+    needs:
+      - prepare
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -110,6 +116,9 @@ jobs:
         target: prod
         load: true
         tags: kraken:prod
+        # The same version as in the build job, so that it can reuse the layers
+        build-args: |
+          VERSION=${{ needs.prepare.outputs.version }}
         cache-from: type=gha,scope=linux_amd64
         cache-to: type=gha,scope=linux_amd64,mode=max,ignore-error=true
 
@@ -123,8 +132,10 @@ jobs:
             kraken:prod
 
     - name: Smoke Test
+      env:
+        VERSION: ${{ needs.prepare.outputs.version }}
       run: |
-        timeout 30s bash -c 'until docker logs kraken 2>&1 | grep -q "Starting Kraken v"; do sleep 2; done'
+        timeout 30s bash -c 'until docker logs kraken 2>&1 | grep -qF "Starting Kraken v${VERSION}..."; do sleep 2; done'
         sleep 15
         if [ "$(docker inspect -f '{{.State.Running}}' kraken)" != "true" ]; then
           echo "::error::Kraken exited during the smoke test"
@@ -149,6 +160,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Checkout source repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # setuptools-scm derives the version from the git tags, so fetch the full history with all tags
+          fetch-depth: 0
+
+      - name: Set up python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      # The version from the git tag, e.g. 4.7.0, or a development version like 4.7.1.dev3 for the commits after it
+      - name: Determine the version
+        id: version
+        run: |
+          python3 -m pip install --upgrade pip  # --group needs pip 25.1
+          python3 -m pip install --group version
+          version="$(python3 -m setuptools_scm)"
+          echo "Kraken version: ${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
       - name: Convert repository name to lowercase
         id: set-variables
         run: |
@@ -175,6 +208,7 @@ jobs:
       meta-json: ${{ steps.meta.outputs.json }}
       meta-labels: ${{ steps.meta.outputs.labels }}
       meta-version: ${{ steps.meta.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
 
   # Pull requests build every platform without pushing, so that e.g. a Python bump is
   # tested on ARM before it is merged.
@@ -249,6 +283,8 @@ jobs:
           sbom: true
           outputs: type=image,name=${{ needs.prepare.outputs.image }},push-by-digest=true,name-canonical=true,push=${{ needs.prepare.outputs.push }}
           labels: ${{ needs.prepare.outputs.meta-labels }}
+          build-args: |
+            VERSION=${{ needs.prepare.outputs.version }}
           # One cache per platform. linux/amd64 reuses the layers built by the smoke-test job,
           # the ARM platforms keep their (slow to build) layers for the next run.
           cache-from: type=gha,scope=${{ steps.platform.outputs.value }}
