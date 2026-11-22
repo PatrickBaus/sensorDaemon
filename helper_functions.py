@@ -224,7 +224,7 @@ async def with_context(
             finally:
                 future.cancel()
     finally:
-        if on_exit is not None:
+        if on_exit is not None:  # pragma: no branch
             on_exit()
 
 
