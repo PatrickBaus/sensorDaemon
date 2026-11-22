@@ -10,7 +10,7 @@ from aiostream import pipe, stream
 
 from async_event_bus import event_bus
 from errors import UnknownDriverError
-from helper_functions import call_safely, context
+from helper_functions import call_safely, context, describe_exit
 from sensors.factories.sensor_factory import sensor_factory
 
 
@@ -134,7 +134,7 @@ class GenericTransport:
                     transport.name,
                     transport.uri,
                     transport.label,
-                    exit_code,
+                    describe_exit(exit_code),
                 ),
             )
         )

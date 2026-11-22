@@ -11,7 +11,7 @@ from functools import partial
 from unittest.mock import AsyncMock, Mock, call
 
 import pytest
-from aiostream import operator
+from aiostream import operator, pipe
 
 from errors import ConfigurationError
 from sensors.drivers import generic_driver
@@ -249,6 +249,8 @@ class TestGenericDriverMixin:
 
         on_read = partial(read_generator)
         config = {"on_read": (on_read, 0.75), "interval": 10}
+        timeouts = []
+        monkeypatch.setattr(driver, "_timeout", lambda func, timeout: timeouts.append((func, timeout)) or Pipeable())
 
         result = driver._read_device(config)
 
@@ -256,7 +258,7 @@ class TestGenericDriverMixin:
         assert stream_mock.calls[0][0] == "iterate"
         assert inspect.isasyncgen(stream_mock.calls[0][1][0])
         assert ("map",) == tuple(x[:1] for x in pipe_mock.calls)[0]
-        assert ("timeout", (0.75,), {}) in pipe_mock.calls
+        assert timeouts == [(on_read, 0.75)]
 
     def test_read_device_regular_callback(self, driver, monkeypatch):
         """Test read device regular callback."""
@@ -267,6 +269,8 @@ class TestGenericDriverMixin:
 
         on_read = partial(lambda: [1, 2, 3])
         config = {"on_read": (on_read, 0.5), "interval": 2.0}
+        timeouts = []
+        monkeypatch.setattr(driver, "_timeout", lambda func, timeout: timeouts.append((func, timeout)) or Pipeable())
 
         result = driver._read_device(config)
 
@@ -283,9 +287,8 @@ class TestGenericDriverMixin:
         assert [name for name, _, _ in pipe_mock.calls] == [
             "concatmap",
             "enumerate",
-            "timeout",
         ]
-        assert pipe_mock.calls[-1][1] == (0.5,)
+        assert timeouts == [(on_read, 0.5)]
 
     def test_stream_data_builds_stream_for_initial_config(self, driver, monkeypatch):
         """Test stream data builds stream for initial config."""
@@ -427,3 +430,16 @@ def test_log_error_without_message(driver, caplog):
     with caplog.at_level("ERROR"):
         driver.log_error(ValueError("invalid data"))
     assert caplog.records[-1].getMessage() == "Error while reading Test driver. Error: invalid data"
+
+
+@pytest.mark.asyncio
+async def test_a_read_without_a_reply_names_the_device_the_function_and_the_timeout():
+    """The TimeoutError of an expired on_read timeout says, which device and which function did not reply."""
+
+    async def read_all():
+        await asyncio.sleep(10)
+        yield 1  # pragma: no cover
+
+    driver = DriverUnderTest()
+    with pytest.raises(TimeoutError, match=r"^Test driver: read_all\(\) got no reply within the timeout of 0.01 s$"):
+        await (driver._read_device({"on_read": (partial(read_all), 0.01), "interval": 1}) | pipe.list())

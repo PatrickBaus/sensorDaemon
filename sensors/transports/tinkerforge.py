@@ -14,7 +14,7 @@ from tinkerforge_async.devices import Device
 from tinkerforge_async.ip_connection import EnumerationType
 
 from async_event_bus import TopicNotRegisteredError, event_bus
-from helper_functions import context, retry
+from helper_functions import context, describe_exit, retry
 from sensors.drivers.tinkerforge import TinkerforgeSensor
 
 
@@ -126,7 +126,10 @@ class TinkerforgeTransport(IPConnectionAsync):
                 "Connected to Tinkerforge host at %s (%s).", transport.uri, transport.label
             ),
             on_exit=lambda exit_code: logging.getLogger(__name__).info(
-                "Disconnected from Tinkerforge host at %s (%s). Reason: %s.", transport.uri, transport.label, exit_code
+                "Disconnected from Tinkerforge host at %s (%s). Reason: %s.",
+                transport.uri,
+                transport.label,
+                describe_exit(exit_code),
             ),
         )
         return sensor_stream
