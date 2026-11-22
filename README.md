@@ -1,5 +1,6 @@
 [![GitHub release](https://img.shields.io/github/release/PatrickBaus/sensorDaemon.svg)](../../releases/latest)
 [![CI workflow](https://img.shields.io/github/actions/workflow/status/PatrickBaus/sensorDaemon/ci.yml?branch=master&label=ci&logo=github)](../../actions?workflow=ci)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/PatrickBaus/sensorDaemon/python-coverage-comment-action-data/endpoint.json)](https://github.com/PatrickBaus/sensorDaemon/tree/python-coverage-comment-action-data)
 [![code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](../../pkgs/container/sensordaemon)
