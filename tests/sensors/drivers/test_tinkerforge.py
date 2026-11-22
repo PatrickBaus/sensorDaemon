@@ -4,11 +4,16 @@
 # pylint: disable=protected-access
 
 import struct
+from decimal import Decimal
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from aiostream import pipe
 from tinkerforge_async.bricklet_ptc import BrickletPtc
+from tinkerforge_async.bricklet_ptc_v2 import BrickletPtcV2
 from tinkerforge_async.bricklet_temperature_v2 import BrickletTemperatureV2
+from tinkerforge_async.bricklet_thermocouple_v2 import BrickletThermocoupleV2
+from tinkerforge_async.devices import AdvancedCallbackConfiguration, ThresholdOption
 
 from sensors.drivers.tinkerforge import TinkerforgeSensor
 
@@ -45,3 +50,28 @@ async def test_the_device_receives_the_interval_in_ms(device_class):
     # The first request sets the period. Its payload starts with the period in ms as an uint32.
     request = device.ipcon.send_request.await_args_list[0].kwargs
     assert struct.unpack_from("<I", request["data"])[0] == 1000
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "device_class,sid",
+    [
+        (BrickletPtcV2, 5),  # does not exist
+        (BrickletPtcV2, 2),  # sensor connected, has no callback configuration
+        (BrickletThermocoupleV2, 1),  # error state, has no callback configuration
+    ],
+)
+async def test_invalid_sid_disables_only_this_sensor(device_class, sid, caplog):
+    """An invalid sid in the database config disables the sensor instead of stopping the transport."""
+    device = device_class(12345, fake_ip_connection())
+    sensor = TinkerforgeSensor(device)
+    callback_config = AdvancedCallbackConfiguration(
+        period=Decimal(1), value_has_to_change=True, option=ThresholdOption.OFF, minimum=None, maximum=None
+    )
+
+    with caplog.at_level("ERROR"):
+        result = await sensor._set_callback_configuration(sid, "K", "sensors/test", callback_config)
+
+    assert await (result | pipe.list()) == []
+    device.ipcon.send_request.assert_not_awaited()  # Nothing was sent to the device
+    assert f"Invalid configuration: Invalid sid {sid} for {device}." in caplog.text

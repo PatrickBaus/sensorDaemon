@@ -18,7 +18,7 @@ from typing import Any, AsyncGenerator
 from uuid import UUID
 
 from aiostream import async_, pipe, stream
-from tinkerforge_async.devices import AdvancedCallbackConfiguration, Device, ThresholdOption
+from tinkerforge_async.devices import AdvancedCallbackConfiguration, Device, InvalidSidError, ThresholdOption
 from tinkerforge_async.ip_connection import NotConnectedError
 
 from async_event_bus import event_bus
@@ -242,8 +242,9 @@ class TinkerforgeSensor:
     async def _set_callback_configuration(self, sid: int, unit: str, topic: str, config: AdvancedCallbackConfiguration):
         try:
             await self.device.set_callback_configuration(sid, *config)
-        except AssertionError:
-            self._logger.error("Invalid configuration for %s: sid=%i, config=%s", self.device, sid, config)
+        except InvalidSidError as exc:
+            # The sid does not exist or has no callback configuration. Disable only this sensor.
+            self._logger.error("Invalid configuration: %s Sensor disabled. Config: %s", exc, config)
             return stream.empty()
         remote_callback_config: AdvancedCallbackConfiguration
         remote_callback_config = await self.device.get_callback_configuration(sid)
