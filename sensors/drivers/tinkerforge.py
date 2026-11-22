@@ -8,13 +8,7 @@ from __future__ import annotations
 import logging
 from functools import partial
 from types import TracebackType
-
-try:
-    from typing import Self  # type: ignore # Python 3.11
-except ImportError:
-    from typing_extensions import Self
-
-from typing import Any, AsyncGenerator, TypeAlias
+from typing import Any, AsyncGenerator, Self, TypeAlias
 from uuid import UUID
 
 from aiostream import async_, pipe, stream
@@ -25,7 +19,6 @@ from tinkerforge_async.devices import (
     SimpleCallbackConfiguration,
     ThresholdOption,
 )
-from tinkerforge_async.ip_connection import NotConnectedError
 
 from async_event_bus import event_bus
 from data_types import DataEvent
@@ -315,22 +308,14 @@ class TinkerforgeSensor:
     ) -> AsyncGenerator[DataEvent, None]:
         if config is None:
             return stream.empty()
-        try:
-            # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is
-            # nothing to compare them to (filter => false), then read all sensors of the bricklet and process them in
-            # parallel (flatten).
-            data_stream = stream.chain(
-                self._configure(config),
-                stream.iterate(config["config"].items())
-                | pipe.starmap(self._parse_callback_configuration)
-                | pipe.starmap(self._set_callback_configuration)
-                | pipe.flatten()
-                | pipe.flatmap(lambda args: self._read_sensor(config["uuid"], *args)),
-            )
-            return data_stream
-        except NotConnectedError:
-            # Do not log it
-            raise
-        except Exception:
-            self._logger.exception("This should not happen.")
-            raise
+        # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is
+        # nothing to compare them to (filter => false), then read all sensors of the bricklet and process them in
+        # parallel (flatten).
+        return stream.chain(
+            self._configure(config),
+            stream.iterate(config["config"].items())
+            | pipe.starmap(self._parse_callback_configuration)
+            | pipe.starmap(self._set_callback_configuration)
+            | pipe.flatten()
+            | pipe.flatmap(lambda args: self._read_sensor(config["uuid"], *args)),
+        )

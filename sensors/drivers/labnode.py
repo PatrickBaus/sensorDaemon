@@ -112,21 +112,16 @@ class LabnodeSensor:
     def _configure_and_stream(self, config: dict[str, Any] | None) -> AsyncGenerator[DataEvent, None]:
         if config is None:
             return stream.empty()
-        try:
-            # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is
-            # nothing to compare them to (filter => false), then read all sensors of the node and process them in
-            # parallel (flatten).
-            config_stream = stream.chain(
-                stream.iterate(config["on_connect"])
-                | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
-                | pipe.concat(task_limit=1)
-                | pipe.filter(lambda result: False),
-                stream.iterate(config["config"].items())
-                | pipe.starmap(self._parse_configuration)
-                | pipe.starmap(self._read_sensor)
-                | pipe.flatten(),
-            )
-            return config_stream
-        except Exception:
-            self._logger.exception("This should not happen.")
-            raise
+        # Run all config steps in order (concat) and one at a time (task_limit=1). Drop the output. There is
+        # nothing to compare them to (filter => false), then read all sensors of the node and process them in
+        # parallel (flatten).
+        return stream.chain(
+            stream.iterate(config["on_connect"])
+            | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
+            | pipe.concat(task_limit=1)
+            | pipe.filter(lambda result: False),
+            stream.iterate(config["config"].items())
+            | pipe.starmap(self._parse_configuration)
+            | pipe.starmap(self._read_sensor)
+            | pipe.flatten(),
+        )

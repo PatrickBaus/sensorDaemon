@@ -276,13 +276,14 @@ def parse_log_level(log_level: int | str) -> int:
     return logging.INFO  # default log level
 
 
-# Report all mistakes managing asynchronous resources.
-# import warnings
-# warnings.simplefilter('always', ResourceWarning)
-logging.basicConfig(
-    format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-    level=config("APPLICATION_LOG_LEVEL", default=logging.INFO, cast=parse_log_level),
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+if __name__ == "__main__":
+    # Report all mistakes managing asynchronous resources.
+    # import warnings
+    # warnings.simplefilter('always', ResourceWarning)
+    logging.basicConfig(
+        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        level=config("APPLICATION_LOG_LEVEL", default=logging.INFO, cast=parse_log_level),
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
-sys.exit(asyncio.run(main()))
+    sys.exit(asyncio.run(main()))

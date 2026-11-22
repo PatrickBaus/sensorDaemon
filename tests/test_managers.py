@@ -10,7 +10,10 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, Mock, call
 from uuid import UUID, uuid4
 
+import aiomqtt
 import pytest
+from paho.mqtt.packettypes import PacketTypes
+from paho.mqtt.reasoncodes import ReasonCode
 from pydantic import ValidationError
 
 import managers
@@ -528,3 +531,194 @@ class TestHostManager:
         assert result == "data"
         assert attempts == 2
         assert "Unexpected error while streaming data from flaky host" in caplog.text
+
+
+class TestMqttConsumerReconnects:
+    """The MQTT worker reconnects after errors and does not lose the event it was publishing."""
+
+    @pytest.mark.asyncio
+    async def test_consumer_recovers_from_connection_errors(self, mqtt_manager, monkeypatch, caplog):
+        """Every kind of connection error is logged, then the worker reconnects. The pending event is published."""
+        lost_connection = FakeMqttClient()
+        lost_connection.publish.side_effect = aiomqtt.MqttError("Disconnected during message iteration")
+        working_connection = FakeMqttClient()
+        attempts = iter(
+            [
+                aiomqtt.MqttCodeError(ReasonCode(PacketTypes.CONNACK, identifier=134)),  # bad credentials
+                aiomqtt.MqttCodeError(128),  # unspecified error, given as int
+                ConnectionRefusedError(),
+                aiomqtt.MqttError("[Errno -2] Name or service not known"),
+                aiomqtt.MqttError("timed out"),
+                RuntimeError("bug"),
+                lost_connection,  # fails while publishing, so the event must be published again
+                working_connection,
+            ]
+        )
+
+        def connect(**_kwargs):
+            attempt = next(attempts)
+            if isinstance(attempt, Exception):
+                raise attempt
+            return attempt
+
+        monkeypatch.setattr(managers.aiomqtt, "Client", connect)
+        monkeypatch.setattr(asyncio, "sleep", AsyncMock())
+        queue = asyncio.Queue()
+        queue.put_nowait(("sensors/test", {"value": 1}))
+
+        with caplog.at_level("INFO"):
+            task = asyncio.create_task(mqtt_manager.consumer(queue, "worker", reconnect_interval=5))
+            await asyncio.wait_for(queue.join(), timeout=1)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        working_connection.publish.assert_awaited_once_with("sensors/test", payload='{"value": 1}', qos=2)
+        for message in (
+            "Invalid username or password",
+            "Raised an unspecified error (128)",
+            "Connection refused",
+            "Failure in name resolution",
+            "timed out",
+            "Error while publishing data to MQTT broker",
+            "due to rate limiting",
+        ):
+            assert message in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_consumer_without_brokers_ends(self):
+        """Without any broker, there is nothing to connect to."""
+        manager = managers.MqttManager(
+            None, managers.MQTTParams.model_construct(hosts=[], username=None, password=None)
+        )
+        await asyncio.wait_for(manager.consumer(asyncio.Queue(), "worker"), timeout=1)
+
+
+@pytest.mark.asyncio
+async def test_mqtt_manager_publishes_the_data_of_the_event_bus(broker_params, monkeypatch):
+    """Data events published on the event bus are sent to the broker."""
+    client = FakeMqttClient()
+    monkeypatch.setattr(managers.aiomqtt, "Client", lambda **kwargs: client)
+    manager = managers.MqttManager(uuid4(), broker_params, number_of_workers=1)
+    sender = UUID("12345678-1234-5678-1234-567812345678")
+
+    task = asyncio.create_task(manager.run())
+    for _ in range(10):  # let the producer subscribe to the event bus
+        await asyncio.sleep(0)
+    managers.event_bus.publish("wamp/publish", DataEvent(sender=sender, sid=0, topic="sensors/t", value=1, unit="K"))
+    for _ in range(100):
+        if client.publish.await_count:
+            break
+        await asyncio.sleep(0.01)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    topic, payload = client.publish.await_args.args[0], client.publish.await_args.kwargs["payload"]
+    assert topic == "sensors/t"
+    assert '"uuid": "12345678-1234-5678-1234-567812345678"' in payload and '"value": 1' in payload
+
+
+class FakeDatabase:
+    """Replaces the MongoDb connection of the DatabaseManager."""
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_exc_info):
+        return None
+
+
+@pytest.mark.asyncio
+async def test_database_manager_restarts_the_workers_after_an_error(monkeypatch, caplog):
+    """An error of a database worker is logged and all workers are restarted."""
+    runs = []
+
+    class Context:
+        """A database context, whose worker fails on the first run."""
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_exc_info):
+            return None
+
+        async def monitor_changes(self, timeout):
+            """Fail on the first run, then run until cancelled."""
+            runs.append(timeout)
+            if len(runs) == 1:
+                raise RuntimeError("database worker failed")
+            await asyncio.Event().wait()
+
+    monkeypatch.setattr(managers, "MongoDb", lambda **kwargs: FakeDatabase())
+    monkeypatch.setattr(managers, "DATABASE_CONTEXTS", {Context})
+    real_sleep = asyncio.sleep
+    monkeypatch.setattr(managers.asyncio, "sleep", AsyncMock())
+    manager = managers.DatabaseManager(host="mongodb://localhost")
+
+    with caplog.at_level("ERROR"):
+        task = asyncio.create_task(manager.run())
+        for _ in range(100):
+            if len(runs) == 2:
+                break
+            await real_sleep(0.01)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    assert runs == [5, 5]
+    assert "Error while processing database." in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_host_manager_streams_the_data_of_the_hosts(monkeypatch):
+    """
+    The host manager creates the transports of the hosts in the database, publishes their data, stops a host when its
+    config is removed and starts hosts added later.
+    """
+    first_host, second_host = uuid4(), uuid4()
+    configs = {
+        host: {"driver": "fake", "enabled": True, "node_id": None, "uuid": host} for host in (first_host, second_host)
+    }
+
+    class FakeTransport:  # pylint: disable=too-few-public-methods
+        """A transport, that sends its uuid, then waits until it is stopped."""
+
+        def __init__(self, uuid, **_kwargs):
+            self.uuid = uuid
+            self.label = str(uuid)
+
+        def stream_data(self):
+            """Send the uuid, then wait."""
+
+            async def generate():
+                yield self.uuid
+                await asyncio.Event().wait()
+
+            return generate()
+
+    async def get_hosts():
+        yield first_host
+
+    async def get_config(uuid):
+        return configs[uuid]
+
+    monkeypatch.setattr(managers, "transport_factory", Mock(get=FakeTransport))
+    managers.event_bus.register("db_autodiscovery_sensors/get", get_hosts)
+    managers.event_bus.register("db_autodiscovery_sensors/get_config", get_config)
+    data = managers.event_bus.subscribe("wamp/publish")
+    try:
+        task = asyncio.create_task(managers.HostManager(node_id=None).run())
+        assert await asyncio.wait_for(anext(data), timeout=1) == first_host
+
+        managers.event_bus.publish(f"nodes/by_uuid/{first_host}/update", None)  # host removed from the database
+        managers.event_bus.publish("db_autodiscovery_sensors/add_host", second_host)  # host added to the database
+        assert await asyncio.wait_for(anext(data), timeout=1) == second_host
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    finally:
+        await data.aclose()
+        managers.event_bus.unregister("db_autodiscovery_sensors/get")
+        managers.event_bus.unregister("db_autodiscovery_sensors/get_config")

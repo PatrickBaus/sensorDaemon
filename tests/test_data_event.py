@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from data_types import DataEvent
+from data_types import ChangeEvent, DataEvent
 
 
 class TestDataEvent:
@@ -55,3 +55,16 @@ class TestDataEvent:
         )
 
         assert event.value == {"enabled": True}
+
+
+def test_data_event_as_text():
+    """A data event is printed with its sender, value and unit."""
+    sender = UUID("12345678-1234-5678-1234-567812345678")
+    event = DataEvent(sender=sender, topic="temperature", value=12.5, sid=0, unit="K")
+    assert str(event) == f"Data event from {sender}: 12.5 K"
+
+
+@pytest.mark.parametrize("change", [{"enabled": True}, UUID("12345678-1234-5678-1234-567812345678"), None])
+def test_change_event_holds_the_change(change):
+    """A change event carries the changed data, the uuid of a removed entry or None."""
+    assert ChangeEvent(change).change == change

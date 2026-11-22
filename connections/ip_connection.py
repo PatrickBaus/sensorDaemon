@@ -7,11 +7,7 @@ import errno
 import logging
 from asyncio import StreamReader, StreamWriter
 from types import TracebackType
-
-try:
-    from typing import Self  # type: ignore # Python 3.11
-except ImportError:
-    from typing_extensions import Self
+from typing import Self
 
 
 class ConnectionLostError(ConnectionError):
