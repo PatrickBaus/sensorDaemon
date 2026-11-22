@@ -9,11 +9,12 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from aiostream import pipe
+from tinkerforge_async.bricklet_isolator import BrickletIsolator
 from tinkerforge_async.bricklet_ptc import BrickletPtc
 from tinkerforge_async.bricklet_ptc_v2 import BrickletPtcV2
 from tinkerforge_async.bricklet_temperature_v2 import BrickletTemperatureV2
 from tinkerforge_async.bricklet_thermocouple_v2 import BrickletThermocoupleV2
-from tinkerforge_async.devices import AdvancedCallbackConfiguration, ThresholdOption
+from tinkerforge_async.devices import AdvancedCallbackConfiguration, SimpleCallbackConfiguration, ThresholdOption
 
 from sensors.drivers.tinkerforge import TinkerforgeSensor
 
@@ -75,3 +76,32 @@ async def test_invalid_sid_disables_only_this_sensor(device_class, sid, caplog):
     assert await (result | pipe.list()) == []
     device.ipcon.send_request.assert_not_awaited()  # Nothing was sent to the device
     assert f"Invalid configuration: Invalid sid {sid} for {device}." in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_configuration_without_threshold_option_is_applied():
+    """A configuration read back from a device has no option (None) if the channel has no thresholds."""
+    device = BrickletTemperatureV2(12345, fake_ip_connection())
+    config = AdvancedCallbackConfiguration(
+        period=Decimal("0.5"), value_has_to_change=True, option=None, minimum=None, maximum=None
+    )
+
+    await TinkerforgeSensor(device)._apply_callback_configuration(0, config)
+
+    # Payload: period (uint32, ms), value_has_to_change (bool), option (char), minimum, maximum
+    request = device.ipcon.send_request.await_args_list[0].kwargs
+    period, value_has_to_change, option = struct.unpack_from("<I?c", request["data"])
+    assert (period, value_has_to_change, option) == (500, True, ThresholdOption.OFF.value.encode())
+
+
+@pytest.mark.asyncio
+async def test_a_simple_configuration_is_applied():
+    """The Isolator Bricklet returns a SimpleCallbackConfiguration, which has no thresholds."""
+    device = BrickletIsolator(12345, fake_ip_connection())
+
+    await TinkerforgeSensor(device)._apply_callback_configuration(
+        0, SimpleCallbackConfiguration(period=Decimal(2), value_has_to_change=False)
+    )
+
+    request = device.ipcon.send_request.await_args_list[0].kwargs
+    assert struct.unpack_from("<I?", request["data"]) == (2000, False)
