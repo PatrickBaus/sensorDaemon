@@ -15,7 +15,7 @@ from aiostream import pipable_operator, pipe, stream, streamcontext
 from async_event_bus import event_bus
 from data_types import DataEvent
 from errors import ConfigurationError
-from helper_functions import catch, create_device_function, finally_action, retry
+from helper_functions import catch, create_device_function, finally_action, retry, timeout_with_reason
 
 
 @pipable_operator
@@ -61,8 +61,7 @@ class GenericDriverMixin:
             if isinstance(result, Exception):
                 logging.getLogger(__name__).error("Error during shutdown of: %s", self, exc_info=result)
 
-    @staticmethod
-    def _call_functions(funcs: Iterable[tuple[partial, float]]):
+    def _call_functions(self, funcs: Iterable[tuple[partial, float]]):
         """
         Call the functions one after another, each with its own timeout, and drop their results.
 
@@ -78,9 +77,30 @@ class GenericDriverMixin:
         """
         return (
             stream.iterate(funcs)
-            | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
+            | pipe.starmap(lambda func, timeout: stream.just(func()) | self._timeout(func, timeout))
             | pipe.concat(task_limit=1)
             | pipe.filter(lambda result: False)
+        )
+
+    def _timeout(self, func: partial, timeout: float | None):
+        """
+        A timeout for a call to the device. When it expires, the TimeoutError names the device, the function and the
+        timeout, which are logged when the connection is closed.
+
+        Parameters
+        ----------
+        func: partial
+            The function called
+        timeout: float or None
+            The timeout in seconds from the config
+
+        Returns
+        -------
+        Callable
+            The pipable timeout operator
+        """
+        return timeout_with_reason.pipe(
+            timeout, lambda: f"{self}: {func.func.__name__}() got no reply within the timeout of {timeout} s"
         )
 
     def _with_after_read(self, read_stream, config: dict[str, Any]):
@@ -109,7 +129,9 @@ class GenericDriverMixin:
         timeout: float
         on_read, timeout = config["on_read"]
         if inspect.isasyncgenfunction(on_read.func):
-            data_stream = stream.iterate(on_read()) | pipe.map(lambda value: (0, value)) | pipe.timeout(timeout)
+            data_stream = (
+                stream.iterate(on_read()) | pipe.map(lambda value: (0, value)) | self._timeout(on_read, timeout)
+            )
             if config.get("on_after_read"):
                 # Call the 'on_after_read' functions after each value produced by the generator
                 data_stream = data_stream | call_after_each.pipe(self._call_functions(config["on_after_read"]))
@@ -123,7 +145,7 @@ class GenericDriverMixin:
                     stream.just(func())  # Get the results of the query (a mapping/list)
                     | pipe.concatmap(stream.iterate)  # iterate the results
                     | pipe.enumerate()  # add the sid for each result in order
-                    | pipe.timeout(timeout),  # time out if no result is produced within the deadline
+                    | self._timeout(func, timeout),  # time out if no result is produced within the deadline
                     config,
                 )
             )
@@ -172,7 +194,7 @@ class GenericDriverMixin:
         # compare them to (filter => false), then read the device.
         config_stream = stream.chain(
             stream.iterate(config["on_connect"])
-            | pipe.starmap(lambda func, timeout: stream.just(func()) | pipe.timeout(timeout))
+            | pipe.starmap(lambda func, timeout: stream.just(func()) | self._timeout(func, timeout))
             | pipe.concat(task_limit=1)
             | pipe.filter(lambda result: False),
             self._read_device(config)

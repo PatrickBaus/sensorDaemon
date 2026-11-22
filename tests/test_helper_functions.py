@@ -474,3 +474,66 @@ async def test_with_context_keeps_the_context_open_until_the_stream_is_closed(on
     assert context_manager.exited
     if on_exit is not None:
         on_exit.assert_called_once_with()
+
+
+class TestDescribeExit:
+    """The reason, why a stream ended, as written to the log."""
+
+    @pytest.mark.parametrize(
+        "exc, expected",
+        [
+            (None, "closed"),
+            (ValueError("bad value"), "ValueError: bad value"),
+            (TimeoutError("No reply from the meter"), "TimeoutError: No reply from the meter"),
+            # A connection raises a TimeoutError without a message
+            (TimeoutError(), "TimeoutError: No reply within the timeout of the connection"),
+            (ConnectionResetError(), "ConnectionResetError"),
+        ],
+    )
+    def test_describe_exit(self, exc, expected):
+        """The exception is named, and an empty message is not shown."""
+        assert helper_functions.describe_exit(exc) == expected
+
+
+class TestTimeoutWithReason:
+    """A timeout, that says why it expired."""
+
+    @pytest.mark.asyncio
+    async def test_items_within_the_timeout_are_passed_on(self):
+        """The items are forwarded and the stream ends with its source. A timeout of None never expires."""
+        for timeout in (1, None):
+            items = stream.iterate([1, 2, 3]) | helper_functions.timeout_with_reason.pipe(timeout, lambda: "unused")
+            assert await (items | pipe.list()) == [1, 2, 3]
+
+    @pytest.mark.asyncio
+    async def test_an_expired_timeout_raises_the_reason(self):
+        """If the source is too slow, the TimeoutError carries the reason."""
+
+        async def slow():
+            yield 1
+            await asyncio.sleep(10)
+            yield 2  # pragma: no cover
+
+        items = stream.iterate(slow()) | helper_functions.timeout_with_reason.pipe(
+            0.01, lambda: "No reply within 0.01 s"
+        )
+        received = []
+        with pytest.raises(TimeoutError, match="No reply within 0.01 s"):
+            async with items.stream() as streamer:
+                async for item in streamer:
+                    received.append(item)
+        assert received == [1]
+
+    @pytest.mark.asyncio
+    async def test_a_timeout_of_the_source_is_passed_on_unchanged(self):
+        """A TimeoutError of the source, e.g. of its connection, is not mistaken for an expired timeout."""
+        error = TimeoutError()
+
+        async def connection_times_out():
+            raise error
+            yield  # pragma: no cover  # pylint: disable=unreachable
+
+        items = stream.iterate(connection_times_out()) | helper_functions.timeout_with_reason.pipe(10, lambda: "unused")
+        with pytest.raises(TimeoutError) as exc_info:
+            await (items | pipe.list())
+        assert exc_info.value is error

@@ -114,6 +114,67 @@ async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any) 
             return result
 
 
+def describe_exit(exc: BaseException | None) -> str:
+    """
+    Describe why a stream ended, for the log. Some exceptions have no message, e.g. a TimeoutError raised by a
+    connection, so their name is shown as well.
+
+    Parameters
+    ----------
+    exc: BaseException or None
+        The exception, that ended the stream, or None if it ended without an error
+
+    Returns
+    -------
+    str
+        For example "TimeoutError: No reply within 2 s" or "closed" if there was no error.
+    """
+    if exc is None:
+        return "closed"
+    message = str(exc)
+    if not message and isinstance(exc, TimeoutError):
+        message = "No reply within the timeout of the connection"
+    return f"{type(exc).__name__}: {message}" if message else type(exc).__name__
+
+
+@pipable_operator
+async def timeout_with_reason(
+    source: AsyncIterable[Any], timeout: float | None, reason: Callable[[], str]
+) -> AsyncGenerator[Any, None]:
+    """
+    Raise a TimeoutError, if the source does not produce the next item within `timeout`, like `pipe.timeout`. Unlike
+    `pipe.timeout`, the error says why: `reason()` is called, when the timeout expires. A TimeoutError raised by the
+    source itself, e.g. by its connection, is passed on unchanged, so that the two can be told apart.
+
+    Parameters
+    ----------
+    source: AsyncIterable
+        The source stream
+    timeout: float or None
+        The maximum time in seconds between two items. None disables the timeout.
+    reason: Callable
+        Returns the message of the TimeoutError
+
+    Yields
+    -------
+    Any
+        The items of the source stream
+    """
+    async with streamcontext(source) as streamer:
+        while True:
+            deadline = asyncio.timeout(timeout)
+            try:
+                async with deadline:
+                    item = await anext(streamer)
+            except StopAsyncIteration:
+                return
+            except TimeoutError:
+                if deadline.expired():
+                    raise TimeoutError(reason()) from None
+                raise
+            yield item
+
+
 @pipable_operator
 async def retry(
     source: AsyncIterable[Any],
