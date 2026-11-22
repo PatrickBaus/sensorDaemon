@@ -8,13 +8,7 @@ from __future__ import annotations
 import logging
 from functools import partial
 from types import TracebackType
-
-try:
-    from typing import Self  # type: ignore # Python 3.11
-except ImportError:
-    from typing_extensions import Self
-
-from typing import Any, AsyncGenerator, TypeAlias
+from typing import Any, AsyncGenerator, Self, TypeAlias
 from uuid import UUID
 
 from aiostream import async_, pipe, stream

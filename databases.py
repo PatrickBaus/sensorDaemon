@@ -7,13 +7,7 @@ import asyncio
 import logging
 import re
 from types import TracebackType
-from typing import Any, AsyncGenerator, NotRequired, TypedDict, Unpack
-
-try:
-    from typing import Self  # type: ignore # Python 3.11
-except ImportError:
-    from typing_extensions import Self
-
+from typing import Any, AsyncGenerator, NotRequired, Self, TypedDict, Unpack
 from uuid import UUID
 
 import motor.motor_asyncio
