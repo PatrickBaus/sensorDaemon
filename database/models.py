@@ -114,7 +114,8 @@ class TinkerforgeSensorConfigModel(BaseModel):
     """
 
     # pylint: disable=too-few-public-methods
-    interval: int = Field(ge=0, le=2**32 - 1)
+    # The callback period in s. The devices store it as uint32 in ms.
+    interval: float = Field(ge=0, le=(2**32 - 1) / 1000)
     trigger_only_on_change: bool | None = True
     description: str | None = ""
     topic: str
