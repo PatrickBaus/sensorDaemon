@@ -48,7 +48,28 @@ profile = "black"
 [tool.black]
 line-length = 120
 
+[tool.coverage.run]
+# Only the code of Kraken is measured, not the tests
+source = ["."]
+omit = ["tests/*"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = true
+exclude_also = [
+    # Only evaluated by the type checker
+    "if TYPE_CHECKING:",
+    # The entry point of the daemon. Its parts are tested separately.
+    'if __name__ == "__main__":',
+    # Marks code after an endless loop, that only exists to tell mypy that the function does not return there
+    'assert False, "unreachable"',
+]
+
 [tool.pytest.ini_options]
+# Every test gets its own event loop
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     # conftest.py reorders tests moving slow ones to the end of the list
     "slow",
@@ -79,6 +100,7 @@ test = [
     "mongomock-motor~=0.0.36",
     "pytest~=9.2.0",
     "pytest-asyncio~=1.5.0",
+    "pytest-cov~=7.1.0",
 ]
 
 [tool.setuptools.dynamic]
