@@ -14,11 +14,17 @@ try:
 except ImportError:
     from typing_extensions import Self
 
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, TypeAlias
 from uuid import UUID
 
 from aiostream import async_, pipe, stream
-from tinkerforge_async.devices import AdvancedCallbackConfiguration, Device, InvalidSidError, ThresholdOption
+from tinkerforge_async.devices import (
+    AdvancedCallbackConfiguration,
+    Device,
+    InvalidSidError,
+    SimpleCallbackConfiguration,
+    ThresholdOption,
+)
 from tinkerforge_async.ip_connection import NotConnectedError
 
 from async_event_bus import event_bus
@@ -27,6 +33,9 @@ from database.models import TinkerforgeSensorConfigModel
 from errors import ConfigurationError
 from helper_functions import call_safely, context, create_device_function
 from sensors.drivers.shared import DeviceStatus
+
+# The callback configuration as returned by the devices. The Isolator Bricklet returns a SimpleCallbackConfiguration.
+CallbackConfiguration: TypeAlias = AdvancedCallbackConfiguration | SimpleCallbackConfiguration
 
 
 class TinkerforgeSensor:
@@ -186,7 +195,7 @@ class TinkerforgeSensor:
         return config
 
     def _read_sensor(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: AdvancedCallbackConfiguration
+        self, source_uuid: UUID, sid: int, unit: str, topic: str, callback_config: CallbackConfiguration
     ) -> AsyncGenerator[DataEvent, None]:
         monitor_stream = (
             stream.repeat(self.device, interval=1)  # TODO: make interval configurable
@@ -194,7 +203,7 @@ class TinkerforgeSensor:
             | pipe.map(lambda current_config: None if current_config == callback_config else self.device)
             | pipe.filter(lambda sensor: sensor is not None)
             | pipe.action(lambda sensor: logging.getLogger(__name__).info("Resetting callback config for %s", sensor))
-            | pipe.action(async_(lambda sensor: sensor.set_callback_configuration(sid, *callback_config)))
+            | pipe.action(async_(lambda sensor: self._apply_callback_configuration(sid, callback_config)))
             | pipe.filter(lambda x: False)
         )
 
@@ -239,14 +248,39 @@ class TinkerforgeSensor:
         )
         return sid, config["unit"], config["topic"], callback_config
 
+    async def _apply_callback_configuration(self, sid: int, config: CallbackConfiguration) -> None:
+        """
+        Configure the callback of the sensor `sid`. The arguments are passed explicitly, because a configuration read
+        from the device has no threshold option (None) if the channel has no thresholds, and the Isolator Bricklet
+        returns a SimpleCallbackConfiguration without thresholds at all.
+
+        Parameters
+        ----------
+        sid: int
+            The secondary id of the sensor
+        config: AdvancedCallbackConfiguration or SimpleCallbackConfiguration
+            The callback configuration
+        """
+        if isinstance(config, SimpleCallbackConfiguration):
+            await self.device.set_callback_configuration(sid, config.period, config.value_has_to_change)
+            return
+        await self.device.set_callback_configuration(
+            sid,
+            config.period,
+            config.value_has_to_change,
+            ThresholdOption.OFF if config.option is None else config.option,
+            config.minimum,
+            config.maximum,
+        )
+
     async def _set_callback_configuration(self, sid: int, unit: str, topic: str, config: AdvancedCallbackConfiguration):
         try:
-            await self.device.set_callback_configuration(sid, *config)
+            await self._apply_callback_configuration(sid, config)
         except InvalidSidError as exc:
             # The sid does not exist or has no callback configuration. Disable only this sensor.
             self._logger.error("Invalid configuration: %s Sensor disabled. Config: %s", exc, config)
             return stream.empty()
-        remote_callback_config: AdvancedCallbackConfiguration
+        remote_callback_config: CallbackConfiguration
         remote_callback_config = await self.device.get_callback_configuration(sid)
         if remote_callback_config.period == 0:
             self._logger.warning(
