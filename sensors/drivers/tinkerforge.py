@@ -219,7 +219,7 @@ class TinkerforgeSensor:
         sid: int or str
             The secondary id, naming the sensor of the node. Each node may have multiple sensors with a separate sid.
         config: dict
-            A dictionary containing the keys 'interval', 'trigger_only_on_change'. 'unit', and 'topic'
+            A dictionary containing the keys 'interval' (in s), 'trigger_only_on_change'. 'unit', and 'topic'
 
         Returns
         -------
@@ -231,7 +231,7 @@ class TinkerforgeSensor:
         """
         sid = int(sid)
         callback_config = AdvancedCallbackConfiguration(
-            period=config["interval"],
+            period=config["interval"],  # in s, like the database
             value_has_to_change=config["trigger_only_on_change"],
             option=ThresholdOption.OFF,
             minimum=None,
