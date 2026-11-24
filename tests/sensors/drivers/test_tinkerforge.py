@@ -28,7 +28,7 @@ from tests.fake_tinkerforge import FakeTinkerforgeConnection, tinkerforge_config
 
 
 def fake_ip_connection():
-    """An IP connection, that records the requests sent and returns an empty reply."""
+    """An IP connection that records the requests sent and returns an empty reply."""
     ipcon = Mock()
     ipcon.send_request = AsyncMock(return_value=(None, b""))
     return ipcon
@@ -126,7 +126,7 @@ async def wait_for(condition, timeout=3.0):
 async def test_a_bricklet_is_configured_and_streams_its_data(tinkerforge_database):
     """
     The bricklet is configured by the on_connect functions and the callback configuration of the database. Its
-    callbacks are streamed. A removed config stops the sensor, a new config starts it again, and the sensor stops,
+    callbacks are streamed. A removed config stops the sensor, a new config starts it again, and the sensor stops
     when the bricklet is disconnected.
     """
     connection = FakeTinkerforgeConnection()
@@ -175,7 +175,7 @@ async def test_a_bricklet_is_configured_and_streams_its_data(tinkerforge_databas
 @pytest.mark.asyncio
 @pytest.mark.slow
 async def test_the_callback_configuration_is_restored_after_a_reset_of_the_bricklet(tinkerforge_database, caplog):
-    """The callback configuration is checked every second and set again, if it was lost, e.g. by a reset."""
+    """The callback configuration is checked every second and set again if it was lost, e.g. by a reset."""
     connection = FakeTinkerforgeConnection()
     device = BrickletTemperatureV2(12345, connection)
     tinkerforge_database[12345] = tinkerforge_config(12345, uuid4())
@@ -199,7 +199,7 @@ async def test_the_callback_configuration_is_restored_after_a_reset_of_the_brick
 
 @pytest.mark.asyncio
 async def test_a_config_with_an_unknown_on_connect_function_is_ignored(tinkerforge_database, caplog):
-    """A config, whose on_connect functions do not exist, is logged and the bricklet is not configured."""
+    """A config whose on_connect functions do not exist is logged and the bricklet is not configured."""
     connection = FakeTinkerforgeConnection()
     device = BrickletTemperatureV2(12345, connection)
     tinkerforge_database[12345] = tinkerforge_config(
@@ -233,7 +233,7 @@ def edge_count_call(*args, **kwargs):
 )
 async def test_an_invalid_on_connect_call_disables_only_this_sensor(tinkerforge_database, caplog, call, error):
     """
-    An on_connect call, that the device function rejects, disables the sensor without a traceback. The following
+    An on_connect call that the device function rejects disables the sensor without a traceback. The following
     on_connect calls are skipped and the sensor is not configured. A corrected config from the database enables it
     again.
     """
@@ -269,7 +269,7 @@ async def test_an_invalid_on_connect_call_disables_only_this_sensor(tinkerforge_
 
 @pytest.mark.asyncio
 async def test_a_timeout_of_an_on_connect_call_is_not_a_configuration_error():
-    """A device, that does not answer, is a connection problem. The error is raised, so the connection is restarted."""
+    """A device that does not answer is a connection problem. The error is raised, so the connection is restarted."""
 
     async def no_answer():
         await asyncio.Event().wait()

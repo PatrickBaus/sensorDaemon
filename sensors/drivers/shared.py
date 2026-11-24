@@ -1,5 +1,5 @@
 """
-This file contains all shared classed used by the drivers.
+This file contains all shared classes used by the drivers.
 """
 
 from dataclasses import dataclass

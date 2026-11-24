@@ -1,7 +1,7 @@
 """
 This file contains the implementation of the managers for the sensor hosts. All
-hosts of a certain type are managed by their managers. The mangers configure the
-hosts extract the data stream from them.
+hosts of a certain type are managed by their managers. The managers configure the
+hosts and extract the data stream from them.
 """
 
 import asyncio
@@ -104,11 +104,12 @@ class MQTTParams(BaseModel):
     @classmethod
     def ensure_list_of_hosts(cls, value: str) -> list[tuple[str, int]]:
         """
-        Parse
+        Parse a list of MQTT broker hosts.
+
         Parameters
         ----------
         value: str
-            Either a single hostname:port string or a comma separated list of hostname:port strings.
+            Either a single hostname:port string or a comma-separated list of hostname:port strings.
 
         Returns
         -------
@@ -145,7 +146,7 @@ class MqttManager:
         Parameters
         ----------
         output_queue: asyncio.Queue
-            The output queue, to aggregate the data to.
+            The output queue to aggregate the data to.
         """
         event: DataEvent
         async for event in event_bus.subscribe("wamp/publish"):
@@ -185,7 +186,7 @@ class MqttManager:
     ) -> None:
         """
         Log the MQTT error codes as human-readable errors to the logger (error log level). If the code is unknown, log
-        it as an exception for debugging. Suppresses errors, if they are repeated.
+        it as an exception for debugging. Suppresses errors if they are repeated.
         Parameters
         ----------
         worker_name: str
@@ -219,7 +220,7 @@ class MqttManager:
             self.__logger.error("Worker (%s): MQTT broker (%s:%i) is unreachable. Retrying.", worker_name, *host)
         elif error_code == 128:
             self.__logger.error(
-                "Worker (%s): MQTT broker (%s:%i) Raised an unspecified error (128). Retrying.", worker_name, *host
+                "Worker (%s): MQTT broker (%s:%i) raised an unspecified error (128). Retrying.", worker_name, *host
             )
         elif error_code == 134:
             self.__logger.error(
@@ -253,13 +254,13 @@ class MqttManager:
         reconnect_interval: int = 5,
     ) -> None:
         """
-        Pushes the data from the input queue to the MQTT broker. It will make sure,
+        Pushes the data from the input queue to the MQTT broker. It will make sure
         that no data is lost if the MQTT broker disconnects.
 
         Parameters
         ----------
         input_queue: asyncio.Queue
-            The queue, that supplies the worker with data
+            The queue that supplies the worker with data
         worker_name: str
             A human-readable label used for logging
         reconnect_interval: int, default=5
@@ -366,7 +367,7 @@ class MqttManager:
 
     async def run(self) -> None:
         """
-        The main task, that spawns all workers.
+        The main task that spawns all workers.
         """
         async with AsyncExitStack() as stack:
             tasks: set[asyncio.Task] = set()
@@ -408,7 +409,7 @@ class DatabaseManager:
 
     async def run(self) -> None:
         """
-        The main task, that spawn all workers.
+        The main task that spawns all workers.
         """
         while "loop not cancelled":
             # TODO: Notify all hosts/sensors, when the database is connected
@@ -506,7 +507,7 @@ class HostManager:  # pylint: disable=too-few-public-methods
     @staticmethod
     def _is_config_valid(node_id: UUID | None, config: dict[str, Any]) -> bool:
         """
-        A config is valid, if it is enabled and assigned to this logger node. The latter is the case if either this node
+        A config is valid if it is enabled and assigned to this logger node. The latter is the case if either this node
         has no uuid, the config has no node id (served by loggers) or the config matches this node id.
         Parameters
         ----------
@@ -528,7 +529,7 @@ class HostManager:  # pylint: disable=too-few-public-methods
 
     async def run(self) -> None:
         """
-        The main task, that reads data from the sensors and pushes it onto the event_bus.
+        The main task that reads data from the sensors and pushes it onto the event_bus.
         """
         # Generate the UUIDs of new sensors
         sensor_stream = stream.chain(
