@@ -1,5 +1,6 @@
 """
-This is an asyncIO driver for a generic SCPI compatible device.
+This is the transport for Tinkerforge bricks and bricklets. It connects to a brick daemon, discovers the devices and
+streams their data.
 """
 
 from __future__ import annotations
@@ -160,10 +161,13 @@ class TinkerforgeTransport(IPConnectionAsync):
 
     def stream_data(self):
         """
-        Discover all Tinkerforge devices connected via this transport.
-        Yields
-        -------
+        Connect to the brick daemon, discover all Tinkerforge devices connected via this transport, and stream their
+        data. The connection is restarted after a connection error or a timeout.
 
+        Returns
+        -------
+        Stream of DataEvent
+            The data of the devices
         """
         data_stream = (
             stream.just(self)

@@ -1,6 +1,6 @@
 """
-This is a wrapper for the Prologix Ethernet controller used by other generic devices like the SCPI driver. It wraps
-the Prologix library and adds the stream interface via GenericTransport.
+This is a wrapper for a GPIB controller supported by Linux-GPIB, used by generic devices like the SCPI driver. It wraps
+the async-gpib library and adds the stream interface via GenericTransport.
 """
 
 # pylint: disable=duplicate-code
@@ -18,7 +18,7 @@ from sensors.transports.generic_transport import GenericTransport
 
 class LinuxGpibTransport(GenericTransport, AsyncGpib):
     """
-    The transport wrapper for the generic ethernet connection
+    The transport wrapper for a Linux-GPIB controller
     """
 
     @classmethod
@@ -65,10 +65,12 @@ class LinuxGpibTransport(GenericTransport, AsyncGpib):
 
     def stream_data(self):
         """
-        Discover all Tinkerforge devices connected via this transport.
-        Yields
-        -------
+        Connect to the GPIB device and stream its data. The connection is restarted after a GPIB error or a timeout.
 
+        Returns
+        -------
+        Stream of DataEvent
+            The data of the device
         """
         data_stream = (
             stream.just(self)
@@ -82,6 +84,6 @@ class LinuxGpibTransport(GenericTransport, AsyncGpib):
         )
         # We need to catch the TimeoutError here, because most protocols like SCPI have no means of synchronizing
         # messages. This means that we will lose sync after a timeout. In these cases, we reconnect the transport.
-        # In case of a GpibError, we error out and stop the device.
+        # A GpibError also restarts the transport.
 
         return data_stream

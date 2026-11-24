@@ -1,6 +1,6 @@
 """
-This is a wrapper for the Prologix Ethernet controller used by other generic devices like the SCPI driver. It wraps
-the Prologix library and adds the stream interface via GenericTransport.
+This is a wrapper for the Ethernet connection of an APQ LabNode. It wraps the LabNode library and adds the stream
+interface via GenericEthernetTransport.
 """
 
 import logging
@@ -17,7 +17,7 @@ from sensors.transports.generic_ethernet_transport import GenericEthernetTranspo
 
 class LabnodeTransport(GenericEthernetTransport, LabnodeIPConnection):
     """
-    The transport wrapper for the generic ethernet connection
+    The transport wrapper for the Ethernet connection of an APQ LabNode
     """
 
     @classmethod

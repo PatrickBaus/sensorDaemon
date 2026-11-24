@@ -35,15 +35,16 @@ class TransportFactory:
 
     def get(self, driver: str, **kwargs: Any):
         """
-        Look up the driver for a given database entry. Raises a `ValueError` if
+        Look up the driver for a given database entry. Raises an `UnknownDriverError` if
         the driver is not registered.
 
         Parameters
         ----------
         driver: str
             A string identifying the driver.
-        **kwargs : tuple
+        **kwargs: Any
             Additional keyword arguments that will be passed to the constructor of the class produced
+
         Returns
         -------
         Any
@@ -51,7 +52,8 @@ class TransportFactory:
 
         Raises
         ------
-        ValueError
+        UnknownDriverError
+            Raised if the transport driver is not registered
         """
         host = self.__available_drivers.get(driver)
         if host is None:

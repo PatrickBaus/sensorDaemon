@@ -1,5 +1,5 @@
 """
-This is an asyncIO driver for a generic SCPI compatible device.
+This is an asyncIO driver for the HP 3478A multimeter.
 """
 
 from __future__ import annotations
