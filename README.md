@@ -4,7 +4,7 @@
 
 | Name      |    Stmts |     Miss |   Branch |   BrPart |    Cover |   Missing |
 |---------- | -------: | -------: | -------: | -------: | -------: | --------: |
-| **TOTAL** | **1631** |    **0** |  **314** |    **0** | **100%** |           |
+| **TOTAL** | **1646** |    **0** |  **318** |    **0** | **100%** |           |
 
 29 files skipped due to complete coverage.
 
