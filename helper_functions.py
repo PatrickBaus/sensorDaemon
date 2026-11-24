@@ -5,13 +5,56 @@ A collection of helper functions used in Kraken.
 import asyncio
 import inspect
 from functools import partial
-from typing import Any, AsyncContextManager, AsyncGenerator, AsyncIterable, Awaitable, Callable, Type, TypedDict, cast
+from typing import (
+    Any,
+    AsyncContextManager,
+    AsyncGenerator,
+    AsyncIterable,
+    Awaitable,
+    Callable,
+    Generic,
+    Type,
+    TypedDict,
+    TypeVar,
+    cast,
+)
 
 from aiostream import operator, pipable_operator, streamcontext
 from aiostream.core import Stream
 
 from async_event_bus import TopicNotRegisteredError, event_bus
 from errors import ConfigurationError
+
+T = TypeVar("T")
+
+
+class IterableQueue(Generic[T]):
+    """
+    An asynchronous iterator over the items put into an asyncio.Queue. It can be used as the source of a stream, e.g.
+    `stream.iterate(IterableQueue(queue))`. The iteration ends when the sentinel is put into the queue.
+    """
+
+    def __init__(self, queue: asyncio.Queue[T], sentinel: Any = None) -> None:
+        """
+        Parameters
+        ----------
+        queue: asyncio.Queue
+            The queue to iterate
+        sentinel: Any, default=None
+            The item that ends the iteration. It is compared by identity and not yielded.
+        """
+        self.queue = queue
+        self.sentinel = sentinel
+
+    def __aiter__(self) -> "IterableQueue[T]":
+        return self
+
+    async def __anext__(self) -> T:
+        item = await self.queue.get()
+        self.queue.task_done()
+        if item is self.sentinel:
+            raise StopAsyncIteration
+        return item
 
 
 class FunctionCallConfig(TypedDict):

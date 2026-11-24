@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from functools import partial
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from aiostream import Stream, pipe, stream
 from tinkerforge_async import IPConnectionAsync
@@ -15,7 +15,7 @@ from tinkerforge_async.devices import Device
 from tinkerforge_async.ip_connection import EnumerationType
 
 from async_event_bus import event_bus
-from helper_functions import context, describe_exit, retry
+from helper_functions import IterableQueue, context, describe_exit, retry
 from sensors.drivers.tinkerforge import TinkerforgeSensor
 
 
@@ -86,14 +86,8 @@ class TinkerforgeTransport(IPConnectionAsync):
             event_bus.publish(f"nodes/tinkerforge/{device.uid}/remove", None)
 
     @staticmethod
-    async def _iterate_queue(queue: asyncio.Queue[Device]) -> AsyncGenerator[Device, None]:
-        """Yield the items put into the queue forever."""
-        while True:
-            yield await queue.get()
-
-    @classmethod
     def route_enumeration(
-        cls, device_queues: dict[int, asyncio.Queue[Device]], enumeration: tuple[EnumerationType, Device]
+        device_queues: dict[int, asyncio.Queue[Device]], enumeration: tuple[EnumerationType, Device]
     ) -> Stream[Any] | None:
         """
         Route an enumeration to the sensor of the device. There is only one sensor per uid. The first enumeration of a
@@ -117,6 +111,9 @@ class TinkerforgeTransport(IPConnectionAsync):
         if enumeration_type is EnumerationType.DISCONNECTED:
             # The sensor is notified via the event bus by notify_device() and shuts down.
             return None
+        # The queues are unbounded and never shut down, so put_nowait() cannot raise asyncio.QueueFull (or
+        # asyncio.QueueShutDown on Python 3.13+). A queue lives as long as the connection, because the dict of queues
+        # is created anew for each connection by _stream_transport().
         queue = device_queues.get(device.uid)
         if queue is not None:
             if enumeration_type is EnumerationType.CONNECTED:
@@ -126,7 +123,12 @@ class TinkerforgeTransport(IPConnectionAsync):
         queue = asyncio.Queue()
         device_queues[device.uid] = queue
         queue.put_nowait(device)
-        return stream.iterate(cls._iterate_queue(queue)) | pipe.switchmap(
+        # Each device put into the queue creates a new sensor. switchmap() streams the data of the latest sensor only:
+        # When a new device arrives, switchmap() first closes the stream of the previous sensor, which exits its
+        # context and unregisters its event bus topics, and only then starts the stream of the new sensor. This is
+        # unlike flatmap(), which would run the old and the new sensor in parallel. Two sensors of the same uid would
+        # then try to register the same event bus topics.
+        return stream.iterate(IterableQueue(queue)) | pipe.switchmap(
             lambda new_device: TinkerforgeSensor(new_device).stream_data()
         )
 
@@ -136,7 +138,10 @@ class TinkerforgeTransport(IPConnectionAsync):
             stream.call(transport.enumerate) | pipe.filter(lambda x: False),  # drop the result, because we don't care
             stream.iterate(transport.read_enumeration())
             | pipe.action(transport.notify_device)  # Notify clients to shut down if necessary
-            | pipe.map(partial(transport.route_enumeration, {}))  # The device queues are local to this connection
+            # partial() binds a new, empty dict of device queues to route_enumeration(). This creates a closure
+            # that keeps the device queues of this connection between the enumerations. They are discarded when
+            # the connection is closed, and a new dict is created when _stream_transport() is called on reconnect.
+            | pipe.map(partial(transport.route_enumeration, {}))
             | pipe.filter(lambda sensor_stream: sensor_stream is not None)
             | pipe.flatten(),
         ) | context.pipe(

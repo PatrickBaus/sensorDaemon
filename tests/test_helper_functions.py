@@ -537,3 +537,42 @@ class TestTimeoutWithReason:
         with pytest.raises(TimeoutError) as exc_info:
             await (items | pipe.list())
         assert exc_info.value is error
+
+
+class TestIterableQueue:
+    """Tests for iterating an asyncio.Queue."""
+
+    @pytest.mark.asyncio
+    async def test_yields_the_items_until_the_sentinel(self):
+        """The items are yielded in order and marked as done. The sentinel ends the iteration and is not yielded."""
+        queue: asyncio.Queue = asyncio.Queue()
+        for item in (1, 2, None, 3):
+            queue.put_nowait(item)
+
+        assert await (stream.iterate(helper_functions.IterableQueue(queue)) | pipe.list()) == [1, 2]
+        assert queue.qsize() == 1  # the item after the sentinel is not consumed
+        queue.get_nowait()
+        queue.task_done()
+        await asyncio.wait_for(queue.join(), timeout=1)  # all items consumed were marked as done
+
+    @pytest.mark.asyncio
+    async def test_a_custom_sentinel_is_compared_by_identity(self):
+        """None is a regular item, if another sentinel is given."""
+        sentinel = object()
+        queue: asyncio.Queue = asyncio.Queue()
+        for item in (None, 0, sentinel):
+            queue.put_nowait(item)
+
+        assert await (stream.iterate(helper_functions.IterableQueue(queue, sentinel)) | pipe.list()) == [None, 0]
+
+    @pytest.mark.asyncio
+    async def test_waits_for_new_items(self):
+        """Without a sentinel, the iteration waits for the next item."""
+        queue: asyncio.Queue = asyncio.Queue()
+        iterator = aiter(helper_functions.IterableQueue(queue))
+        waiting = asyncio.ensure_future(anext(iterator))
+        await asyncio.sleep(0)
+        assert not waiting.done()
+
+        queue.put_nowait("item")
+        assert await asyncio.wait_for(waiting, timeout=1) == "item"
