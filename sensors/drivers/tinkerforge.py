@@ -46,7 +46,7 @@ CallbackConfiguration: TypeAlias = AdvancedCallbackConfiguration | SimpleCallbac
 
 
 class TinkerforgeSensor:
-    """This class extends the driver with catch-all arguments in the constructor"""
+    """The sensor driver for a Tinkerforge brick or bricklet. It configures the device and streams its data."""
 
     @classmethod
     def driver(cls) -> str:

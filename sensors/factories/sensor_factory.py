@@ -1,6 +1,6 @@
 """
-This file contains the GPIB device factory that produces sensor devices using
-available special GPIB device drivers.
+This file contains the sensor factory that produces the drivers of the devices connected to generic transports, e.g.
+SCPI devices via Ethernet or GPIB.
 """
 
 from typing import Any
@@ -39,7 +39,7 @@ class SensorFactory:
 
     def get(self, driver: str, connection: Any, **kwargs: Any) -> Any:
         """
-        Look up the driver for a given database entry. Raises a `ValueError` if
+        Look up the driver for a given database entry. Raises an `UnknownDriverError` if
         the driver is not registered.
 
         Parameters
@@ -56,7 +56,7 @@ class SensorFactory:
 
         Raises
         ------
-        ValueError
+        UnknownDriverError
             Raised if the device driver is not registered
         """
         try:

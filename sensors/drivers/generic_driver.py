@@ -1,5 +1,5 @@
 """
-This is an asyncIO driver for a generic SCPI compatible device.
+This is the generic driver mixin, which adds the streaming interface to device drivers like the SCPI driver.
 """
 
 from __future__ import annotations

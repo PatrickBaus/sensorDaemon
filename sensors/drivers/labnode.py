@@ -19,7 +19,7 @@ from helper_functions import call_safely, create_device_function
 
 
 class LabnodeSensor:
-    """This class extends the driver with catch-all arguments in the constructor"""
+    """The sensor driver for an APQ LabNode. It configures the LabNode and streams its data."""
 
     @classmethod
     def driver(cls) -> str:

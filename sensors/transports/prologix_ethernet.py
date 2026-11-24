@@ -14,7 +14,7 @@ from sensors.transports.generic_ethernet_transport import GenericEthernetTranspo
 
 class PrologixEthernetTransport(GenericEthernetTransport, AsyncPrologixGpibEthernetController):
     """
-    The transport wrapper for the generic ethernet connection
+    The transport wrapper for the Prologix GPIB Ethernet controller
     """
 
     @classmethod

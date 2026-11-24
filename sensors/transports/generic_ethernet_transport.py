@@ -19,10 +19,13 @@ class GenericEthernetTransport(GenericTransport):
 
     def stream_data(self):
         """
-        Discover all Tinkerforge devices connected via this transport.
-        Yields
-        -------
+        Connect to the host and stream the data of its devices. The connection is restarted after
+        a connection error or a timeout.
 
+        Returns
+        -------
+        Stream of DataEvent
+            The data of the devices
         """
         data_stream = (
             stream.just(self)
