@@ -1,5 +1,5 @@
 """
-This file contains the GPIB device factory, that produces sensor devices using
+This file contains the GPIB device factory that produces sensor devices using
 available special GPIB device drivers.
 """
 
@@ -12,7 +12,7 @@ from sensors.drivers.hp3478a_driver import Hp3478ADriver
 
 class SensorFactory:
     """
-    A sensor factory to select the correct driver for given database
+    A sensor factory to select the correct driver for a given database
     config.
     """
 
@@ -55,7 +55,7 @@ class SensorFactory:
             A sensor device driver object
 
         Raises
-        ----------
+        ------
         ValueError
             Raised if the device driver is not registered
         """

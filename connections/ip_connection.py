@@ -1,5 +1,5 @@
 """
-This file contains an ip connection class, that simplifies the asyncio streamreader and streamwriter
+This file contains an IP connection class that simplifies the asyncio streamreader and streamwriter
 """
 
 import asyncio
@@ -36,7 +36,7 @@ class HostRefusedError(ConnectionError):
 
 class GenericIpConnection:
     """
-    A generic ip connection, that wraps the asyncio stream reader/writer and creates a context manager for connecting
+    A generic IP connection that wraps the asyncio stream reader/writer and creates a context manager for connecting
     and disconnecting the ip connection.
     """
 
@@ -56,7 +56,7 @@ class GenericIpConnection:
         Returns
         -------
         int
-            The port of connection.
+            The port of the connection.
         """
         return self.__port
 
@@ -103,7 +103,7 @@ class GenericIpConnection:
 
     def __init__(self, hostname: str, port: int, timeout: float | None = None) -> None:
         """
-        Create new IpConnection. `hostname` and `port` parameters can be None if they are provided when calling
+        Create a new IpConnection. `hostname` and `port` parameters can be None if they are provided when calling
         `connect()`
 
         Parameters
@@ -112,7 +112,7 @@ class GenericIpConnection:
             IP or hostname of the machine hosting the sensor daemon
         port: int
             port on the host
-        timeout int or None
+        timeout: int or None
             The timeout used during initial connection. The read timeout can be given separately to the `read()` call.
         """
         self.__hostname, self.__port = hostname, port

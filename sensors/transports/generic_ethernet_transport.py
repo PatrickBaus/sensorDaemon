@@ -35,9 +35,9 @@ class GenericEthernetTransport(GenericTransport):
             | retry.pipe((OSError, asyncio.TimeoutError), self.reconnect_interval)
         )
         # We need to catch OSError, which is the parent of ConnectionError, because a connection to localhost
-        # might resolve to 2 IPs and then return  multiple exception at once if all IPs fail, which is an
+        # might resolve to 2 IPs and then return multiple exceptions at once if all IPs fail, which is an
         # OSError.
         # We also need to catch the TimeoutError here, because most protocols like SCPI have no means of synchronizing
-        # messages. This means, that we will lose sync after a timeout. We therefore need to reconnect in these cases.
+        # messages. This means that we will lose sync after a timeout. We therefore need to reconnect in these cases.
 
         return data_stream

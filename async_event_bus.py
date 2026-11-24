@@ -98,12 +98,12 @@ class AsyncEventBus:
 
     def unregister(self, event_name: str) -> None:
         """
-        Unregister a previously registered function. Does not raise an error, if an unknown event is to be unregistered.
+        Unregister a previously registered function. Does not raise an error if an unknown event is to be unregistered.
 
         Parameters
         ----------
         event_name: Any
-            The name of event to be unregistered.
+            The name of the event to be unregistered.
         """
         self.__logger.debug("Unregistering function call from '%s'", event_name)
         self.__registered_calls.pop(event_name, None)
@@ -115,7 +115,7 @@ class AsyncEventBus:
         Parameters
         ----------
         event_name: str
-            The name of the of event to be called.
+            The name of the event to be called.
         ignore_unregistered: bool
             If True, do not raise an error if the event_name has not been registered
         args: List

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class ScpiIoError(ValueError):
-    """Raised if either invalid data is sent by device or if invalid data is requested to be written to the device"""
+    """Raised if invalid data is either sent by the device or requested to be written to the device"""
 
 
 class GenericScpiMixin:
@@ -50,7 +50,7 @@ class GenericScpiMixin:
         self.__device_name = None
 
         self.__logger = logging.getLogger(__name__)
-        # Call the base class constructor, because this is just a mixin, that comes before the base class in the MRO,
+        # Call the base class constructor, because this is just a mixin that comes before the base class in the MRO,
         # so there *might* be a base class.
         super().__init__(*args, **kwargs)
 
@@ -75,7 +75,7 @@ class GenericScpiMixin:
 
     async def get_id(self) -> tuple[str, str, str, str]:
         """
-        Returns a tuple with 4 elements, that contain the manufacturer name, model number, serial number and revision
+        Returns a tuple with 4 elements that contain the manufacturer name, model number, serial number and revision
         :return:
         """
         idn = await self.query("*IDN?")
@@ -87,13 +87,13 @@ class GenericScpiMixin:
 
     async def read(self, *args: Any, scpi_terminator: str | None = None, **kwargs: Any) -> Iterable[str]:
         """
-        Read a single value from the device. If `length' is given, read `length` bytes, else
+        Read a single value from the device. If `length` is given, read `length` bytes, else
         read until a line break.
 
         Parameters
         ----------
         scpi_terminator: str, optional
-            One or more characters, that terminate SCPI replies. If not set, the default terminator '\n' will be used.
+            One or more characters that terminate SCPI replies. If not set, the default terminator '\n' will be used.
             The terminator will be stripped from the end of the data.
         *args: Any
             The arguments passed on to the connection object.
@@ -101,7 +101,7 @@ class GenericScpiMixin:
             The keyword arguments passed on to the connection object.
 
         Returns
-        ----------
+        -------
         iterable of str
             The data from the device. The data is split at commas.
         """
@@ -164,7 +164,7 @@ class GenericScpiMixin:
         Returns
         -------
         iterable of str
-            The result of the query. The result return by device is split at commas.
+            The result of the query. The result returned by the device is split at commas.
         """
         await self.write(cmd, scpi_terminator)
         return await self.read(*args, scpi_terminator=scpi_terminator, **kwargs)
@@ -230,7 +230,7 @@ class GenericScpiMixin:
 
 
 class GenericScpiDriver(GenericDriverMixin, GenericScpiMixin):
-    """This is a basic generic SCPI driver, that implements the streaming interface and SCPI functionality."""
+    """This is a basic generic SCPI driver that implements the streaming interface and SCPI functionality."""
 
     @classmethod
     def driver(cls) -> str:
