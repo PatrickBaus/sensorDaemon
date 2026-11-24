@@ -81,7 +81,7 @@ class LinuxGpibTransport(GenericTransport, AsyncGpib):
             | retry.pipe((GpibError, asyncio.TimeoutError), self.reconnect_interval)
         )
         # We need to catch the TimeoutError here, because most protocols like SCPI have no means of synchronizing
-        # messages. This means, that we will lose sync after a timeout. In these cases, we reconnect the transport.
+        # messages. This means that we will lose sync after a timeout. In these cases, we reconnect the transport.
         # In case of a GpibError, we error out and stop the device.
 
         return data_stream

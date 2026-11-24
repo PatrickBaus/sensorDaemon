@@ -18,8 +18,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 """
-Kraken is a sensor data aggregation tool for distributed sensors arrays. It uses
-AsyncIO instead of threads to scale and outputs data to a MQTT broker.
+Kraken is a sensor data aggregation tool for distributed sensor arrays. It uses
+AsyncIO instead of threads to scale and outputs data to an MQTT broker.
 """
 
 import asyncio
@@ -40,9 +40,9 @@ from managers import DatabaseManager, HostManager, MqttManager, MQTTParams
 def load_secret(name: str, *args, **kwargs) -> str:
     """
     Loads a sensitive parameter either from the environment variable or Docker secret file. See
-    https://docs.docker.com/engine/swarm/secrets/ for details. The env variable read for the file
-    path is automatically appended by '_FILE'. Using the name 'MY_SECRET', the secret is either read from 'MY_SECRET' or
-    the secret path is read from 'MY_SECRET_FILE'. In the latter case the secret is then read from  the file
+    https://docs.docker.com/engine/swarm/secrets/ for details. The name of the env variable holding the file
+    path is the name with '_FILE' appended. Using the name 'MY_SECRET', the secret is either read from 'MY_SECRET' or
+    the secret path is read from 'MY_SECRET_FILE'. In the latter case the secret is then read from the file given by
     'MY_SECRET_FILE'. The secret file is preferred over the env variable.
 
     Parameters
@@ -79,7 +79,7 @@ def load_secret(name: str, *args, **kwargs) -> str:
 
 class Kraken:
     """
-    Main daemon, that runs in the background and monitors all sensors. It will
+    Main daemon that runs in the background and monitors all sensors. It will
     configure them according to options set in the database and then place the
     returned data in the database as well.
     """
@@ -131,7 +131,7 @@ class Kraken:
         self.__logger.warning("Starting Kraken v%s...", __version__)
         self.__logger.warning("#################################################")
 
-        # Catch signals and shutdown
+        # Catch signals and shut down
         signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
         for sig in signals:
             asyncio.get_running_loop().add_signal_handler(sig, lambda: asyncio.create_task(self.__shutdown()))
@@ -199,7 +199,7 @@ class Kraken:
         Parameters
         ----------
         task: asyncio.Task
-            The worker task, that has stopped
+            The worker task that has stopped
         """
         if task.cancelled():
             self.__logger.error("Worker %s was cancelled unexpectedly.", task.get_name())
@@ -213,7 +213,7 @@ class Kraken:
 
     async def shutdown(self):
         """
-        Stops the daemon and gracefully disconnect from all clients.
+        Stops the daemon and gracefully disconnects from all clients.
         """
         self.__logger.warning("#################################################")
         self.__logger.warning("Stopping Kraken...")
@@ -239,7 +239,7 @@ class Kraken:
 
 async def main() -> int:
     """
-    The main (infinite) loop, that runs until Kraken has shut down.
+    The main (infinite) loop that runs until Kraken has shut down.
 
     Returns
     -------

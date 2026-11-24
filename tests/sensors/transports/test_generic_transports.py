@@ -25,7 +25,7 @@ from sensors.transports.transport_factory import transport_factory
 
 
 class FakeScpiInstrument:
-    """A SCPI instrument on a local TCP port, that answers *IDN? and MEAS? and records the commands received."""
+    """An SCPI instrument on a local TCP port that answers *IDN? and MEAS? and records the commands received."""
 
     def __init__(self) -> None:
         self.commands: list[str] = []
@@ -58,7 +58,7 @@ class FakeScpiInstrument:
 
 
 class FakeGpibError(GpibError):
-    """A GpibError, that does not query the error code from the GPIB library, which is not installed for the tests."""
+    """A GpibError that does not query the error code from the GPIB library, which is not installed for the tests."""
 
     def __init__(self, message: str) -> None:  # pylint: disable=super-init-not-called
         Exception.__init__(self, message)  # pylint: disable=non-parent-init-called
@@ -139,7 +139,7 @@ def test_create_device_with_a_faulty_driver(caplog, monkeypatch):
 
 
 def failing_once(error: Exception):
-    """A stream factory, whose stream raises `error` on the first run and yields "data" on the second run."""
+    """A stream factory whose stream raises `error` on the first run and yields "data" on the second run."""
     runs = 0
 
     @operator
@@ -199,7 +199,7 @@ def test_transport_factory():
 
 
 def test_the_sensor_factory_creates_hp3478a_multimeters():
-    """An HP 3478A multimeter is created with its own driver, that uses the connection of the transport."""
+    """An HP 3478A multimeter is created with its own driver, which uses the connection of the transport."""
     connection = Mock()
     device = sensor_factory.get("hp3478a2", connection=connection, uuid=uuid4())
 

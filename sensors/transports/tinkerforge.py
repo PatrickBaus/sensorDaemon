@@ -1,5 +1,5 @@
 """
-This is a asyncIO driver for a generic SCPI compatible device.
+This is an asyncIO driver for a generic SCPI compatible device.
 """
 
 from __future__ import annotations

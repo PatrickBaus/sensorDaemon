@@ -52,8 +52,8 @@ async def iterate_safely(topic: str, status_topic: str, *args: Any, **kwargs: An
     topic: str
         The data source topic
     status_topic:
-        The data source status update topic, that will be listened to, if the source is not available
-    *args; Any
+        The data source status update topic that will be listened to if the source is not available
+    *args: Any
         The arguments passed to the eventbus topic
     **kwargs: Any
         The keyword arguments passed to the eventbus topic
@@ -89,8 +89,8 @@ async def call_safely(topic: str, status_topic: str, *args: Any, **kwargs: Any) 
     topic: str
         The data source topic
     status_topic:
-        The data source status update topic, that will be listened to, if the source is not available
-    *args; Any
+        The data source status update topic that will be listened to if the source is not available
+    *args: Any
         The arguments passed to the eventbus topic
     **kwargs: Any
         The keyword arguments passed to the eventbus topic
@@ -122,7 +122,7 @@ def describe_exit(exc: BaseException | None) -> str:
     Parameters
     ----------
     exc: BaseException or None
-        The exception, that ended the stream, or None if it ended without an error
+        The exception that ended the stream, or None if it ended without an error
 
     Returns
     -------
@@ -142,8 +142,8 @@ async def timeout_with_reason(
     source: AsyncIterable[Any], timeout: float | None, reason: Callable[[], str]
 ) -> AsyncGenerator[Any, None]:
     """
-    Raise a TimeoutError, if the source does not produce the next item within `timeout`, like `pipe.timeout`. Unlike
-    `pipe.timeout`, the error says why: `reason()` is called, when the timeout expires. A TimeoutError raised by the
+    Raise a TimeoutError if the source does not produce the next item within `timeout`, like `pipe.timeout`. Unlike
+    `pipe.timeout`, the error says why: `reason()` is called when the timeout expires. A TimeoutError raised by the
     source itself, e.g. by its connection, is passed on unchanged, so that the two can be told apart.
 
     Parameters
@@ -193,7 +193,7 @@ async def retry(
     interval: float
         The time in seconds to wait between retries
     action: Callable, optional
-        A function, that takes an exception
+        A function that takes an exception
 
     Yield
     -------
@@ -269,7 +269,7 @@ async def with_context(
     context_manager: AsyncContextManager
         The context manager to enter
     on_exit: Callable
-        A callback function to call, when exiting the context
+        A callback function to call when exiting the context
 
     Yields
     -------
@@ -300,7 +300,7 @@ async def finally_action(
     ----------
     source: AsyncIterable
     func: Awaitable or Callable
-        The function to be called when the entering the finally-block.
+        The function to be called when entering the finally block.
 
     Yields
     -------
@@ -323,14 +323,14 @@ async def catch(
     source: AsyncIterable[Any], exc_class: Type[BaseException], on_exc: Callable[[BaseException], Stream] | None = None
 ) -> AsyncGenerator[Any, None]:
     """
-    Catch an exception and then switch to the next stream `on_exc` or gracefully terminate, when no stream is given.
+    Catch an exception and then switch to the next stream `on_exc` or gracefully terminate when no stream is given.
     Parameters
     ----------
     source: AsyncIterable
     exc_class: BaseException type
         The exception to catch
     on_exc: Callable
-        A function, that takes an exception and returns a Stream.
+        A function that takes an exception and returns a Stream.
 
     Yields
     -------
@@ -365,7 +365,7 @@ def create_device_function(device: Any, func_call: FunctionCallConfig) -> tuple[
     """
     try:
         function = getattr(device, func_call["function"])
-        # Create a partial function, that freezes the parameters and can be called later
+        # Create a partial function that freezes the parameters and can be called later
         func = partial(function, *func_call.get("args", []), **func_call.get("kwargs", {}))
         timeout = func_call["timeout"]
     except AttributeError:

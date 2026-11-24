@@ -180,7 +180,7 @@ class TinkerforgeSensor:
         Parameters
         ----------
         config: dict or None
-            A dict that contains the key 'on_connect' which defines functions calls to made on the self.device object.
+            A dict that contains the key 'on_connect' which defines function calls to be made on the self.device object.
             If None is given, None will be returned.
 
         Returns
@@ -235,7 +235,7 @@ class TinkerforgeSensor:
         sid: int or str
             The secondary id, naming the sensor of the node. Each node may have multiple sensors with a separate sid.
         config: dict
-            A dictionary containing the keys 'interval' (in s), 'trigger_only_on_change'. 'unit', and 'topic'
+            A dictionary containing the keys 'interval' (in s), 'trigger_only_on_change', 'unit', and 'topic'
 
         Returns
         -------
@@ -243,7 +243,7 @@ class TinkerforgeSensor:
             The sid is an int specifying the secondary id of the sensor in the tree below the node
             The unit is a str naming the unit of measurement of this sensor
             The topic is a str defining where to publish the data
-            The callback_config is an AdvancedCallbackConfiguration that specifies the configuration if this sensor
+            The callback_config is an AdvancedCallbackConfiguration that specifies the configuration of this sensor
         """
         sid = int(sid)
         callback_config = AdvancedCallbackConfiguration(
@@ -291,7 +291,7 @@ class TinkerforgeSensor:
         remote_callback_config = await self.device.get_callback_configuration(sid)
         if remote_callback_config.period == 0:
             self._logger.warning(
-                "Callback configuration configuration for %s: sid=%i, config=%s failed. Source disabled.",
+                "Callback configuration for %s: sid=%i, config=%s failed. Source disabled.",
                 self.device,
                 sid,
                 config,
@@ -307,7 +307,7 @@ class TinkerforgeSensor:
         Parameters
         ----------
         config: dict[str, tuple[partial, float]]
-            A config dict, that contains the key 'on_connect', which holds the function and a timeout when calling it.
+            A config dict that contains the key 'on_connect', which holds the function and a timeout when calling it.
 
         Returns
         -------

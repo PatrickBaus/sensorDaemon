@@ -1,5 +1,6 @@
 """
-This is a generic transport driver implementing the basic streams used by transports, that cannot enumerate its devices.
+This is a generic transport driver implementing the basic streams used by transports that cannot enumerate their
+devices.
 """
 
 import logging
@@ -105,7 +106,7 @@ class GenericTransport:
             logging.getLogger(__name__).warning("No driver available for device '%s'", config["driver"])
         except Exception:  # pylint: disable=broad-except
             # This is the catch-all in case there is a problem with the driver. We catch it here, because we do not want
-            # The whole driver instance to blow up, because maybe it is a wrong settings, so we keep listening to
+            # the whole driver instance to blow up, because it may just be a wrong setting, so we keep listening to
             # database updates.
             logging.getLogger(__name__).exception("Error while creating device '%s'", config["driver"])
         return None, None
