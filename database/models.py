@@ -1,5 +1,5 @@
 """
-This file contains all database data models, that represent either sensor
+This file contains all database data models that represent either sensor
 hosts/nodes or sensors.
 """
 
@@ -51,7 +51,7 @@ class HostBaseModel(BaseModel):
 
     @field_validator("sad")
     def validate_sad(cls, field_value):
-        """Make sure, that the secondary address is either 0 or between 96 and 126. 0 means disabled."""
+        """Make sure that the secondary address is either 0 or between 96 and 126. 0 means disabled."""
         if field_value is None or field_value == 0 or 0x60 <= field_value <= 0x7E:
             # TODO: Move to UnionDoc
             return field_value
@@ -59,7 +59,7 @@ class HostBaseModel(BaseModel):
 
     class Settings:
         """
-        The index, that makes sure, that a (host, port) tuple is unique.
+        The index that makes sure that a (host, port) tuple is unique.
         """
 
         indexes = [
@@ -71,7 +71,7 @@ class HostBaseModel(BaseModel):
 
 
 class BaseDocument(Document):  # pylint: disable=too-many-ancestors
-    """The base mode used by all database entries. It makes sure that the id is a universally/globally unique id"""
+    """The base model used by all database entries. It makes sure that the id is a universally/globally unique id"""
 
     id: UUID = Field(default_factory=uuid4)
 

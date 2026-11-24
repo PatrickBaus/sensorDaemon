@@ -29,7 +29,7 @@ async def call_after_each(source: AsyncIterable[Any], calls: AsyncIterable[Any])
     source: AsyncIterable
         The source stream
     calls: AsyncIterable
-        A stream, that is iterated (and its results dropped) after each item of the source
+        A stream that is iterated (and its results dropped) after each item of the source
 
     Yields
     -------
@@ -49,7 +49,7 @@ class GenericDriverMixin:
 
     def __init__(self, uuid, *args: Any, **kwargs: Any) -> None:
         self.__uuid = uuid
-        # Call the base class constructor, because this is just a mixin, that comes before the base class in the MRO,
+        # Call the base class constructor, because this is just a mixin that comes before the base class in the MRO,
         # so there *might* be a base class.
         super().__init__(*args, **kwargs)
 
@@ -73,7 +73,7 @@ class GenericDriverMixin:
         Returns
         -------
         Stream
-            An empty stream, that calls the functions when iterated.
+            An empty stream that calls the functions when iterated.
         """
         return (
             stream.iterate(funcs)
@@ -112,7 +112,7 @@ class GenericDriverMixin:
         read_stream: Stream
             The data of a single read
         config: dict
-            The device config, that may contain the key 'on_after_read'
+            The device config that may contain the key 'on_after_read'
 
         Returns
         -------
@@ -155,17 +155,17 @@ class GenericDriverMixin:
 
     def on_error(self, exc: BaseException) -> AsyncGenerator[None, None]:
         """
-        The function to call in case of an execution during streaming.
+        The function to call in case of an exception during streaming.
 
         Parameters
         ----------
         exc: BaseException
-            The exception, that was raised
+            The exception that was raised
 
         Returns
         -------
         AsyncGenerator
-            Am empty stream, that terminates without generating a value.
+            An empty stream that terminates without generating a value.
         """
         self.log_error(exc, "Terminating device.")
         return stream.empty()

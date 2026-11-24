@@ -477,7 +477,7 @@ async def test_with_context_keeps_the_context_open_until_the_stream_is_closed(on
 
 
 class TestDescribeExit:
-    """The reason, why a stream ended, as written to the log."""
+    """The reason why a stream ended, as written to the log."""
 
     @pytest.mark.parametrize(
         "exc, expected",
@@ -496,7 +496,7 @@ class TestDescribeExit:
 
 
 class TestTimeoutWithReason:
-    """A timeout, that says why it expired."""
+    """A timeout that says why it expired."""
 
     @pytest.mark.asyncio
     async def test_items_within_the_timeout_are_passed_on(self):

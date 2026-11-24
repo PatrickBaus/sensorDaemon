@@ -30,7 +30,7 @@ from database.models import (
 
 
 class FakeChangeStream:
-    """A change stream, that yields the given changes and then raises an error or waits forever."""
+    """A change stream that yields the given changes and then raises an error or waits forever."""
 
     def __init__(self, changes, error=None, end=False):
         self.changes = changes
@@ -60,7 +60,7 @@ class FakeChangeStream:
 
 
 class FakeCollection:  # pylint: disable=too-few-public-methods
-    """A collection, that serves one fake change stream per call to watch()."""
+    """A collection that serves one fake change stream per call to watch()."""
 
     def __init__(self, change_streams):
         self.change_streams = list(change_streams)
@@ -73,7 +73,7 @@ class FakeCollection:  # pylint: disable=too-few-public-methods
 
 
 def fake_model(collection, model_validate=lambda document: document):
-    """Create a database model, that is backed by a fake collection."""
+    """Create a database model that is backed by a fake collection."""
     return SimpleNamespace(
         get_motor_collection=lambda: collection,
         get_settings=lambda: SimpleNamespace(name="Test"),
@@ -159,7 +159,7 @@ async def test_monitor_database_skips_invalid_documents(caplog):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# The connection and the contexts, that serve the configs. The queries run on an in-memory MongoDB (mongomock-motor).
+# The connection and the contexts that serve the configs. The queries run on an in-memory MongoDB (mongomock-motor).
 # ----------------------------------------------------------------------------------------------------------------------
 
 DOCUMENT_MODELS = [BaseDocument, SensorHostModel, TinkerforgeSensorModel, LabnodeSensorModel, GenericSensorModel]
@@ -354,7 +354,7 @@ async def test_errors_while_querying_a_config(  # pylint: disable=too-many-argum
     database, monkeypatch, caplog, context_class, model, document, key, errors, returns_config, log
 ):  # pylint: disable=unused-argument
     """
-    A config, that cannot be read, is None. While the database is not available, the query is repeated. Errors are
+    A config that cannot be read is None. While the database is not available, the query is repeated. Errors are
     logged.
     """
     stored = document()

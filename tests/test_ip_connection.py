@@ -38,7 +38,7 @@ async def test_read_logs_the_data_at_debug_level(caplog):
 
 
 class FakeHost:
-    """A host on a local TCP port, that runs `handler` for each connection."""
+    """A host on a local TCP port that runs `handler` for each connection."""
 
     def __init__(self, handler) -> None:
         self.handler = handler
@@ -65,7 +65,7 @@ async def echo(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> No
 
 
 def reply_once(data: bytes):
-    """A handler, that sends `data` and closes the connection."""
+    """A handler that sends `data` and closes the connection."""
 
     async def handler(_reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         writer.write(data)
@@ -156,7 +156,7 @@ async def test_errors_while_dropping_a_lost_connection_are_logged(monkeypatch, c
 
 @pytest.mark.asyncio
 async def test_read_timeout():
-    """A read, that does not finish within the timeout, raises a TimeoutError."""
+    """A read that does not finish within the timeout raises a TimeoutError."""
     async with FakeHost(echo) as host:
         async with GenericIpConnection("127.0.0.1", host.port) as connection:
             with pytest.raises(TimeoutError):
@@ -190,7 +190,7 @@ async def test_requests_need_a_connection(call):
 
 @pytest.mark.asyncio
 async def test_connection_refused():
-    """A host, that refuses the connection, raises a HostRefusedError."""
+    """A host that refuses the connection raises a HostRefusedError."""
     async with FakeHost(echo) as host:
         port = host.port
     # The host is gone, so the port is closed
@@ -221,7 +221,7 @@ async def test_connection_errors(monkeypatch, error, expected):
     "error", [ConnectionResetError(), OSError(errno.ENOTCONN, "not connected")], ids=["reset", "not connected"]
 )
 async def test_errors_while_disconnecting_are_ignored(error):
-    """A connection, that is already broken, is dropped without an error."""
+    """A connection that is already broken is dropped without an error."""
     async with FakeHost(echo) as host:
         connection = GenericIpConnection("127.0.0.1", host.port)
         await connection.connect()

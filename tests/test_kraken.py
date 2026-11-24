@@ -16,7 +16,7 @@ from kraken_ethernet import Kraken, load_secret, parse_log_level
 
 @pytest.fixture(name="environment")
 def environment_fixture(monkeypatch):
-    """The environment variables, that Kraken needs to start."""
+    """The environment variables that Kraken needs to start."""
     for name in ("NODE_ID", "MQTT_CLIENT_USER", "MQTT_CLIENT_PASSWORD", "SENSORS_DATABASE_USERNAME"):
         monkeypatch.delenv(name, raising=False)
         monkeypatch.delenv(f"{name}_FILE", raising=False)
@@ -114,7 +114,7 @@ async def test_kraken_stops_on_sigterm(environment, caplog):
     """A SIGTERM, e.g. from docker stop, stops all workers and Kraken exits with 0."""
 
     async def terminate():
-        os.kill(os.getpid(), signal.SIGTERM)  # The signal handler was installed, before the workers were started
+        os.kill(os.getpid(), signal.SIGTERM)  # The signal handler was installed before the workers were started
         await asyncio.Event().wait()
 
     fake_managers(environment, terminate)
@@ -126,16 +126,16 @@ async def test_kraken_stops_on_sigterm(environment, caplog):
 
 
 async def fail():
-    """A worker, that fails"""
+    """A worker that fails"""
     raise RuntimeError("broken")
 
 
 async def end():
-    """A worker, that stops on its own"""
+    """A worker that stops on its own"""
 
 
 async def cancel():
-    """A worker, that is cancelled"""
+    """A worker that is cancelled"""
     asyncio.current_task().cancel()
     await asyncio.sleep(0)
 

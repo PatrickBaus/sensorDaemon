@@ -1,5 +1,5 @@
 """
-The database abstraction layer, that handles all application specific tasks of
+The database abstraction layer that handles all application-specific tasks of
 the databases.
 """
 
@@ -48,7 +48,7 @@ class MongoDb:
     @property
     def hostname(self) -> str:
         """Return the hostname including the port. Strips usernames and passwords."""
-        # strip usernames and password
+        # strip usernames and passwords
         last_occurance = self.__params["host"].rfind("/?")
         return self.__params["host"][
             self.__params["host"].find("@") + 1 : last_occurance if last_occurance >= 0 else len(self.__params["host"])
@@ -348,7 +348,7 @@ class LabnodeContext(Context):
         Returns
         -------
         dict
-            A dictionary, that contains the configuration of the sensor.
+            A dictionary that contains the configuration of the sensor.
         """
         connection_attempt = 0
         while "not connected":
@@ -385,7 +385,7 @@ class LabnodeContext(Context):
                 return device
 
             device = device.model_dump()
-            # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
+            # Rename the id key, because the id is called uuid throughout the program. Note: This moves the uuid field
             # to the back of the dict
             device["uuid"] = device.pop("id")
 
@@ -454,7 +454,7 @@ class GenericSensorContext(Context):
         Returns
         -------
         dict
-            A dictionary, that contains the configuration of the sensor.
+            A dictionary that contains the configuration of the sensor.
         """
         connection_attempt = 0
         while "not connected":
@@ -494,7 +494,7 @@ class GenericSensorContext(Context):
                 return device
 
             device = device.model_dump()
-            # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
+            # Rename the id key, because the id is called uuid throughout the program. Note: This moves the uuid field
             # to the back of the dict
             device["uuid"] = device.pop("id")
 
@@ -579,7 +579,7 @@ class HostContext(Context):
         Returns
         -------
         dict
-            A dictionary, that contains the configuration of the sensor.
+            A dictionary that contains the configuration of the sensor.
         """
         connection_attempt = 0
         while "not connected":
@@ -616,7 +616,7 @@ class HostContext(Context):
                 return device
 
             device = device.model_dump()
-            # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
+            # Rename the id key, because the id is called uuid throughout the program. Note: This moves the uuid field
             # to the back of the dict
             device["uuid"] = device.pop("id")
 
@@ -685,7 +685,7 @@ class TinkerforgeContext(Context):
         Returns
         -------
         dict
-            A dictionary, that contains the configuration of the sensor.
+            A dictionary that contains the configuration of the sensor.
         """
         connection_attempt = 0
         while "not connected":
@@ -723,7 +723,7 @@ class TinkerforgeContext(Context):
                 return device
 
             device = device.model_dump()
-            # Rename the id key, because, the id is called uuid throughout the program. Note: This moves the uuid field
+            # Rename the id key, because the id is called uuid throughout the program. Note: This moves the uuid field
             # to the back of the dict
             device["uuid"] = device.pop("id")
 

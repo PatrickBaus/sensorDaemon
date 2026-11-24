@@ -16,7 +16,7 @@ from .tinkerforge import TinkerforgeTransport
 
 class TransportFactory:
     """
-    A transport factory to select the correct driver for given database config.
+    A transport factory to select the correct driver for a given database config.
     """
 
     def __init__(self):
@@ -50,7 +50,7 @@ class TransportFactory:
             A registered sensor host
 
         Raises
-        ----------
+        ------
         ValueError
         """
         host = self.__available_drivers.get(driver)

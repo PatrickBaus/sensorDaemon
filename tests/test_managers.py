@@ -576,7 +576,7 @@ class TestMqttConsumerReconnects:
         working_connection.publish.assert_awaited_once_with("sensors/test", payload='{"value": 1}', qos=2)
         for message in (
             "Invalid username or password",
-            "Raised an unspecified error (128)",
+            "raised an unspecified error (128)",
             "Connection refused",
             "Failure in name resolution",
             "timed out",
@@ -635,7 +635,7 @@ async def test_database_manager_restarts_the_workers_after_an_error(monkeypatch,
     runs = []
 
     class Context:
-        """A database context, whose worker fails on the first run."""
+        """A database context whose worker fails on the first run."""
 
         async def __aenter__(self):
             return self
@@ -682,7 +682,7 @@ async def test_host_manager_streams_the_data_of_the_hosts(monkeypatch):
     }
 
     class FakeTransport:  # pylint: disable=too-few-public-methods
-        """A transport, that sends its uuid, then waits until it is stopped."""
+        """A transport that sends its uuid, then waits until it is stopped."""
 
         def __init__(self, uuid, **_kwargs):
             self.uuid = uuid

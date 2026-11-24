@@ -17,7 +17,7 @@ from sensors.transports.labnode import LabnodeTransport
 
 
 class FakeLabnode:
-    """A LabNode, that returns increasing values and records the functions called."""
+    """A LabNode that returns increasing values and records the functions called."""
 
     def __init__(self) -> None:
         self.uuid = uuid4()
@@ -38,12 +38,12 @@ class FakeLabnode:
         return self.__value
 
     async def set_kp(self, value):
-        """A function, that can be called by the on_connect config"""
+        """A function that can be called by the on_connect config"""
         self.calls.append(("set_kp", (value,)))
 
 
 class FakeLabnodeTransport(LabnodeTransport):
-    """A LabNode transport, that connects to a FakeLabnode instead of a real LabNode."""
+    """A LabNode transport that connects to a FakeLabnode instead of a real LabNode."""
 
     def __init__(self, device: FakeLabnode) -> None:
         super().__init__(hostname="192.0.2.1", port=4223, reconnect_interval=0, uuid=uuid4(), label="LabNode")
@@ -100,7 +100,7 @@ async def test_the_transport_streams_the_data_of_the_labnode(labnode_database):
         (device.uuid, 0, "sensors/labnode", Decimal(2), "K"),
     ]
     assert device.calls[0] == ("set_kp", (2,))
-    assert not transport.connected  # disconnected, when the stream is closed
+    assert not transport.connected  # disconnected when the stream is closed
     assert (LabnodeTransport.driver(), transport.uri, transport.label) == ("labnode", "192.0.2.1:4223", "LabNode")
 
 
@@ -136,7 +136,7 @@ async def test_a_labnode_without_config_waits_for_one(labnode_database):
 
 
 def test_a_config_with_an_unknown_on_connect_function_is_rejected(caplog):
-    """A config, whose on_connect functions do not exist on the LabNode, is logged and ignored."""
+    """A config whose on_connect functions do not exist on the LabNode is logged and ignored."""
     sensor = LabnodeSensor(FakeLabnode())
     config = labnode_config(
         uuid4(), on_connect=[{"function": "does_not_exist", "args": [], "kwargs": {}, "timeout": 1}]

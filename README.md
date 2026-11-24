@@ -9,18 +9,18 @@
 laboratories like:
  * [Tinkerforge](https://www.tinkerforge.com/en/shop/bricklets.html) sensors
  * [Labnodes](https://github.com/TU-Darmstadt-APQ/Labnode_PID)
- * SCPI enabled devices via GPIB or Ethernet
+ * SCPI-enabled devices via GPIB or Ethernet
 
 The data is extracted from the devices and published via [MQTT](https://en.wikipedia.org/wiki/MQTT) for further
 processing. Used with a datalogger like the [Kraken Logger](https://github.com/PatrickBaus/database_logger) and
-a data visualisation frontend like [Grafana](https://grafana.com/grafana/) it allows to precisely monitor labs and
-experiments in real-time.
+a data visualisation frontend like [Grafana](https://grafana.com/grafana/) it allows precise monitoring of labs and
+experiments in real time.
 
 `LabKraken` is written in Python using the [asyncio](https://docs.python.org/3/library/asyncio.html) framework and runs on
 both large scale servers and small [Raspberry Pis](https://www.raspberrypi.com/).
 
 # Setup
-`LabKraken` is best installed via the Docker repository provided with this repository.
+`LabKraken` is best installed via the Docker image provided with this repository.
 
 ## ... via [`docker-compose`](https://github.com/docker/compose)
 
